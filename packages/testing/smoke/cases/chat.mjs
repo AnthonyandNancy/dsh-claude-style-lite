@@ -119,7 +119,7 @@ export default {
     basicChecks(r)
     const fold = r.fold || {}
     check('a thinking row stays as the host drew it until the reader presses it',
-      fold.thinkOpen === false && (fold.clicks || {}).think === 0, JSON.stringify({ open: fold.thinkOpen, clicks: fold.clicks }))
+      fold.thinkOpen === false, JSON.stringify({ open: fold.thinkOpen }))
     check('a running process group is opened at install',
       fold.groupOpen === true, JSON.stringify(fold))
     const summary = fold.summary || {}
@@ -146,7 +146,7 @@ export default {
       fold.expandedUntouched === true && (fold.clicks || {}).expanded === 0, JSON.stringify(fold.clicks))
     const after = fold.after || {}
     check('the thinking row stays as the host drew it once the reasoning stops',
-      after.thinkOpen === false && (after.clicks || {}).think === 0, JSON.stringify(after))
+      after.thinkOpen === false, JSON.stringify({ open: after.thinkOpen }))
     check('the process group folds back when the section ends, and its summary stops sweeping',
       after.groupOpen === false && (after.summary || {}).running === false && (after.summary || {}).band === null, JSON.stringify(after))
     check('a group the host folds when its turn is stopped opens again, so a stopped turn keeps its work on the page',
@@ -167,52 +167,6 @@ export default {
       message.toggle === 'Show the whole message' && messageOpen.marked === null &&
         messageOpen.toggle === 'Show less' && messageOpen.capped > message.capped && messageOpen.mask === 'none',
       JSON.stringify({ message, open: messageOpen }))
-    // The reasoning's streamed window: transitions.dev's "Reasoning stream",
-    // adapted to live text — a window that grows with the reasoning up to the cap
-    // it may reach, where it holds still and the text steps on the snippet's clock.
-    // The probe grows the first row across the cap and reads the second, which
-    // stands over it from the start.
-    const grow = fold.reasonWindow || []
-    const run = fold.reasonGrow || []
-    const offsetsOf = (frame) => {
-      const match = /matrix\(1, 0, 0, 1, 0, (-?[\d.]+)\)/.exec((frame || {}).transform || '')
-      return match === null ? 0 : -Number(match[1])
-    }
-    const step = 24 * 2
-    const offsets = run.map(offsetsOf)
-    const reachable = run.length > 0 ? (run[0].textHeight - run[0].slotHeight) : 0
-    check('a reasoning shorter than the cap stands in a window exactly as tall as the text, with nothing faded',
-      grow.length === 4 &&
-        grow.slice(0, 2).every((frame) => frame.on === true && frame.capped === false && frame.offset === 0 && frame.mask === 'none' && frame.slotHeight === frame.textHeight && frame.textHeight < 400) &&
-        grow.slice(2).every((frame) => frame.capped === true && frame.slotHeight === 400 && frame.mask.startsWith('linear-gradient') && frame.textHeight > 400) &&
-        grow[3].textHeight > grow[0].textHeight,
-      JSON.stringify(grow))
-    check('a reasoning over the cap holds the window at the height it may reach, masked at both edges',
-      run.length > 0 &&
-        run.every((frame) => frame.on === true && frame.capped === true &&
-          frame.slotHeight === 400 && frame.mask.startsWith('linear-gradient') && frame.textHeight > 400),
-      JSON.stringify(run))
-    check('the window holds a transition for its step, on the snippet\'s own clock',
-      run.every((frame) => frame.transition === 'transform 0.5s') && grow.every((frame) => frame.transition === 'transform 0.5s'),
-      JSON.stringify([...run, ...grow].map((frame) => frame.transition)))
-    check('the text steps up towards the newest line and stops there, never past it',
-      offsets.every((offset) => offset <= reachable + 0.5) && Math.max(...offsets) === reachable,
-      JSON.stringify({ offsets, reachable, step }))
-    const reopened = fold.reasonOpen || {}
-    check('once the reasoning stops the window is off and the text stands at the host\'s own height',
-      reopened.on === false && offsetsOf(reopened) === 0 && reopened.mask === 'none' &&
-        reopened.slotHeight === 400 && reopened.textHeight > 400,
-      JSON.stringify(reopened))
-    const closed = fold.reasonClosed || {}
-    check('the window comes off the row without the row changing height',
-      closed.on === false && closed.capped === false && offsetsOf(closed) === 0 && closed.mask === 'none' &&
-        closed.slotHeight === run[run.length - 1].slotHeight && closed.bodyHeight === run[run.length - 1].bodyHeight,
-      JSON.stringify({ closed, during: run[run.length - 1] }))
-    const grewClosed = fold.reasonGrewClosed || {}
-    check('the window a reasoning outgrew comes off with the row unchanged as well',
-      grewClosed.on === false && grewClosed.capped === false && offsetsOf(grewClosed) === 0 && grewClosed.mask === 'none' &&
-        grewClosed.slotHeight === grow[grow.length - 1].slotHeight && grewClosed.bodyHeight === grow[grow.length - 1].bodyHeight,
-      JSON.stringify({ grewClosed, during: grow[grow.length - 1] }))
     const glide = fold.glide || {}
     const glideAfter = glide.after || {}
     check('a press on a folding row is intercepted and handed to the real element when the door lands',

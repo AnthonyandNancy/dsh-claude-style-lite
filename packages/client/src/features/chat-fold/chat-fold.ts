@@ -4,7 +4,6 @@ import { installChatFoldGlide } from './fold-glide'
 import { createMessageFold } from './message-fold'
 import { createProcessFold } from './process-fold'
 import { createProcessSummary } from './process-summary'
-import { createReasoningStream } from './reasoning-stream'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureHandle } from '@dsh-claude-style/engine/scheduler'
 import type { FeatureUi } from '../../core/feature'
@@ -19,7 +18,6 @@ export interface ChatFoldHandle extends FeatureHandle {
    ui.chatFold lets the follow guard exclude an active glide and disappears on teardown. */
 export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   document.body.setAttribute(CHAT_FOLD_ATTR, '')
-  const stream = createReasoningStream()
   const stopProcess = createProcessFold()
   const summary = createProcessSummary()
   const messageFold = createMessageFold(() => ui.schedule?.())
@@ -33,22 +31,15 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     skipOnContentOnly: true,
     onCopyChange: () => {
       summary.rewrite()
-      stream.sync()
       messageFold.onCopyChange()
     },
-    // A resize can change the text's line height (the content font delta), which
-    // the window's own height is measured from, and it re-wraps a message's words.
-    // A scroll or a resize re-anchors whatever is open in the same frame: the
-    // width is read in that frame's read phase, never in the write that follows.
     measureReposition: () => messageFold.measureColumn(),
     reposition: () => {
-      stream.sync()
       messageFold.reposition()
     },
   }
   return () => {
     delete ui.chatFold
-    stream.stop()
     stopProcess()
     summary.stop()
     messageFold.stop()

@@ -10,7 +10,7 @@ import { spec } from '../../fixtures/behaviour.mjs'
 
 export default spec({ page: 'chat-fold' }, ({ test }) => {
   test('new, replaced and reattached user bubbles keep exactly one fold control', async (t) => {
-    await t.prefs({ chatAnimations: true, motion: 'full', reasoningDisplay: 'continuous' })
+    await t.prefs({ chatAnimations: true, motion: 'full' })
     const scroller = t.host('chat.scroller')
     const flowAttribute = t.host.attribute('chat.flow')
     const kindAttribute = t.host('chat.user-row')

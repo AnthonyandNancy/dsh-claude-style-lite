@@ -22,7 +22,7 @@ export default spec({ page: 'chat-follow' }, ({ test }) => {
   test('a stuck thinking header stays at the scroller top while streamed growth slides the column', async (t) => {
     const flowSelector = t.host('chat.flow')
     const scrollerSelector = t.host('chat.scroller')
-    await t.prefs({ chatAnimations: true, motion: 'full', reasoningDisplay: 'continuous' })
+    await t.prefs({ chatAnimations: true, motion: 'full' })
 
     const result = await t.page.evaluate(async ([
       flowSel,

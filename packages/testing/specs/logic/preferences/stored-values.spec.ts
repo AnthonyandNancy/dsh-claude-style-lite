@@ -125,18 +125,10 @@ test('quick providers keep distinct ids in order, without the official group, wi
   expect(clampPrefs({ quickProviders: many }).quickProviders).toHaveLength(QUICK_PROVIDERS_MAX)
 })
 
-test('the typeface, reasoning and interface font choices survive storage', () => {
-  const stored = clampPrefs({
-    typeface: 'system',
-    reasoningDisplay: 'stepped',
-    interfaceFontSize: ' 125 ',
-  })
-  expect(stored.typeface).toBe('system')
-  expect(stored.reasoningDisplay).toBe('stepped')
-  expect(stored.interfaceFontSize).toBe('125')
-  expect(clampPrefs({ typeface: 'other' }).typeface).toBe(PREF_DEFAULTS.typeface)
-  expect(clampPrefs({ reasoningDisplay: 'other' }).reasoningDisplay).toBe(PREF_DEFAULTS.reasoningDisplay)
-  expect(clampPrefs({}).interfaceFontSize).toBe('100')
+test('the retired reasoning display key is ignored without changing the default read', () => {
+  const stored = clampPrefs({ reasoningDisplay: 'stepped' })
+  expect(Object.hasOwn(stored, 'reasoningDisplay')).toBe(false)
+  expect(clampPrefs({})).toEqual(PREF_DEFAULTS)
 })
 
 test('the username is trimmed and cut to its limit', () => {

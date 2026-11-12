@@ -76,7 +76,6 @@ Lite 默认不自动读取原版的设置命名空间。原版与 Lite 的设置
 - `backgroundOpacity`
 - `pageZoom`
 - `chatReveal`
-- `reasoningDisplay`
 - `processRows`
 - `statsPosition`
 - `statsMode`
@@ -89,6 +88,7 @@ Lite 默认不自动读取原版的设置命名空间。原版与 Lite 的设置
 - `chatSend`
 - `messageEnter`
 - `caretMotion`
+- `reasoningDisplay`
 
 ## 测试与验证
 

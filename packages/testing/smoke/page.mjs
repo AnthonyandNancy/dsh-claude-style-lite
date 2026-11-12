@@ -294,30 +294,28 @@ function page(name, tier, cases, probe = PROBE) {
   // row (opened and folded back by its own control) and process groups — one
   // running and capped, holding a thought and a tool call, and one in a tier
   // that does not cap its body. The host's own behaviour is modelled in the
-  // script: the row's control flips data-expanded, a group's header flips its
-  // body's hidden. A header is the host's: a decorative icon span, then its words.
-  // A thinking row carries its reasoning body the way the pinned host renders it:
-  // a wrapper with the Markdown inside, no slot of its own. The chat flow holds a
-  // DisclosureRow in both of the host's shapes: the row with its body beside it,
-  // and — first in the flow, so the other's body stays the flow's last child —
-  // the row wrapped in a header beside its accessory, the expanded content inside
-  // that same wrapper.
+  // script: each row's control flips its own aria-expanded, a group's header
+  // flips its body's hidden. A header is the host's: a decorative icon span, then
+  // its words. A thinking row carries its reasoning body the way the pinned host
+  // renders it: a wrapper with the Markdown inside, no slot of its own. The chat
+  // flow holds a DisclosureRow in both of the host's shapes: the row with its
+  // body beside it, and — first in the flow, so the other's body stays the flow's
+  // last child — the row wrapped in a header beside its accessory, the expanded
+  // content inside that same wrapper.
   var foldReasoning = ''
   for (var line = 1; line <= 12; line += 1) foldReasoning += '思考第 ' + line + ' 行。' + (line < 12 ? '<br>' : '')
-  // The reasoning's window takes the text's height up to the cap reasoning may
-  // reach (reasoning-stream.ts). Both rows mirror the host's own capped body in
-  // the Standard tier — the same 400px the window stops at — and the probe grows
-  // the first past that cap so the window is read on both sides of it.
+  // The second row mirrors the host's own capped reasoning body in the Standard
+  // tier; both bodies stand under that cap while the page is read.
   var longReasoning = ''
   for (var long = 1; long <= 36; long += 1) longReasoning += '想得久一点第 ' + long + ' 行。' + (long < 36 ? '<br>' : '')
   var foldArea = name === 'chat-fold'
     ? '<style>[data-step-process-body][hidden] { display: none; } #debugGroupHeader { display: flex; gap: 6px; padding: 0; max-width: 100%; } #debugThinkText, #debugGrowText { line-height: 24px; } #debugThinkBody, #debugGrowBody { max-height: 400px; overflow: hidden; }</style>' +
-      '<div data-variant="think" data-state="running" id="debugThink"><button type="button" id="debugThinkRow">Thinking</button>' +
+      '<div data-variant="think" data-state="running" id="debugThink"><button type="button" id="debugThinkRow" aria-expanded="false">Thinking</button>' +
         '<div id="debugThinkBody">' +
           '<div data-markdown-variant="compact" id="debugThinkText">' + foldReasoning + '</div>' +
         '</div>' +
       '</div>' +
-      '<div data-variant="think" data-state="running" data-expanded id="debugGrow"><button type="button" id="debugGrowRow">Thinking</button>' +
+      '<div data-variant="think" data-state="running" id="debugGrow"><button type="button" id="debugGrowRow" aria-expanded="false">Thinking</button>' +
         '<div id="debugGrowBody">' +
           '<div data-markdown-variant="compact" id="debugGrowText">' + longReasoning + '</div>' +
         '</div>' +
@@ -360,13 +358,14 @@ function page(name, tier, cases, probe = PROBE) {
       '</div>' +
       '<script>' +
       '(function () {' +
-      '  window.__foldClicks = { think: 0, group: 0, expanded: 0 };' +
+      '  window.__foldClicks = { group: 0, expanded: 0 };' +
       '  window.__disclosureClicks = 0;' +
-      '  var think = document.getElementById("debugThink");' +
-      '  think.querySelector("button").addEventListener("click", function () {' +
-      '    window.__foldClicks.think += 1;' +
-      '    if (think.hasAttribute("data-expanded")) think.removeAttribute("data-expanded");' +
-      '    else think.setAttribute("data-expanded", "");' +
+      '  document.querySelectorAll("[data-variant=\\"think\\"] > button").forEach(function (button) {' +
+      '    button.addEventListener("click", function () {' +
+      '      var row = this.parentElement;' +
+      '      var open = row.querySelector("[aria-expanded=\\"true\\"]") !== null;' +
+      '      row.querySelector("button").setAttribute("aria-expanded", open ? "false" : "true");' +
+      '    });' +
       '  });' +
       '  var body = document.getElementById("debugGroupBody");' +
       '  document.getElementById("debugGroupHeader").addEventListener("click", function () {' +

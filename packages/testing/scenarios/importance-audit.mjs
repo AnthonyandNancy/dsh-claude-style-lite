@@ -52,7 +52,7 @@ const TRANSIENT_SELECTORS = [
   '[data-dsh-claude-reader-hold]', '[data-dsh-claude-summary-running]', '[data-dsh-claude-wait-badge-leaving]',
   '[data-dsh-claude-file-merge]', '[data-dsh-claude-chat-reveal]', '[data-dsh-claude-roll]',
   '[data-dsh-claude-dragging]', '[data-dsh-claude-swapping]',
-  '[data-dsh-claude-reason-window]', mark('skin.asleep'),
+  mark('skin.asleep'),
   '[data-dsh-theme-transitioning]',
 ]
 

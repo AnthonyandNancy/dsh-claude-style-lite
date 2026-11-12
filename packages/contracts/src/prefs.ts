@@ -55,11 +55,6 @@ export const CHAT_REVEAL_OFF = 'off'
 export const CHAT_REVEAL_ON = 'on'
 export const CHAT_REVEAL_MODES = [CHAT_REVEAL_ON, CHAT_REVEAL_OFF] as const
 
-/** How live reasoning reaches the reader: as it arrives, or through the two-line stepping window. */
-export const REASONING_DISPLAY_CONTINUOUS = 'continuous'
-export const REASONING_DISPLAY_STEPPED = 'stepped'
-export const REASONING_DISPLAYS = [REASONING_DISPLAY_CONTINUOUS, REASONING_DISPLAY_STEPPED] as const
-
 /** How an open process group lays out its rows: the host's own list, or one bordered card of single-line rows. */
 export const PROCESS_ROWS_FLAT = 'flat'
 export const PROCESS_ROWS_COLUMN = 'column'
@@ -320,7 +315,6 @@ export const PREFS = {
   chatAnimations: { type: 'boolean', default: true, legacy: { [CHAT_ANIMATIONS_OFF]: false, enhanced: true, redraw: true } },
   chatWait: { type: 'boolean', default: true },
   chatReveal: { type: 'choice', values: CHAT_REVEAL_MODES, default: CHAT_REVEAL_OFF },
-  reasoningDisplay: { type: 'choice', values: REASONING_DISPLAYS, default: REASONING_DISPLAY_STEPPED },
   /** Moves the reading position when an answer starts; default off because this is unsolicited movement. */
   answerAnchor: { type: 'boolean', default: false },
   processRows: { type: 'choice', values: PROCESS_ROWS_LAYOUTS, default: PROCESS_ROWS_FLAT },
