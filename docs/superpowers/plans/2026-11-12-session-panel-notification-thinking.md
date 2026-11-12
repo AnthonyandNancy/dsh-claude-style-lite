@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让会话详情入口常驻并可默认打开，新增默认开启的系统通知，修复思考首帧不可见，并删除「思考内容显示」及其逐步窗口逻辑。
+**Goal:** 让会话详情入口常驻并可默认打开，新增默认开启的系统通知，删掉思考行上的代按逻辑让折叠保持宿主状态，并删除「思考内容显示」及其逐步窗口逻辑。
 
-**Architecture:** 四项改动各自独立：会话详情把功能安装与初始开合拆开；通知新增独立功能并共享注意力读取；思考行恢复最小的运行阶段自动展开；逐步窗口连同偏好、样式、契约与测试整体删除。所有状态仍来自宿主已有快照，不新增宿主路由或私有接口。
+**Architecture:** 四项改动各自独立：会话详情把功能安装与初始开合拆开；通知新增独立功能并共享注意力读取；思考行删除代按标题的模块，开合交回宿主与读者；逐步窗口连同偏好、样式、契约与测试整体删除。所有状态仍来自宿主已有快照，不新增宿主路由或私有接口。
 
 **Tech Stack:** TypeScript、React 18、esbuild、Vitest（browser mode）、Playwright、DSH client primitives、项目自带的清单／偏好／测试生成工具。
 
@@ -18,7 +18,7 @@
 - 不引入运行时依赖；React 与 `@deepseek-ai/dsh-client-ui-primitives` 来自宿主。
 - 不手写通知中心、窗口管理器或新的事件总线；系统通知只用浏览器 `Notification`，状态读取复用共享的 mutation/snapshot 机制。
 - 失败要就地抛出；只有能隔离单个订阅者或单个通知失败的地方才捕获，并在旁边写明原因。
-- 不恢复 `reasoning-fold.ts` 的完整自动开合；只实现运行阶段的一次性展开。
+- 思考行不再有任何代按逻辑；折叠状态由宿主的 `ReasoningRow` 与读者决定。
 - 删除 `reasoningDisplay` 后，旧设置中的该键必须被忽略，不导致启动失败。
 
 ---
@@ -206,7 +206,7 @@ In `docs/INSTALL.md`, remove `reasoningDisplay` from the retained migration keys
 In `docs/CHANGES-FROM-UPSTREAM.md`, change the first bullet under 移除 to:
 
 ```md
-- 思考行的完整自动开合与逐步显示窗口：思考正文随内容到达直接显示，读者仍可手动开合。
+- 思考行的完整自动开合与逐步显示窗口：思考正文随内容到达直接显示，读者仍可手动开合，插件不代按标题。
 ```
 
 In `docs/THIRD_PARTY_NOTICES.md`, delete the paragraph that begins `The "Reasoning stream" transition` and remove `reasoning-stream` from the transitions.dev source list.
@@ -234,404 +234,78 @@ git commit -m "refactor: 删除思考内容显示与逐步窗口"
 
 ---
 
-### Task 2: 让运行中的思考行立即展开一次
+### Task 2: 删除思考行上的代按逻辑
 
 **Files:**
-- Create: `packages/client/src/features/chat-fold/reasoning-open.ts`
+- Delete: `packages/client/src/features/chat-fold/reasoning-open.ts`
 - Modify: `packages/client/src/features/chat-fold/chat-fold.ts`
+- Modify: `packages/client/src/features/chat-fold/chat-fold.manifest.ts`
+- Modify: `packages/client/src/features/chat-fold/fold-glide.ts`
 - Modify: `packages/client/src/features/chat-follow/chat-follow.ts:310-330`
 - Modify: `packages/client/src/features/process-column/process-column.css:55-62`
 - Modify: `packages/client/src/features/process-column/process-column.ts`
 - Modify: `packages/contracts/src/dom.ts:230-234`
-- Modify: `packages/contracts/src/table.ts:133-140`
+- Modify: `packages/contracts/src/table.ts:64`
 - Modify: `packages/testing/specs/behaviour/reasoning-display/manual-fold.spec.mjs`
-- Create: `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`
-- Modify: `packages/testing/smoke/page.mjs` (thinking row control already updated in Task 1)
+- Delete: `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`
+- Modify: `packages/testing/smoke/page.mjs`
+- Modify: `packages/testing/smoke/probe/chat-fold.js`
+- Modify: `packages/testing/smoke/cases/chat.mjs`
 - Test: `packages/testing/specs/behaviour/reasoning-display/manual-fold.spec.mjs`
-- Test: `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`
 
 **Interfaces:**
-- Consumes:
-  - `THINK_ROW_SELECTOR`, `ROW_PHASE_ATTRIBUTE`, `RUNNING_STATE` from `@dsh-claude-style/contracts/dom`
-  - `composerComposing`, `captureComposerCaret`, `focusKeepingComposerCaret` from `../../shared/composer-caret`
-  - `beginChatFoldToggle`, `endChatFoldToggle`, `isChatFoldToggle`, `subscribeFoldReaderEvents` from `./fold-toggle`
-  - `subscribeMutations` from `@dsh-claude-style/engine/bus`
-  - `requestFrame` from `@dsh-claude-style/engine/frame`
-- Produces:
-  - `createReasoningOpen(): { stop(): void }`
-  - A running thinking row whose disclosure control starts closed is pressed open once per phase.
-  - Reader collapse in that phase is preserved.
+- Consumes: `THINK_ROW_SELECTOR`, `ROW_PHASE_ATTRIBUTE`, `RUNNING_STATE` from `@dsh-claude-style/contracts/dom`
+- Produces: no `createReasoningOpen()`; no press on a thinking row's control; the row keeps the folded state the host gave it and the reader's own presses are not rewritten.
 
-- [ ] **Step 1: Write the failing behaviour test**
+- [ ] **Step 1: Rewrite the behaviour test**
 
-Replace `packages/testing/specs/behaviour/reasoning-display/manual-fold.spec.mjs` with:
+Replace `packages/testing/specs/behaviour/reasoning-display/manual-fold.spec.mjs` with a spec that mounts a running thinking row, waits three frames, and asserts:
 
-```js
-/**
- * A running thinking row is opened once when it starts, so the first reasoning
- * text is visible at once; a reader who closes it keeps it closed for that phase.
- *
- * @capability reasoning-display
- * @features chat-fold
- * @risk The skin leaves the first reasoning frames folded, or overrides a reader who closed the row.
- */
-import { spec, host, surface } from '../../fixtures/behaviour.mjs'
-import { ROW_PHASE_ATTRIBUTE, RUNNING_STATE } from '@dsh-claude-style/contracts/dom'
+- the control's `aria-expanded` is still `false`, so the skin never pressed it;
+- the recorded press count is `0`;
+- after the reader presses the control, `aria-expanded` is `true` and the skin leaves it there;
+- the state stays `true` after the row's phase changes to `ok`.
 
-export default spec({ page: 'chat-fold' }, ({ test }) => {
-  test('a running thinking row opens once, and a reader who closes it stays closed', async (t) => {
-    const result = await t.page.evaluate(async ([think, phase, running]) => {
-      const build = (tag, pairs) => {
-        const element = document.createElement(tag)
-        for (const [name, value] of pairs) element.setAttribute(name, value)
-        return element
-      }
-      const frames = (count) => new Promise((resolve) => {
-        const step = () => (count -= 1) === 0 ? resolve() : requestAnimationFrame(step)
-        requestAnimationFrame(step)
-      })
-      const row = build('div', [...think, [phase, running]])
-      const control = build('button', [['type', 'button'], ['aria-expanded', 'false']])
-      control.textContent = 'Think'
-      control.addEventListener('click', () => {
-        control.setAttribute('aria-expanded', control.getAttribute('aria-expanded') === 'true' ? 'false' : 'true')
-      })
-      let presses = 0
-      control.addEventListener('click', () => { presses += 1 }, true)
-      row.append(control, build('div', []))
-      document.body.append(row)
-      await frames(3)
-      const opened = control.getAttribute('aria-expanded') === 'true'
-      // The reader closes it: the same phase must not reopen it.
-      control.click()
-      await frames(3)
-      const afterReaderClose = control.getAttribute('aria-expanded') === 'true'
-      // A new phase starts on the same row: it may open once more.
-      row.setAttribute(phase, 'ok')
-      row.setAttribute(phase, running)
-      await frames(3)
-      return {
-        opened,
-        presses,
-        afterReaderClose,
-        afterNewPhase: control.getAttribute('aria-expanded') === 'true',
-      }
-    }, [host.attributes('chat.think-row'), ROW_PHASE_ATTRIBUTE, RUNNING_STATE])
+Delete `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`: it asserts the removed press.
 
-    t.expectThat.equal(result.opened, true, 'the running row opens itself')
-    t.expectThat.equal(result.presses, 1, 'one press opens it')
-    t.expectThat.equal(result.afterReaderClose, false, 'the reader’s close is kept in that phase')
-    t.expectThat.equal(result.afterNewPhase, true, 'a new running phase opens it again')
-  })
-})
-```
+- [ ] **Step 2: Delete the module and its wiring**
 
-- [ ] **Step 2: Run the test and confirm it fails**
+Delete `packages/client/src/features/chat-fold/reasoning-open.ts`, remove the `createReasoningOpen` import, the `const reasoningOpen = createReasoningOpen()` line and the `reasoningOpen.stop()` call from `packages/client/src/features/chat-fold/chat-fold.ts`.
 
-Run:
+- [ ] **Step 3: Drop the contracts the module alone read**
+
+- From `chat-fold.manifest.ts`, delete `chat.think-row` and `chat.think-running`.
+- In `fold-glide.ts`, the marked-press guard becomes `if (isChatFoldToggle()) return` and `THINK_ROW_SELECTOR` leaves the import.
+- In `table.ts`, the `chat.think-row` use text becomes 「one thinking row, whose own state the skin reads and never presses: it stays folded as the host draws it」.
+
+- [ ] **Step 4: Keep the state readings the rest of the skin still needs**
+
+- `chat-follow.ts` reads `aria-expanded` on the row or its control for `stuckThinkHeaders()`.
+- `process-column.ts` projects that state onto `data-dsh-claude-think-open`, and `process-column.css` reads the attribute instead of `data-expanded`.
+- `contracts/src/dom.ts` drops `EXPANDED_ATTRIBUTE`; `table.ts` drops `fold.expanded`.
+
+- [ ] **Step 5: Update the smoke fixture and its readings**
+
+- `packages/testing/smoke/page.mjs`: the fixture comment says thinking rows are never pressed.
+- `packages/testing/smoke/probe/chat-fold.js`: the comment says the row keeps the folded state the host drew; `thinkOpen` and `clicks.think` are read as before.
+- `packages/testing/smoke/cases/chat.mjs`: both checks expect `thinkOpen === false` and `clicks.think === 0`, before and after the phase settles.
+
+- [ ] **Step 6: Run the focused spec and the smoke case**
 
 ```powershell
-$env:PATH = 'D:\Develop\nvm\v24.19.0;' + $env:PATH
+$env:PATH = 'D:\Develop
+vm24.19.0;' + $env:PATH
 node packages/testing/stand-in.mjs --spec reasoning-display/manual-fold
+node packages/testing/stand-in.mjs --case chat-fold
 ```
 
-Expected: FAIL with `the running row opens itself` actual `false`.
+Expected: both PASS, with no press recorded.
 
-- [ ] **Step 3: Write `reasoning-open.ts`**
-
-Create `packages/client/src/features/chat-fold/reasoning-open.ts`:
-
-```ts
-import { requestFrame } from '@dsh-claude-style/engine/frame'
-import { subscribeMutations } from '@dsh-claude-style/engine/bus'
-import { ROW_PHASE_ATTRIBUTE, RUNNING_STATE, THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
-import { captureComposerCaret, composerComposing, focusKeepingComposerCaret } from '../../shared/composer-caret'
-import { beginChatFoldToggle, endChatFoldToggle, isChatFoldToggle, subscribeFoldReaderEvents } from './fold-toggle'
-
-/* Host ReasoningRow starts folded and renders no body until it opens. The
-   first reasoning text therefore cannot be waited for: the row is pressed as
-   soon as it enters `running`, once for that phase. A reader's own fold is
-   remembered per phase and is never overridden; the next phase may open once
-   more. The press is marked so the fold door and the token reveal treat it as
-   the skin's own. */
-
-export function createReasoningOpen() {
-  /** The phase a row was in when the reader last touched it. */
-  const touchedIn = new WeakMap<Element, string>()
-  /** The phase a row was last pressed in, so a press that changed nothing is not retried. */
-  const attemptedIn = new WeakMap<Element, string>()
-  const pending = new Set<Element>()
-  let queued = false
-  let cancelFrame: (() => void) | null = null
-  let stopped = false
-
-  function controlOf(row: Element) {
-    return row.querySelector<HTMLElement>('[data-disclosure-row][aria-expanded], [role="button"][aria-expanded], button[aria-expanded]')
-  }
-
-  function expandedOf(row: Element) {
-    if (row.getAttribute('aria-expanded') === 'true') return true
-    const control = controlOf(row)
-    return control !== null && control.getAttribute('aria-expanded') === 'true'
-  }
-
-  function shouldOpen(row: Element) {
-    if (!row.isConnected) return false
-    if (row.getAttribute(ROW_PHASE_ATTRIBUTE) !== RUNNING_STATE) return false
-    if (touchedIn.get(row) === RUNNING_STATE) return false
-    if (expandedOf(row)) return false
-    if (attemptedIn.get(row) === RUNNING_STATE) return false
-    return controlOf(row) !== null
-  }
-
-  function press(row: Element) {
-    const control = controlOf(row)
-    if (control === null) return
-    // A focus or selection moved under an uncommitted composition makes the
-    // browser drop the letters typed so far; the row is settled after it lands.
-    if (composerComposing()) return
-    attemptedIn.set(row, RUNNING_STATE)
-    const previousFocus = document.activeElement
-    const caret = captureComposerCaret()
-    beginChatFoldToggle()
-    try {
-      control.click()
-    } finally {
-      endChatFoldToggle()
-    }
-    if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
-      focusKeepingComposerCaret(previousFocus, caret)
-    }
-    if (document.activeElement === control) control.blur()
-  }
-
-  function queue(row: Element) {
-    if (stopped || !row.matches(THINK_ROW_SELECTOR)) return
-    pending.add(row)
-    if (queued) return
-    queued = true
-    cancelFrame = requestFrame({
-      read() {
-        cancelFrame = null
-        queued = false
-      },
-      write() {
-        const rows = [...pending]
-        pending.clear()
-        for (const row of rows) {
-          if (shouldOpen(row)) press(row)
-        }
-      },
-    })
-  }
-
-  const stopMutations = subscribeMutations(document.body, {
-    subtree: true,
-    childList: true,
-    attributeFilter: [ROW_PHASE_ATTRIBUTE, 'aria-expanded'],
-  }, (records) => {
-    for (const record of records) {
-      const target = record.target instanceof Element ? record.target : record.target.parentElement
-      const row = target?.closest(THINK_ROW_SELECTOR) ?? null
-      if (row !== null) queue(row)
-      for (const node of record.addedNodes) {
-        if (!(node instanceof Element)) continue
-        if (node.matches(THINK_ROW_SELECTOR)) queue(node)
-        for (const found of node.querySelectorAll(THINK_ROW_SELECTOR)) queue(found)
-      }
-    }
-  })
-
-  const stopReaderEvents = subscribeFoldReaderEvents((event) => {
-    if (isChatFoldToggle()) return
-    const target = event.target
-    if (!(target instanceof Element)) return
-    const row = target.closest(THINK_ROW_SELECTOR)
-    if (row === null) return
-    touchedIn.set(row, row.getAttribute(ROW_PHASE_ATTRIBUTE) ?? '')
-  }, () => {
-    for (const row of document.querySelectorAll<HTMLElement>(THINK_ROW_SELECTOR)) queue(row)
-  })
-
-  // Rows already standing when the feature installed take their turn now.
-  for (const row of document.querySelectorAll<HTMLElement>(THINK_ROW_SELECTOR)) queue(row)
-
-  return {
-    stop() {
-      stopped = true
-      if (cancelFrame !== null) cancelFrame()
-      cancelFrame = null
-      pending.clear()
-      stopMutations()
-      stopReaderEvents()
-    },
-  }
-}
-```
-
-- [ ] **Step 4: Wire it into `chat-fold.ts`**
-
-In `packages/client/src/features/chat-fold/chat-fold.ts`:
-
-```ts
-import { createReasoningOpen } from './reasoning-open'
-
-export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
-  document.body.setAttribute(CHAT_FOLD_ATTR, '')
-  const reasoningOpen = createReasoningOpen()
-  const stopProcess = createProcessFold()
-  // ...
-
-  return () => {
-    delete ui.chatFold
-    reasoningOpen.stop()
-    stopProcess()
-    // ...
-  }
-}
-```
-
-- [ ] **Step 5: Replace the missing `data-expanded` reads**
-
-In `packages/client/src/features/chat-follow/chat-follow.ts`, change the stuck thinking header check:
-
-```ts
-const open = think.getAttribute('aria-expanded') === 'true'
-  || think.querySelector('[data-disclosure-row][aria-expanded="true"], [role="button"][aria-expanded="true"]') !== null
-if (!open || !column.contains(think)) continue
-```
-
-and remove `EXPANDED_ATTRIBUTE` from its imports if no other use remains.
-
-In `packages/client/src/features/process-column/process-column.ts`, add a tiny mutation projection:
-
-```ts
-import { subscribeMutations } from '@dsh-claude-style/engine/bus'
-import { THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
-import { PROCESS_COLUMN_ATTR } from '../../constants'
-
-/** On a thinking row: `open` while its disclosure control is expanded. */
-const THINK_OPEN_ATTRIBUTE = 'data-dsh-claude-think-open'
-
-function syncThinkOpen() {
-  for (const row of document.querySelectorAll<HTMLElement>(THINK_ROW_SELECTOR)) {
-    const open = row.getAttribute('aria-expanded') === 'true'
-      || row.querySelector('[data-disclosure-row][aria-expanded="true"], [role="button"][aria-expanded="true"]') !== null
-    if (open !== row.hasAttribute(THINK_OPEN_ATTRIBUTE)) row.toggleAttribute(THINK_OPEN_ATTRIBUTE, open)
-  }
-}
-
-export function install() {
-  document.body.setAttribute(PROCESS_COLUMN_ATTR, '')
-  syncThinkOpen()
-  const stop = subscribeMutations(document.body, {
-    childList: true,
-    subtree: true,
-    attributeFilter: ['aria-expanded'],
-  }, syncThinkOpen)
-  return () => {
-    stop()
-    for (const row of document.querySelectorAll(`[${THINK_OPEN_ATTRIBUTE}]`)) row.removeAttribute(THINK_OPEN_ATTRIBUTE)
-    document.body.removeAttribute(PROCESS_COLUMN_ATTR)
-  }
-}
-```
-
-In `packages/client/src/features/process-column/process-column.css`, replace:
-
-```css
-body[data-dsh-claude-style][data-dsh-claude-process-column] [data-step-process-content] [data-variant="think"]:not([data-expanded]) {
-```
-
-with:
-
-```css
-body[data-dsh-claude-style][data-dsh-claude-process-column] [data-step-process-content] [data-variant="think"]:not([data-dsh-claude-think-open]) {
-```
-
-- [ ] **Step 6: Remove the obsolete expanded contract**
-
-In `packages/contracts/src/dom.ts`, delete:
-
-```ts
-export const EXPANDED_ATTRIBUTE = 'data-expanded'
-```
-
-Keep `FOLD_TOGGLE_SELECTOR`.
-
-In `packages/contracts/src/table.ts`, delete the `fold.expanded` entry. Remove `'fold.expanded'` from `chat-fold.manifest.ts`, `chat-follow.manifest.ts`, and `process-column.manifest.ts`.
-
-- [ ] **Step 7: Add the first-frame test**
-
-Create `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`:
-
-```js
-/**
- * The running row is pressed before any reasoning text renders, because the
- * host renders no body while the row is folded.
- *
- * @capability reasoning-display
- * @features chat-fold
- * @risk The skin waits for a body that a folded row never mounts, or retries a press that the control ignores.
- */
-import { spec, host } from '../../fixtures/behaviour.mjs'
-import { ROW_PHASE_ATTRIBUTE, RUNNING_STATE } from '@dsh-claude-style/contracts/dom'
-
-export default spec({ page: 'chat-fold' }, ({ test }) => {
-  test('a folded running row is pressed before its body exists, and an ignored press is not repeated', async (t) => {
-    const result = await t.page.evaluate(async ([think, phase, running]) => {
-      const frames = (count) => new Promise((resolve) => {
-        const step = () => (count -= 1) === 0 ? resolve() : requestAnimationFrame(step)
-        requestAnimationFrame(step)
-      })
-      const row = document.createElement('div')
-      for (const [name, value] of think) row.setAttribute(name, value)
-      row.setAttribute(phase, running)
-      const control = document.createElement('button')
-      control.type = 'button'
-      control.setAttribute('aria-expanded', 'false')
-      let presses = 0
-      control.addEventListener('click', () => { presses += 1 })
-      row.append(control)
-      document.body.append(row)
-      await frames(3)
-      return { presses, expanded: control.getAttribute('aria-expanded') }
-    }, [host.attributes('chat.think-row'), ROW_PHASE_ATTRIBUTE, RUNNING_STATE])
-
-    t.expectThat.equal(result.presses, 1, 'the row is pressed once without a body')
-    t.expectThat.equal(result.expanded, 'false', 'an ignored press leaves the control as it was')
-  })
-})
-```
-
-- [ ] **Step 8: Run the focused specs**
-
-Run:
-
-```powershell
-$env:PATH = 'D:\Develop\nvm\v24.19.0;' + $env:PATH
-node packages/testing/stand-in.mjs --spec reasoning-display/manual-fold
-node packages/testing/stand-in.mjs --spec reasoning-display/first-frame
-```
-
-Expected: both PASS.
-
-- [ ] **Step 9: Run the chat-fold smoke**
-
-Run:
-
-```powershell
-$env:PATH = 'D:\Develop\nvm\v24.19.0;' + $env:PATH
-node packages/testing/stand-in.mjs --spec chat-fold
-```
-
-Expected: PASS with the thinking row open and one press.
-
-- [ ] **Step 10: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
 git add packages/client/src/features/chat-fold packages/client/src/features/chat-follow/chat-follow.ts packages/client/src/features/process-column packages/contracts/src/dom.ts packages/contracts/src/table.ts packages/testing/specs/behaviour/reasoning-display packages/testing/smoke
-git commit -m "fix: 思考开始后立即展开一次"
+git commit -m "refactor: 思考行不再代按标题"
 ```
 
 ---
@@ -1745,7 +1419,7 @@ Expected: PASS; the cue still plays once per window and the permission cue wins.
 In `locale/zh.json` and `locale/en.json`, change the description to name system notifications and the current reasoning behavior. Use:
 
 ```json
-"zh": "dsh-claude-style 的轻量派生版：保留 Claude / DeepSeek 主题、模型选择、会话与统计能力；思考正文随内容到达直接显示并在运行阶段展开一次；任务完成或等待处理时可用提示音与系统通知提醒；不保留逐段步进窗口、峰谷费率、消息入场动画与自绘光标。"
+"zh": "dsh-claude-style 的轻量派生版：保留 Claude / DeepSeek 主题、模型选择、会话与统计能力；思考正文随内容到达直接显示，思考行保持宿主默认的折叠；任务完成或等待处理时可用提示音与系统通知提醒；不保留逐段步进窗口、峰谷费率、消息入场动画与自绘光标。"
 ```
 
 ```json
@@ -1828,19 +1502,6 @@ Create `docs/changes/notifications.json`:
   "external": true,
   "zh": "新增「提示通知窗口」开关，默认开启；任务完成、等待审批、等待计划审阅与等待回答时用系统通知提醒，点击通知回到对应会话",
   "en": "Add a Notification window switch, on by default, raising a system notification when a task finishes, waits for approval, waits for plan review or waits for an answer, with a click returning to that session"
-}
-```
-
-Create `docs/changes/reasoning-first-frame.json`:
-
-```json
-{
-  "at": "2026-11-12",
-  "group": "fixes",
-  "order": 2,
-  "external": true,
-  "zh": "修复思考刚开始时只显示标题、推理正文迟迟不出现的问题：运行中的思考行自动展开一次，读者手动收起后同一阶段不再打开",
-  "en": "Fix the first reasoning frames staying behind the folded title: a running thinking row opens once, and a reader who closes it keeps it closed for that phase"
 }
 ```
 

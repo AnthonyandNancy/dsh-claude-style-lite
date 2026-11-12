@@ -1,16 +1,16 @@
 /**
- * A running thinking row is opened once when it starts, so the first reasoning
- * text is visible at once; a reader who closes it keeps it closed for that phase.
+ * The host's own reasoning disclosure stays the reader's: a running thinking
+ * row is never pressed, and the row keeps the folded state the host gave it.
  *
  * @capability reasoning-display
  * @features chat-fold
- * @risk The skin leaves the first reasoning frames folded, or overrides a reader who closed the row.
+ * @risk The skin presses a thinking row open or shut behind the reader, or leaves the row in a state the host did not draw.
  */
 import { spec, host } from '../../fixtures/behaviour.mjs'
 import { ROW_PHASE_ATTRIBUTE, RUNNING_STATE } from '@dsh-claude-style/contracts/dom'
 
 export default spec({ page: 'chat-fold' }, ({ test }) => {
-  test('a running thinking row opens once, and a reader who closes it stays closed', async (t) => {
+  test('a running thinking row is never pressed, and keeps the state the host gave it', async (t) => {
     const result = await t.page.evaluate(async ([think, phase, running]) => {
       const build = (tag, pairs) => {
         const element = document.createElement(tag)
@@ -21,6 +21,8 @@ export default spec({ page: 'chat-fold' }, ({ test }) => {
         const step = () => (count -= 1) === 0 ? resolve() : requestAnimationFrame(step)
         requestAnimationFrame(step)
       })
+      // A row that arrives while the turn runs, as a live stream adds one: the
+      // page's own rows were in place when the skin installed.
       const row = build('div', [...think, [phase, running]])
       const control = build('button', [['type', 'button'], ['aria-expanded', 'false']])
       control.textContent = 'Think'
@@ -32,27 +34,25 @@ export default spec({ page: 'chat-fold' }, ({ test }) => {
       row.append(control, build('div', []))
       document.body.append(row)
       await frames(3)
-      const opened = control.getAttribute('aria-expanded') === 'true'
-      const pressedToOpen = presses
-      // The reader closes it: the same phase must not reopen it.
+      const afterMount = control.getAttribute('aria-expanded')
+      // The reader opens it: the skin leaves that state alone too.
       control.click()
       await frames(3)
-      const afterReaderClose = control.getAttribute('aria-expanded') === 'true'
-      // A new phase starts on the same row: it may open once more.
+      const afterReaderOpen = control.getAttribute('aria-expanded')
+      // The reasoning stops: the row is still where the reader put it.
       row.setAttribute(phase, 'ok')
-      row.setAttribute(phase, running)
       await frames(3)
       return {
-        opened,
-        pressedToOpen,
-        afterReaderClose,
-        afterNewPhase: control.getAttribute('aria-expanded') === 'true',
+        presses,
+        afterMount,
+        afterReaderOpen,
+        afterSettled: control.getAttribute('aria-expanded'),
       }
     }, [host.attributes('chat.think-row'), ROW_PHASE_ATTRIBUTE, RUNNING_STATE])
 
-    t.expectThat.equal(result.opened, true, 'the running row opens itself')
-    t.expectThat.equal(result.pressedToOpen, 1, 'one press opens it')
-    t.expectThat.equal(result.afterReaderClose, false, 'the reader’s close is kept in that phase')
-    t.expectThat.equal(result.afterNewPhase, true, 'a new running phase opens it again')
+    t.expectThat.equal(result.presses, 1, 'only the reader’s own press reaches the control')
+    t.expectThat.equal(result.afterMount, 'false', 'the running row stays folded as the host drew it')
+    t.expectThat.equal(result.afterReaderOpen, 'true', 'the reader’s own open is kept')
+    t.expectThat.equal(result.afterSettled, 'true', 'the row keeps that state once the reasoning stops')
   })
 })

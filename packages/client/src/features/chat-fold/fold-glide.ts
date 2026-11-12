@@ -3,7 +3,7 @@ import { motionReduced, systemPrefersReducedMotion } from '../../core/prefs'
 import { FOLD_INTENT_TTL_MS, FOLD_POPUP_SELECTOR, FOLD_ROLL_MS, FOLD_SKIPPED_CONTROL_SELECTOR, FOLD_VISIBLE_SHARE, foldBeginHeightClip, foldConfirmCollapsed, foldControlAt, foldControlAtBottom, foldExpandedBody, foldHoldThroughStalls, foldProcessBody, foldSettleAfter, foldVisibleReach, foldWatchReader, markChatFoldBusy } from './fold-glide-parts'
 import type { FoldWatch } from './fold-glide-parts'
 import { beginChatFoldToggle, chatFoldPressReading, endChatFoldToggle, isChatFoldToggle } from './fold-toggle'
-import { CHAT_FLOW_SELECTOR, CHAT_MOTION_SCOPE_SELECTOR, PROCESS_GROUP_SELECTOR, THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
+import { CHAT_FLOW_SELECTOR, CHAT_MOTION_SCOPE_SELECTOR, PROCESS_GROUP_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { joinScrollOwner } from '@dsh-claude-style/engine/scroll-owner'
 import { motionEase } from '../../shared/motion'
 import { inPageBox, inPagePixels } from '../../shared/page-zoom'
@@ -176,9 +176,8 @@ export function installChatFoldGlide() {
     if (!(target instanceof Element)) return
     // The folding's own programmatic presses (process groups and stopped-turn
     // work) go through this capture path marked, and are handed on: their door
-    // is not the reader's. Only a thinking row has its door rolled for such a
-    // press, because a row opening or closing without it would snap.
-    if (isChatFoldToggle() && target.closest(THINK_ROW_SELECTOR) === null) return
+    // is not the reader's.
+    if (isChatFoldToggle()) return
     // Only the chat area is taken over. aria-expanded is used page-wide — the
     // model picker, the settings dropdowns, the sidebar's rows, the task panel
     // — and their opening has nothing to do with the chat flow's movement;

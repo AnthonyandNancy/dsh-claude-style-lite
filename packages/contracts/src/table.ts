@@ -61,7 +61,7 @@ export const HOST_DOM: HostDomEntry[] = [
   { id: 'chat.call', value: dom.CHAT_CALL_SELECTOR, probe: { state: 'conversation', kind: 'selector' }, use: 'one tool call row: structure the follow watches for, and the estimate prices the call by the tool it runs' },
   { id: 'chat.call-tool', value: dom.CHAT_CALL_TOOL_SELECTOR, probe: { state: 'conversation', kind: 'selector' }, use: 'the host’s tool view inside a call row, which names the tool the call runs' },
   { id: 'chat.call-tool-attribute', value: dom.CHAT_CALL_TOOL_ATTRIBUTE, probe: { state: 'conversation', kind: 'attribute' }, use: 'the same contract as an attribute name: the tool a call row runs' },
-  { id: 'chat.think-row', value: dom.THINK_ROW_SELECTOR, probe: { state: 'conversation', kind: 'selector' }, use: 'one thinking row, whose disclosure the skin presses open once when it starts running' },
+  { id: 'chat.think-row', value: dom.THINK_ROW_SELECTOR, probe: { state: 'conversation', kind: 'selector' }, use: 'one thinking row, whose own state the skin reads and never presses: it stays folded as the host draws it' },
   { id: 'chat.think-running', value: dom.RUNNING_STATE, probe: { state: 'streaming', kind: 'value' }, use: 'the phase value while the model is still thinking' },
   { id: 'chat.phase', value: dom.ROW_PHASE_ATTRIBUTE, probe: { state: 'conversation', kind: 'attribute' }, use: 'the phase of a thinking row or a tool call\u2019s own view; the fold opens a thinking row while it reads `running`, and the follow notices one leaving it' },
   { id: 'chat.streaming', value: dom.STREAMING_SELECTOR, probe: { state: 'streaming', kind: 'selector' }, use: 'the markdown container while an answer streams' },

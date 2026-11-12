@@ -290,10 +290,10 @@ function page(name, tier, cases, probe = PROBE) {
         '<span class="_crumb_s_1 _crumbCurrent_s_1" style="padding:4px 8px;font-size:14px;font-weight:500">smoke session</span></span>' +
         '</nav></div></div></header>'
     : ''
-  // The fold case drives the two surfaces the ported folding acts on: a thinking
-  // row (opened once by the skin while it runs, then its own control flips it)
-  // and process groups — one running and capped, holding a thought and a tool
-  // call, and one in a tier that does not cap its body. The host's own behaviour
+  // The fold case drives the two surfaces the ported folding acts on: thinking
+  // rows (never pressed by the skin; each row's own control flips it) and process
+  // groups — one running and capped, holding a thought and a tool call, and one
+  // in a tier that does not cap its body. The host's own behaviour
   // is modelled in the script: each row's control flips its own aria-expanded, a
   // group's header flips its body's hidden. A header is the host's: a decorative
   // icon span, then its words. A thinking row carries its reasoning body the way

@@ -16,7 +16,7 @@
 | --- | --- | --- | --- |
 | R1 | 「会话总览面板」改为「默认打开会话总览面板」，入口常驻顶部，开关只决定每个会话是否默认打开 | `sessionPanel` 同时是功能开关和交互状态：关掉即拆除入口、栏和轮询；`useRailReading()` 的 `choice.mode` 只有 `auto/open/closed`，且以窗口阈值和宿主右栏为前置条件 | 把入口从偏好开关中解耦，功能改为 `ungated` 常驻安装；新增单独的默认打开偏好；栏的每次会话初始状态读取该偏好，读者的手动开合只覆盖当前会话 |
 | R2 | 「提示音效」下方新增「提示通知窗口」，默认打开；任务完成或受阻时发送系统通知 | 现有 `soundCues` 只消费 `permission/finished` 两类注意力事件，并仅调用宿主声音路由；仓库没有任何 `window.Notification` 调用、权限申请或通知点击路由；DSH 的 `pendingInteraction` 实际有 `approval / plan-review / question` 三型，现有代码只把它归并为一个 `permission` 布尔 | 新增独立通知功能，共用同一份注意力读取；偏好默认 `true`；事件拆成完成、受阻两类，受阻保留宿主三型细分；用 `Notification` API，权限在第一次真实通知时申请，拒绝后静默降级并保留开关；点击通知回到对应会话 |
-| R3 | 思考过程刚开始不能及时显示，只看到「思考」两个字（图一） | 宿主 `ReasoningRow` 的展开状态是组件内 `useState(false)`，Lite 在上一次改造中移除了唯一的自动展开；首段推理尚未换行时折叠摘要只显示最后一行，长推理首帧可能为空；页面下方「正在思考 1 秒」来自等待行，不是思考正文。另有 `data-expanded` 契约实际由旧皮肤写入/读取，宿主当前源码只写 `aria-expanded` 与 `data-open` | 恢复「运行阶段自动展开思考行」这一最小行为，并改读宿主的稳定标记 `aria-expanded`；读者手动开合按阶段记忆；行一进入运行阶段就展开；保留输入法组合与焦点保护；不恢复旧的完整 `reasoning-fold.ts` 行为 |
+| R3 | 思考过程刚开始不能及时显示，只看到「思考」两个字（图一） | 宿主 `ReasoningRow` 的展开状态是组件内 `useState(false)`；皮肤在行进入运行阶段时替读者按开标题，行因此不再保持宿主默认的折叠；页面下方「正在思考 1 秒」来自等待行，不是思考正文。另有 `data-expanded` 契约实际由旧皮肤写入/读取，宿主当前源码只写 `aria-expanded` 与 `data-open` | 删掉这段代按逻辑，思考行保持宿主自身的折叠形态，读者按标题自行开合；开合状态的读取改用宿主稳定的 `aria-expanded` |
 | R4 | 删除「思考内容显示」及其逻辑，默认逐字跟随 | `reasoningDisplay` 是 `PREFS` 中的正式选择，默认 `stepped`；`chat-fold` 设置行、`reasoning-stream.ts` 的窗口/步进时钟、`fold-motion.css`、surface 表、行为测试、E2E 场景与生成记录全部围绕它 | 删除偏好键、设置行、文案、窗口逻辑、样式、surface 条目与测试；保留宿主的原始流式文本显示；同步删除安装文档中的迁移键与上游差异说明中的窗口保留表述 |
 
 ---
@@ -120,20 +120,14 @@
     - 不创建通知器，不申请权限，不订阅额外状态。
     - 声音提示仍按「提示音效」的档位工作。
 
-### 2.3 R3 思考过程及时显示
+### 2.3 R3 思考行保持宿主的折叠
 
-1. 运行中的思考行在出现后自动展开，使首个到达的推理文字直接可见。
-2. 自动展开只做一次，条件是：
-   - 行处于 `data-state="running"`。
-   - 行的展开标记是收起的。
-   - 这一行在当前阶段没有被读者手动改过。
-3. 读者手动收起后，同一阶段不再自动展开；推理结束进入 `ok` 阶段时清除记忆。
-4. 推理结束时不自动收起，读者的展开状态保持到下一阶段开始。
-5. 输入法组合期间不点击宿主控件；组合结束后补做一次。
-6. 自动点击不抢走输入框焦点、不移动阅读位置，不触发 `chat-reveal` 的折叠静默窗口。
-7. 展开标记读写使用宿主稳定的 `aria-expanded`，不再依赖不存在的 `data-expanded`。
-8. 首段推理还没有任何文字时，标题行保持宿主原样；第一段文字到达后的同一帧或下一帧内展开，正文立即可见。
-9. 收起状态下宿主不渲染正文，因此自动展开的触发看运行阶段，不等正文节点出现：行一进入 `running` 就点击一次；读者收起后，同一阶段不再点击。
+1. 思考行以宿主默认的折叠状态出现，皮肤不按它的标题。
+2. 读者自己按标题展开或收起，状态由宿主保存，皮肤不改写。
+3. 推理结束、进入下一阶段或下一回合，行都不代开代收。
+4. 皮肤对思考行标题的点击次数为 0。
+5. 开合状态的读取使用宿主稳定的 `aria-expanded`，不再依赖不存在的 `data-expanded`。
+6. 思考正文按宿主的流式节奏写入，没有皮肤自己的摘要行或窗口。
 
 ### 2.4 R4 删除思考内容显示
 
@@ -416,81 +410,13 @@ DSH 的受阻状态就是 `pendingInteraction` 的三型：
 - 声音测试：
   - 现有 `sound-cues` 测试仍通过；事件形状改变后，断言声音仍按 `blocked/finished` 播放。
 
-### 3.3 R3 思考过程及时显示
+### 3.3 R3 思考行保持宿主的折叠
 
-#### 3.3.1 恢复最小自动展开
+#### 3.3.1 删掉代按标题的模块
 
-新增 `features/chat-fold/reasoning-open.ts`，职责单一：让运行中的思考行立即展开，并在读者收起后尊重读者。
+`features/chat-fold/reasoning-open.ts` 是皮肤唯一主动点击思考行标题的地方：它订阅思考行的插入与阶段变化，在行进入 `running` 时找到行内的 `aria-expanded` 控件并按一次，再按阶段记住读者的手动开合。整段行为与请求相反，因此删除该文件，连同 `chat-fold.ts` 里的 `createReasoningOpen()` 与它的 `stop()` 调用。
 
-```ts
-export function createReasoningOpen() {
-  const touchedIn = new WeakMap<Element, string>()
-  const attemptedIn = new WeakMap<Element, string>()
-  const queued = new Set<Element>()
-  let frame: (() => void) | null = null
-
-  function controlOf(row: Element) {
-    return row.querySelector<HTMLElement>('[data-disclosure-row][aria-expanded], [role="button"][aria-expanded], button[aria-expanded]')
-  }
-
-  function expandedOf(row: Element, control: HTMLElement) {
-    const onRow = row.getAttribute('aria-expanded')
-    if (onRow === 'true') return true
-    if (onRow === 'false') return false
-    return control.getAttribute('aria-expanded') === 'true'
-  }
-
-  function shouldOpen(row: Element) {
-    if (!row.isConnected) return false
-    if (row.getAttribute(ROW_PHASE_ATTRIBUTE) !== RUNNING_STATE) return false
-    if (touchedIn.get(row) === RUNNING_STATE) return false
-    const control = controlOf(row)
-    if (control === null) return false
-    if (expandedOf(row, control)) return false
-    if (attemptedIn.get(row) === RUNNING_STATE) return false
-    return true
-  }
-
-  function press(row: Element, control: HTMLElement) {
-    if (composerComposing()) return
-    attemptedIn.set(row, RUNNING_STATE)
-    const previousFocus = document.activeElement
-    const caret = captureComposerCaret()
-    beginChatFoldToggle()
-    try {
-      control.click()
-    } finally {
-      endChatFoldToggle()
-    }
-    if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
-      focusKeepingComposerCaret(previousFocus, caret)
-    }
-    if (document.activeElement === control) control.blur()
-  }
-
-  // subscribeMutations watches:
-  // - childList: a row inserted
-  // - attributes: data-state, aria-expanded
-  // It queues rows and uses requestFrame({ read, write }).
-  //
-  // Reader intent:
-  // subscribeFoldReaderEvents(rememberReaderTouched, settleAfterComposition)
-  // rememberReaderTouched: if isChatFoldToggle() return; find row; touchedIn.set(row, phase)
-  // settleAfterComposition: queue every running row not touched in this phase.
-
-  return { stop() { ... } }
-}
-```
-
-关键点：
-
-- 收起状态下正文不在 DOM 中，触发条件只看 `data-state="running"` 与当前展开态，不等正文节点。这样首段文字一到就能显示在已经展开的正文区里。
-- 点击前保存焦点与输入法组合状态，点击后恢复焦点；沿用 `process-fold.ts` 的保护写法。
-- 点击包在 `beginChatFoldToggle()` / `endChatFoldToggle()` 中，使 `fold-glide` 和 `chat-reveal` 知道这是程序点击。
-- 点击真实控件，不直接改 `aria-expanded`，避免与宿主 React 状态脱节。
-- `attemptedIn` 防止点击无效时每帧重试；状态变化后清除。
-- 读者手动收起后 `touchedIn` 记录当前阶段；阶段从 `running` 变为 `ok` 时不需要清除弱引用，下一次新行是新元素；同一行在同一阶段不再自动展开。
-- 推理结束不自动收起。
+删除后剩下的是宿主自己的行为：`ReasoningRow` 以自己的 `useState(false)` 决定开合，读者按标题时宿主自己改状态；皮肤只读这个状态来排版。
 
 #### 3.3.2 标记读取统一
 
@@ -498,42 +424,35 @@ export function createReasoningOpen() {
 
 - `reasoning-stream.ts`：本方案删除整个模块，不再处理。
 - `chat-follow.ts` 的 `stuckThinkHeaders()`：
-  - `think.hasAttribute(EXPANDED_ATTRIBUTE)` 改为：
-    ```ts
-    think.querySelector('[data-disclosure-row][aria-expanded="true"], [role="button"][aria-expanded="true"]') !== null
-    ```
+  - 展开判定改为读行上的 `aria-expanded` 或行内披露控件的 `aria-expanded`。
 - `process-column.css` 的 `[data-variant="think"]:not([data-expanded])`：
   - 由 `process-column.ts` 按 `aria-expanded` 投影 `data-dsh-claude-think-open`，避免 `:has()` 在旧 WebView 的成本。
   - `process-column.css` 的选择器改为 `[data-variant="think"]:not([data-dsh-claude-think-open])`。
 - `contracts/src/dom.ts` 的 `EXPANDED_ATTRIBUTE`：
   - 删除该常量与 `fold.expanded` 契约条目，避免继续把不存在的宿主标记当作契约。
+- `contracts/src/table.ts` 的 `chat.think-row` 说明改为「皮肤只读它的状态，从不代按」。
 - 行为 spec `manual-fold.spec.mjs` 与 `choice.spec.mjs`：
   - 改为在 fixture 中写 `aria-expanded`，与宿主一致。
-  - `manual-fold` 的标题改为「运行中的思考行立即展开一次，读者收起后不再打开」。
+  - `manual-fold` 的标题改为「运行中的思考行从不被代按，状态由读者与宿主决定」。
 
-#### 3.3.3 首段文字的时机
+#### 3.3.3 折叠状态下的显示
 
-宿主 `ReasoningRow` 在收起时不渲染 `thinkBody`，所以自动展开不能等正文节点出现。正确触发是行一进入 `running`、且控件收起时点击一次；宿主随后的流式文字直接长在已展开的正文里。截图里的摘要只显示「思考」两个字，原因是行仍折叠，标题旁的摘要还没有可读的推理文字；页面下方的「正在思考 1 秒」是等待行，不属于思考正文。
+宿主收起时不渲染正文，标题行只显示它自己的标题与折叠摘要；摘要何时有字、写到哪一行为止都由宿主决定，皮肤不补字、不挪位置。读者展开后才出现正文，正文按宿主流式写入。
 
 因此：
 
-- 不在皮肤中伪造摘要文字；摘要属于宿主。
-- 自动展开不依赖 `characterData`；行插入与 `data-state` 变化即可触发。
-- 读者收起后，不再因为后续文字到达而重新展开。
-- 不在标题旁加皮肤自己的「正在思考」；等待行已经承担这个信息。
+- 皮肤不写摘要文字，也不为摘要建立额外的观察或写入。
+- 皮肤不在 `data-state` 变化时点击控件。
+- 等待行已经承担「正在思考」这层信息，标题旁不再加皮肤自己的说法。
 
 #### 3.3.4 测试
 
 - 更新 `packages/testing/specs/behaviour/reasoning-display/manual-fold.spec.mjs`：
   - 构造一个运行中的折叠思考行。
-  - 断言它被展开一次，`aria-expanded="true"`，正文区出现。
-  - 读者收起后，继续追加文字，断言不再自动展开。
-  - 阶段变为 `ok` 后，新的运行阶段可以再次自动展开。
-- 新增 `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`：
-  - 行插入时 `running` 且折叠：下一帧内点击一次。
-  - 输入法组合中：不点击；`compositionend` 后点击。
-  - 点击无效（控件不响应）：不每帧重试。
-- `chat-fold` smoke 的 `fold.thinkOpen` 断言从 `false` 改为 `true`，`clicks.think` 从 `0` 改为 `1`。
+  - 断言插入后 `aria-expanded` 仍是 `false`，且控件没有被皮肤按过。
+  - 读者自己按开，断言皮肤不改写这个状态；阶段变为 `ok` 后状态保留。
+- 删除 `packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs`：它断言的正是被删除的代按行为。
+- `chat-fold` smoke 的 `fold.thinkOpen` 断言保持 `false`，`clicks.think` 保持 `0`，阶段结束后同样如此。
 - 保留 `reasoningContinuous` E2E 场景，作为长思考逐字跟随、跟随滚动与无窗口的回归；删除 `reasoningStream` 场景（见 R4）。
 
 ### 3.4 R4 删除思考内容显示
@@ -572,7 +491,7 @@ export function createReasoningOpen() {
 #### 3.4.3 测试与场景
 
 - 删除 `packages/testing/specs/behaviour/reasoning-display/choice.spec.mjs`。
-- 保留并重写 `manual-fold.spec.mjs` 为「自动展开一次 + 手动收起」。
+- 保留并重写 `manual-fold.spec.mjs` 为「从不代按，状态由读者与宿主决定」。
 - 删除 `packages/testing/scenarios/reasoning-stream.mjs` 中的 `reasoningStreamScenario`，保留 `reasoningContinuousScenario`。
 - `packages/testing/scenarios.mjs`
   - 删除 `reasoningStream` 注册；保留 `reasoningContinuous`。
@@ -586,7 +505,7 @@ export function createReasoningOpen() {
   - 删除窗口相关读数与 `window.__pushForm({ reasoningDisplay: 'stepped' })`。
   - 把 `data-expanded` 的读数改为 `aria-expanded`。
 - `packages/testing/smoke/cases/chat.mjs`
-  - 删除窗口断言；保留自动展开与手动折叠断言。
+  - 删除窗口断言；保留「思考行从未被代按、读者开合保持」的断言。
 - `packages/testing/smoke/cases/settings.mjs`
   - 从 `motion` 行列表删除 `reasoningDisplay`。
 - `packages/testing/specs/logic/preferences/stored-values.spec.ts`
@@ -624,11 +543,9 @@ packages/client/src/features/notifications/
   notifier.ts
   notifications.settings.ts        （权限状态与「允许通知」按钮）
 packages/client/src/shared/attention.ts
-packages/client/src/features/chat-fold/reasoning-open.ts
 packages/testing/specs/logic/notifications/attention.spec.ts
 packages/testing/specs/behaviour/notifications/window.spec.mjs
 packages/testing/specs/behaviour/session-panel/default-open.spec.mjs
-packages/testing/specs/behaviour/reasoning-display/first-frame.spec.mjs
 ```
 
 ### 4.2 修改文件
@@ -708,9 +625,9 @@ packages/testing/scenarios/reasoning-stream.mjs
 
 宿主状态快照没有结束原因。要区分失败/停止，需要跟 `sessions.binding(id).eventSource` 的 `turn/end` 原因，代价是第二条订阅和新的权限/生命周期。请求说「比如任务是待回答的时候，这个你要看 dsh 提供多少个状态了」，当前 DSH 提供的待回答状态就是 `approval / plan-review / question` 三型，方案完整覆盖；完成与停止仍统一为「任务完成」。
 
-### 5.4 为什么思考行自动展开只做「一次」
+### 5.4 为什么思考行不代按
 
-完整自动开合会在阶段切换时反复按宿主控件，带来输入法丢字、焦点抢走、阅读位置跳动和与 `chat-reveal` 的竞争。请求要解决的是「刚开始只有思考两个字」。最小行为是：行一进入运行阶段就展开一次；读者收起后尊重读者。这样既解决首帧空白，又不恢复被移除的整套自动开合。
+任何代按都要先读行状态、再造一次真实点击，然后处理焦点、输入法组合、与折叠门和渐显的竞争；阶段一变就要重来。请求要的是折叠形态本身，宿主 `ReasoningRow` 已经把它画好了，读者按标题就能开合。皮肤只读 `aria-expanded` 用于排版，行因此停在宿主给的状态上，也不再需要这套状态机。
 
 ### 5.5 为什么删除窗口而不是把默认改成 `continuous`
 
@@ -730,8 +647,8 @@ packages/testing/scenarios/reasoning-stream.mjs
 | 宽窗口才自动打开、窄窗口自动收起 | `useRailReading()` 用窗口与列宽阈值决定 `auto` | 代码把「是否默认打开」写成了响应式布局规则，读者无法用开关覆盖 |
 | 无系统通知 | 没有任何 `Notification` 调用 | 提醒功能只实现了声音，没有把同一个注意力事件接到第二个渠道 |
 | 通知缺少「受阻」细分 | `pendingInteraction` 被压成一个布尔 `pending` | 读取器丢失了宿主提供的 `approval / plan-review / question` 三型 |
-| 思考首帧只有「思考」两个字 | 宿主 `ReasoningRow` 初始折叠；Lite 删除了自动展开 | 上一版把「自动开合」整体移除，没有保留「运行阶段立即展开一次」 |
-| 折叠摘要不及时 | `latestLine` + 3 帧节流；首段未换行时可能为空 | 摘要不是正文；正文在折叠状态下不可见 |
+| 思考行不保持折叠 | 皮肤在行进入 `running` 时替读者按开标题 | 折叠状态被外部逻辑接管，宿主自己的开合不再是唯一来源 |
+| 折叠摘要不及时 | `latestLine` + 3 帧节流；首段未换行时可能为空 | 摘要属于宿主；皮肤不应另造摘要行 |
 | `data-expanded` 读取失效 | 宿主当前只写 `aria-expanded` / `data-open` | 契约常量沿用了旧宿主标记，没有随宿主实现更新 |
 | 「思考内容显示」仍存在 | `reasoningDisplay` 偏好、设置行、窗口模块未删除 | 需求从「保留两种显示」变为「只保留逐字跟随」，旧能力未退场 |
 
@@ -764,12 +681,11 @@ packages/testing/scenarios/reasoning-stream.mjs
 
 ### 7.3 R3
 
-- [ ] 运行中的思考行进入运行阶段后立即展开，正文可见。
-- [ ] 读者手动收起后，同一阶段不再自动展开。
-- [ ] 推理结束不自动收起。
-- [ ] 输入法组合期间不点击；组合结束后补做。
-- [ ] 自动点击不抢焦点、不移动阅读位置。
-- [ ] `aria-expanded` 与宿主状态一致；不再依赖 `data-expanded`。
+- [ ] 运行中的思考行以宿主默认的折叠状态出现。
+- [ ] 插件对思考行标题的点击次数为 0。
+- [ ] 读者按标题可以展开、收起，宿主状态不被插件改写。
+- [ ] 推理结束与下一阶段开始时，行的开合状态保持原样。
+- [ ] 皮肤只读 `aria-expanded`，不再依赖 `data-expanded`。
 
 ### 7.4 R4
 
@@ -787,8 +703,6 @@ packages/testing/scenarios/reasoning-stream.mjs
 | --- | --- | --- |
 | 通知权限被浏览器拒绝 | 读者看不到通知 | 设置行显示权限状态与「允许通知」按钮；拒绝后静默，不反复弹窗 |
 | Electron 页面 `Notification` 在窗口后台仍不显示 | 通知不可见 | 与声音一样，宿主声音仍可工作；通知是附加渠道，不承诺替代 |
-| 自动展开点击抢焦点 | 输入法丢字 | 点击前检查 `composerComposing()`；点击后恢复焦点与选区 |
-| 自动展开与读者点击竞争 | 读者刚收起又被打开 | `touchedIn` 按阶段记忆；程序点击标记让折叠门与渐显识别 |
 | 删除 `reasoningDisplay` 后旧设置残留 | 无影响 | `clampPrefs` 只读取已知键；未知键被忽略 |
 | 删除窗口后长思考不可读 | 读者需要自己滚动 | 宿主 `thinkBody` 自带 `max-height` 与滚动；`chat-follow` 保持跟随 |
 | 拆出 `notifications` 功能增加安装顺序复杂度 | 状态订阅重复 | 共享 `attention-feed` 单例读取；两个功能各自订阅同一份宿主快照，成本与现有声音功能相同 |
@@ -796,7 +710,7 @@ packages/testing/scenarios/reasoning-stream.mjs
 回退方式：
 - R1：恢复 `sessionPanel` 偏好与 `auto` 模式；保留新偏好作为未使用键。
 - R2：关闭新功能或删除 `notifications.manifest.ts` 的注册；声音功能不受影响。
-- R3：删除 `reasoning-open.ts` 的调用；思考行回到宿主默认折叠。
+- R3：无；思考行保持宿主自己的折叠，皮肤不参与。
 - R4：从 Git 历史恢复 `reasoning-stream.ts` 与 `reasoningDisplay` 相关文件；不通过 Git 回滚，按文件手工恢复。
 
 ---
@@ -814,12 +728,12 @@ packages/testing/scenarios/reasoning-stream.mjs
 - `docs/DEBUGGING.md`
   - 删除 `reasoning-stream` 窗口说明。
 - `locale/zh.json`、`locale/en.json`、`package.json` 的插件描述
-  - 把「移除思考自动开合」改为准确表述：「思考行在运行阶段展开一次，读者手动开合优先；不保留逐步显示窗口」。
+  - 把「移除思考自动开合」改为准确表述：「思考行保持宿主自己的折叠，读者按标题手动开合；不保留逐步显示窗口」。
   - 增加「系统通知」。
 - `docs/CHANGELOG.md` 或 `docs/changes/` 片段
   - 一条 R1 变更。
   - 一条 R2 新功能。
-  - 一条 R3 修复。
+  - 一条 R3 变更。
   - 一条 R4 移除。
   - 四条各自独立，便于回退与审阅。
 
@@ -828,10 +742,10 @@ packages/testing/scenarios/reasoning-stream.mjs
 ## 10. 实施顺序
 
 1. R4 先删除窗口与偏好，减少后续改动面。
-2. R3 在干净的 `chat-fold` 上加入 `reasoning-open.ts`。
+2. R3 删掉思考行上的代按逻辑，并把展开判定改读 `aria-expanded`。
 3. R1 拆分会话总览的安装与默认打开。
 4. R2 新增通知功能与共享注意力读取器。
 5. 同步生成记录、文档、locale 与变更片段。
 6. 运行构建、lint、单测、stand-in、behaviour、e2e 与 verify。
 
-> 顺序理由：R4 删除的 `reasoning-stream.ts` 与 R3 要改的思考行标记在同一目录；先删窗口，R3 只需处理展开，不必兼容窗口状态机。R1 与 R2 互不依赖，可以并行实施。
+> 顺序理由：R4 删除的 `reasoning-stream.ts` 与 R3 要改的思考行标记在同一目录，先删窗口可以让 R3 只处理标记读取；R1 与 R2 互不依赖，可以并行实施。

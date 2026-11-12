@@ -1,8 +1,0 @@
-{
-  "at": "2026-11-12",
-  "group": "fixes",
-  "order": 2,
-  "external": true,
-  "zh": "修复思考刚开始时只显示标题、推理正文迟迟不出现的问题，运行中的思考行自动展开一次，读者手动收起后同一阶段不再打开",
-  "en": "Fix the first reasoning frames staying behind the folded title, opening a running thinking row once while a reader who closes it keeps it closed for that phase"
-}

@@ -1,8 +1,8 @@
 /**
  * The folding (packages/client/src/features/chat-fold/): a running process group is
- * opened at install and folds back when its section ends; a running thinking row
- * is opened once at its start, the reader keeps their own close, and the reader’s
- * own presses roll a door instead of snapping a body.
+ * opened at install and folds back when its section ends; a thinking row is never
+ * pressed and keeps the folded state the host drew; the reader's own presses roll
+ * a door instead of snapping a body.
  */
 (function () {
   var probe = window.__dshSmokeProbe
@@ -12,8 +12,8 @@
     // The folding (packages/client/src/features/chat-fold/): a running process group is
     // opened at install and folds back when its section ends, a tier that does not
     // cap its body is never pressed, and a group the reader opened himself in that
-    // phase stays open. A running thinking row starts closed and is opened once by
-    // the skin; the state then belongs to the reader for that phase.
+    // phase stays open. A thinking row is never pressed: it stays folded as the
+    // host drew it, and its state belongs to the reader.
     await probe.onlyFor(['chat-fold'], async function () {
       var foldThink = document.getElementById('debugThink')
       var foldGroup = document.getElementById('debugGroup')
@@ -105,11 +105,11 @@
       foldGroup.style.width = ''
       r.fold.wide = await settledSummary()
       // The reasoning stops and the process section ends: the group folds back,
-      // and the host's words stop sweeping. The thinking row keeps the open state
-      // it has while the reader leaves it alone; its running phase ends here. The
-      // group carries no answer row, so it is a stopped turn's group: the host
-      // folds it itself at the end, and the skin opens it again, because a stopped
-      // turn's work is all the page has.
+      // and the host's words stop sweeping. The thinking row keeps the folded
+      // state the host drew, its running phase ending here. The group carries no
+      // answer row, so it is a stopped turn's group: the host folds it itself at
+      // the end, and the skin opens it again, because a stopped turn's work is all
+      // the page has.
       const answeredGroup = document.getElementById('debugAnsweredGroup')
       const answeredBody = document.getElementById('debugAnsweredBody')
       const stoppedGroup = document.getElementById('debugStoppedGroup')

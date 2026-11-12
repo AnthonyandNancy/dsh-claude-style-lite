@@ -831,14 +831,14 @@
       "a reader holding the conversation keeps the growth the host's pin pushed up, and nothing slides": [
         0
       ],
-      "a running thinking row is opened once by the skin": [
-        1
+      "a thinking row is never pressed by the skin, and stays folded as the host drew it": [
+        0
       ],
       "a tier that does not cap its body is never pressed": [
         0
       ],
-      "the thinking row keeps its open state once the reasoning stops": [
-        1
+      "the thinking row keeps that folded state once the reasoning stops": [
+        0
       ],
       "a press on a folding row is intercepted and handed to the real element when the door lands": [
         0,

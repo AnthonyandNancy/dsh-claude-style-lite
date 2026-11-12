@@ -1,6 +1,6 @@
 {
   "name": "dsh-claude-style-lite",
-  "description": "A lite fork of dsh-claude-style: keeps the Claude / DeepSeek themes, model picker, sessions and statistics; reasoning text arrives directly and the running row opens once; sound cues and system notifications can mark a task that finishes or waits on you; the stepped reasoning window, peak-rate meter, sent-message entrance animations and drawn caret are removed.",
+  "description": "A lite fork of dsh-claude-style: keeps the Claude / DeepSeek themes, model picker, sessions and statistics; reasoning text arrives directly while the thinking row stays as the host folds it; sound cues and system notifications can mark a task that finishes or waits on you; the stepped reasoning window, peak-rate meter, sent-message entrance animations and drawn caret are removed.",
   "version": "0.1.0",
   "type": "module",
   "main": "lib/host/index.js",
