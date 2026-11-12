@@ -1,11 +1,11 @@
 {
-  "sessionPanelTitle": {
-    "zh": "会话总览面板",
-    "en": "Session overview panel"
+  "sessionPanelOpenByDefaultTitle": {
+    "zh": "默认打开会话总览面板",
+    "en": "Open the session overview panel by default"
   },
-  "sessionPanelDesc": {
-    "zh": "在对话右侧显示独立的会话详情栏，列出工作目录与所在仓库、上下文占用、产出、变更请求和后台任务。",
-    "en": "Shows a separate session details rail beside the conversation: the working directory and the checkout it sits in, context occupancy, outputs, change requests and background work."
+  "sessionPanelOpenByDefaultDesc": {
+    "zh": "开启后，每个会话默认展开右侧的会话详情栏；关闭后入口仍在，可按需打开。",
+    "en": "With this on, each session opens the details rail; with it off the header control stays and opens it on demand."
   },
   "environment": {
     "zh": "环境",

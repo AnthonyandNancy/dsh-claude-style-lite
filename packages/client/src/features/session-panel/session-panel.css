@@ -503,8 +503,9 @@ body[data-dsh-claude-style] .dsh-claude-panel-group:first-of-type .dsh-claude-pa
 
 /* The conversation's details rail (D94): the skin's own column beside the chat,
    placed against the conversation column's edge and filled like the column's
-   other pages. It opens and retreats with that column's width, so it carries no
-   tab chrome of its own; the body inside keeps the panel's inset and scroll. */
+   other pages. The reader's setting decides whether it starts open, so it
+   carries no tab chrome of its own; the body inside keeps the panel's inset and
+   scroll. */
 /* The rail's own mount: a body child that lays nothing out itself, so the
    fixed column inside it is placed against the page, not against a box. */
 body[data-dsh-claude-style] .dsh-claude-details-root {

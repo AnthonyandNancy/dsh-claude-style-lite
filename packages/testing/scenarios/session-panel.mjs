@@ -4,12 +4,13 @@
  * D92). Registered in the lane's scenario table
  * (packages/testing/scenarios.mjs).
  *
- * The rail opens itself: no header control, no guide card, no host tab. The
- * scenario sends one turn that writes four files and runs three commands, reads
- * the sections the rail shows (environment, context, session stats, outputs,
- * background work), folds the two lists, then widens and narrows the window:
- * the rail retreats under the narrow frame and returns when the frame is wide
- * again. Closing it puts it away for the session and stops its asks.
+ * The rail opens by default, from the header control, with no guide card and no
+ * host tab. The scenario sends one turn that writes four files and runs three
+ * commands, reads the sections the rail shows (environment, context, session
+ * stats, outputs, background work), folds the two lists, then narrows and
+ * widens the window: the rail follows the setting rather than the frame width.
+ * Closing it puts it away for the session, keeps the header control, and stops
+ * its asks; a further turn leaves the reader's close standing.
  */
 import copy from '../../client/src/features/session-panel/session-panel.copy.json' with { type: 'json' }
 import { CONVERSATION_TABS_SELECTOR, HEADER_TITLE_ROW_SELECTOR, HEADER_TITLE_SELECTOR, HEADER_UTILITIES_SELECTOR } from '@dsh-claude-style/contracts/dom'
@@ -166,7 +167,8 @@ export function sessionPanelScenario({ check }) {
     },
     prompt: 'Write the rail note and start the background job.',
     delayMs: 60,
-    // Wide enough for the rail's own threshold (the conversation column keeps 1160px).
+    // The opening state comes from the setting; the frame only has to hold the
+    // 320px rail beside the conversation.
     viewport: { width: 1440, height: 900 },
 
     async beforeSend(context) {
@@ -177,11 +179,18 @@ export function sessionPanelScenario({ check }) {
       page.on('request', (request) => {
         if (request.url().includes(SESSION_PANEL_PATH)) notes.panelAsks.push(Date.now())
       })
-      // A new conversation has no turn yet: the rail stays away until one lands.
-      notes.heroRail = await page.evaluate(() => ({
-        rail: document.querySelector('.dsh-claude-details') !== null,
-        squeezed: [...document.querySelectorAll('div')].some((node) => getComputedStyle(node).paddingRight === '320px'),
-      }))
+      // A new conversation has no turn yet: the header control stands disabled
+      // and the rail stays away until a session can be described.
+      notes.heroRail = await page.evaluate(() => {
+        const control = document.querySelector('.dsh-claude-session-panel-button')
+        return {
+          control: control !== null,
+          disabled: control?.getAttribute('aria-disabled') ?? null,
+          nativeDisabled: control?.disabled ?? null,
+          rail: document.querySelector('.dsh-claude-details') !== null,
+          squeezed: [...document.querySelectorAll('div')].some((node) => getComputedStyle(node).paddingRight === '320px'),
+        }
+      })
     },
 
     async afterTurn(context) {
@@ -196,12 +205,18 @@ export function sessionPanelScenario({ check }) {
       // folded, so the second one is what says it arrived.
       await page.waitForFunction(() => /panel-command-three/.test(document.querySelector('.dsh-claude-details')?.textContent ?? ''), undefined, { timeout: 30000 })
       // The header's own control leads to the rail; the guide card does not
-      // (the rail is not a right-column tab any more).
-      notes.entry = await page.evaluate(() => ({
-        header: [...document.querySelectorAll('[data-slot="conversation.session.header.utilities"] button')]
-          .some((node) => /details|详情/i.test(node.getAttribute('aria-label') ?? '')),
-        guide: document.querySelector('[data-sidebar-right-guide-entry="claude-session-overview"]') === null,
-      }))
+      // (the rail is not a right-column tab any more). The entry stays whether
+      // the setting opens the rail or only leaves it on demand (D94).
+      notes.entry = await page.evaluate(() => {
+        const control = document.querySelector('.dsh-claude-session-panel-button')
+        return {
+          header: [...document.querySelectorAll('[data-slot="conversation.session.header.utilities"] button')]
+            .some((node) => /details|详情/i.test(node.getAttribute('aria-label') ?? '')),
+          control: control !== null,
+          disabled: control?.getAttribute('aria-disabled') ?? null,
+          guide: document.querySelector('[data-sidebar-right-guide-entry="claude-session-overview"]') === null,
+        }
+      })
       notes.preset = await readPreset(page)
       notes.rail = await readRail(page)
       // Section controls are independent, retain their choice through a poll,
@@ -302,8 +317,8 @@ export function sessionPanelScenario({ check }) {
           rows: [...document.querySelectorAll('.dsh-claude-details .dsh-claude-panel-stat')].map((row) => row.textContent.replace(/\s+/g, ' ').trim()),
         }
       }, SESSION_PANEL_PATH)
-      // The column narrows under its own width: the rail steps back, and comes
-      // back when the frame widens again.
+      // The frame narrows without the reader touching the control: the rail
+      // keeps the setting's answer instead of following the width.
       await page.setViewportSize({ width: 1160, height: 900 })
       await page.waitForTimeout(700)
       notes.narrow = await railMounted(page)
@@ -311,7 +326,7 @@ export function sessionPanelScenario({ check }) {
       await page.waitForTimeout(900)
       notes.wide = await railMounted(page)
       // The header's control closes the rail and opens it again, even in a
-      // frame narrow enough for the auto rule to keep it away.
+      // frame narrow enough for the old width rule to keep it away.
       await pressDetails(page)
       notes.closed = await page.evaluate(() => ({
         rail: document.querySelector('.dsh-claude-details') !== null,
@@ -325,6 +340,26 @@ export function sessionPanelScenario({ check }) {
       await pressDetails(page)
       await page.waitForTimeout(2500)
       notes.closedAsks = notes.panelAsks.length - quiet
+      // A measurement from the frame keeps the reader's close instead of
+      // returning the rail to the setting's default (D94).
+      await page.setViewportSize({ width: 1280, height: 900 })
+      await page.waitForTimeout(400)
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await page.waitForTimeout(500)
+      notes.closedAfterResize = await page.evaluate(() => ({
+        control: document.querySelector('.dsh-claude-session-panel-button') !== null,
+        rail: document.querySelector('.dsh-claude-details') !== null,
+      }))
+      // A further turn leaves the reader's close standing: the entry stays and
+      // the rail does not open itself again for this session (D94).
+      await sendPrompt(page, 'One more turn with the rail put away.')
+      await waitForTurn(page)
+      await page.waitForTimeout(500)
+      notes.afterClose = await page.evaluate(() => ({
+        control: document.querySelector('.dsh-claude-session-panel-button') !== null,
+        pressed: document.querySelector('.dsh-claude-session-panel-button')?.getAttribute('aria-pressed') ?? null,
+        rail: document.querySelector('.dsh-claude-details') !== null,
+      }))
       // The output opens through the host's preview controller without a browser tab.
       await pressDetails(page)
       notes.themes = []
@@ -372,10 +407,11 @@ export function sessionPanelScenario({ check }) {
       const statsWords = words('sessionStats')
       return [
         check('the header control leads to the rail and no guide card does',
-          notes.entry?.header === true && notes.entry?.guide === true,
+          notes.entry?.header === true && notes.entry?.control === true && notes.entry?.disabled === null && notes.entry?.guide === true,
           JSON.stringify(notes.entry ?? null)),
-        check('a new conversation opens no rail and squeezes nothing',
-          notes.heroRail?.rail === false && notes.heroRail?.squeezed === false,
+        check('a new conversation keeps the control disabled, opens no rail and squeezes nothing',
+          notes.heroRail?.control === true && notes.heroRail?.disabled === 'true' && notes.heroRail?.nativeDisabled === true &&
+            notes.heroRail?.rail === false && notes.heroRail?.squeezed === false,
           JSON.stringify(notes.heroRail ?? null)),
         check('the details rail opens itself beside the conversation', rail.mounted === true, JSON.stringify({ mounted: rail.mounted })),
         check('the rail shows the environment first', anyOf(environmentWords, (rail.headings ?? []).join('|')), JSON.stringify(rail.headings ?? null)),
@@ -421,7 +457,9 @@ export function sessionPanelScenario({ check }) {
         check('the host header chips step aside while the rail stands',
           notes.headerActions?.exists === false || (notes.headerActions.expanded === 0 && notes.headerActions.tree === 0),
           JSON.stringify(notes.headerActions ?? null)),
-        check('a narrow frame puts the rail away and a wide one brings it back', notes.narrow === false && notes.wide === true, JSON.stringify({ narrow: notes.narrow, wide: notes.wide })),
+        check('the rail follows the default preference rather than the frame width',
+          notes.narrow === true && notes.wide === true,
+          JSON.stringify({ narrow: notes.narrow, wide: notes.wide })),
         check('the header control shows the rail as pressed while it stands',
           notes.utilitiesOpen?.find((entry) => entry.pressed === 'true' && /details|详情/i.test(entry.label ?? '')) !== undefined,
           JSON.stringify(notes.utilitiesOpen ?? null)),
@@ -432,6 +470,12 @@ export function sessionPanelScenario({ check }) {
           notes.reopened === true && (notes.utilitiesReopened ?? []).find((entry) => /details|详情/i.test(entry.label ?? ''))?.pressed === 'true',
           JSON.stringify({ reopened: notes.reopened, utilities: notes.utilitiesReopened ?? null })),
         check('a closed rail stops asking the host', notes.closedAsks === 0, JSON.stringify({ asks: notes.closedAsks })),
+        check('a measurement from the frame keeps the reader\'s close',
+          notes.closedAfterResize?.control === true && notes.closedAfterResize?.rail === false,
+          JSON.stringify(notes.closedAfterResize ?? null)),
+        check('a further turn leaves the reader\'s close and the header control standing',
+          notes.afterClose?.control === true && notes.afterClose?.pressed === 'false' && notes.afterClose?.rail === false,
+          JSON.stringify(notes.afterClose ?? null)),
         check('the details rail stays inside the viewport in both themes',
           notes.themes?.length === 2 && notes.themes.every(theme => theme.width === 320 && theme.inside) && notes.themes[0].background !== notes.themes[1].background,
           JSON.stringify(notes.themes)),

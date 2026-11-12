@@ -1,13 +1,17 @@
 /**
  * The details rail's open state, shared by the rail and the header's control
- * (D94). The rail owns the decision (its column's width and the reader's own
+ * (D94). The rail owns the decision (the setting's default and the reader's own
  * choice); the header's button reads that decision and asks the rail to flip it.
+ * The conversation also reports whether it holds a session the rail can
+ * describe, so the header's control stands disabled on the hero page.
  */
 type Listener = () => void
 
 let open = false
 let toggle: (() => void) | null = null
+let available = false
 const listeners = new Set<Listener>()
+const availabilityListeners = new Set<Listener>()
 
 /** Whether the rail stands on the page right now. */
 export function railOpen() {
@@ -36,4 +40,29 @@ export function setRailToggle(next: (() => void) | null) {
 /** Flip the rail: open it, or put it away for this session. */
 export function toggleRail() {
   toggle?.()
+}
+
+/** Whether the conversation currently holds a session the rail can describe. */
+export function sessionAvailable() {
+  return available
+}
+
+/** Record the conversation's own answer; a changed value wakes the header's control. */
+export function setSessionAvailable(next: boolean) {
+  if (available === next) return
+  available = next
+  for (const listener of availabilityListeners) listener()
+}
+
+/** Follow the conversation's answer. */
+export function subscribeSessionAvailable(listener: Listener) {
+  availabilityListeners.add(listener)
+  return () => availabilityListeners.delete(listener)
+}
+
+/** Clear the answer with the generation that wrote it. */
+export function clearSessionPanelState() {
+  setSessionAvailable(false)
+  setRailOpen(false)
+  setRailToggle(null)
 }

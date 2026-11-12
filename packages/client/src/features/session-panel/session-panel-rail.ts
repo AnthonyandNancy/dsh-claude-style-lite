@@ -3,10 +3,11 @@ import { CONVERSATION_SCROLL_SELECTOR, CONVERSATION_SESSION_ATTRIBUTE, CONVERSAT
 import { observeMarker, observeSize, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { cacheFirstMatch, findRightbarToggle } from '@dsh-claude-style/engine/host'
 import { conversationScroller } from '@dsh-claude-style/engine/chat-dom'
+import { readPrefs, subscribePrefs } from '../../core/prefs'
 import { PART_ATTR } from '../../constants'
 import { SESSION_PANEL_ATTR } from '../../constants'
 import { copy } from './copy'
-import { setRailOpen, setRailToggle } from './session-panel-state'
+import { setRailOpen, setRailToggle, setSessionAvailable } from './session-panel-state'
 import { PanelBody } from './session-panel-body'
 
 const h = React.createElement
@@ -15,18 +16,8 @@ const h = React.createElement
 const CENTER = `[${PART_ATTR}~="center-column"]`
 const PRESET = `[${PART_ATTR}~="header-label"]`
 
-/** The rail's width, and the window and column widths that open and retreat it (D94). */
+/** The rail's width (D94). */
 const RAIL_WIDTH = 320
-/**
- * The rail needs a wide window and a conversation column that keeps a usable
- * chat beside it: the window alone would open it over a chat squeezed by the
- * host's own right column, and the column alone leaves a small window's chat
- * with no room for the rail.
- */
-const OPEN_WINDOW = 1360
-const OPEN_COLUMN = 860
-const CLOSE_WINDOW = 1180
-const CLOSE_COLUMN = 760
 
 /** One box in the page's pixels, as a fixed rail is placed from it. */
 interface RailBox {
@@ -38,7 +29,6 @@ interface RailBox {
 /** The session the conversation shows, followed across a switch and the hero page. */
 function useConversationSession() {
   const [reading, setReading] = React.useState<{ id: string | null, live: boolean }>({ id: null, live: false })
-  const setSession = (id: string | null) => setReading(previous => (previous.id === id ? previous : { id, live: previous.live }))
   React.useEffect(() => {
     // The element the attribute lands on may exist before the attribute: a
     // cached first match reads it again whenever the page's structure changes.
@@ -90,16 +80,17 @@ function usePresetLabel() {
 /**
  * Whether the details rail stands open, and where (D94).
  *
- * It opens itself when the conversation's column is wide enough and steps back
- * when the frame narrows; a reader who closes it keeps it closed for that
- * session. The box follows the column: the rail is fixed, and its right edge is
- * the column's own right edge, so an opened host sidebar moves it along.
+ * The setting decides the first state of each session; a reader who opens or
+ * closes the rail keeps that choice for the session they are reading, and a
+ * switch returns to the setting. The box follows the column: the rail is fixed,
+ * and its right edge is the column's own right edge, so an opened host sidebar
+ * moves it along.
  */
 function useRailReading(session: string | null) {
   const [open, setOpen] = React.useState(false)
   const [box, setBox] = React.useState<RailBox | null>(null)
-  /** The reader's own choice for this session: auto follows the width, open and closed stand. */
-  const choice = React.useRef<{ session: string | null, mode: 'auto' | 'open' | 'closed' }>({ session: null, mode: 'auto' })
+  /** The reader's own choice for this session; `default` follows the setting. */
+  const choice = React.useRef<{ session: string | null, mode: 'default' | 'open' | 'closed' }>({ session: null, mode: 'default' })
   /** Whether the host's own right column holds width now, as the last measurement read it. */
   const hostColumn = React.useRef(false)
   React.useEffect(() => {
@@ -110,27 +101,23 @@ function useRailReading(session: string | null) {
     const measure = () => {
       const rect = center === null ? null : center.getBoundingClientRect()
       // The rail may stand without the column part (an older host): it then
-      // takes the window's right edge, and only the window rule decides.
+      // takes the window's right edge, and the session's own state decides.
       setBox({
         top: rect === null ? 0 : Math.round(rect.top),
         height: rect === null ? window.innerHeight : Math.round(rect.height),
         right: rect === null ? 0 : Math.round(window.innerWidth - rect.right),
       })
-      if (choice.current.session !== session) choice.current = { session, mode: 'auto' }
+      if (choice.current.session !== session) choice.current = { session, mode: 'default' }
       // The host's own right column stands on this same side, so it comes
-      // first: while it holds width the rail keeps away, automatic and pressed
-      // alike, and the reader's choice stands again once that column closes
-      // (D94). Its width is the host's to give, so it is read from its box.
+      // first: while it holds width the rail keeps away, and the reader's
+      // choice stands again once that column closes (D94). Its width is the
+      // host's to give, so it is read from its box.
       hostColumn.current = host !== null && host.isConnected && host.getBoundingClientRect().width > 0
-      if (choice.current.mode !== 'auto') {
-        setOpen(choice.current.mode === 'open' && !hostColumn.current)
-        return
-      }
-      const windowWide = window.innerWidth >= OPEN_WINDOW
-      const columnWide = rect === null || rect.width >= OPEN_COLUMN
-      const windowNarrow = window.innerWidth < CLOSE_WINDOW
-      const columnNarrow = rect !== null && rect.width < CLOSE_COLUMN
-      setOpen(current => !hostColumn.current && (current ? !windowNarrow && !columnNarrow : windowWide && columnWide))
+      const preferred = readPrefs().sessionPanelOpenByDefault
+      const mode = choice.current.mode
+      setOpen(!hostColumn.current && (
+        mode === 'open' || (mode === 'default' && session !== null && preferred)
+      ))
     }
     const columns = observeMarker<HTMLElement>(CENTER)
     const hostColumns = observeMarker<HTMLElement>(RIGHTBAR_COLUMN_SELECTOR)
@@ -163,8 +150,10 @@ function useRailReading(session: string | null) {
     // The columns' own size observers report once on attach, which covers a
     // shell that laid out after this feature's first render; no timer wakes a
     // page that has settled.
+    const offPrefs = subscribePrefs(measure)
     window.addEventListener('resize', bind)
     return () => {
+      offPrefs()
       stopParts()
       columns.release()
       hostColumns.release()
@@ -173,26 +162,24 @@ function useRailReading(session: string | null) {
       if (stopHostSize !== null) stopHostSize()
     }
   }, [session])
-  const close = React.useCallback(() => {
-    choice.current = { session, mode: 'closed' }
-    setOpen(false)
-  }, [session])
   // The header's control keeps the reader's explicit choice for this session.
   React.useEffect(() => {
     const flip = () => {
-      if (open) close()
-      else {
-        choice.current = { session, mode: 'open' }
-        // The rail stands where the host's own right column stands: a press
-        // asks for that side, so the column closes first and the rail comes in
-        // as soon as its width is back (D94).
-        if (hostColumn.current) findRightbarToggle()?.click()
-        setOpen(!hostColumn.current)
+      if (open) {
+        choice.current = { session, mode: 'closed' }
+        setOpen(false)
+        return
       }
+      // The rail stands where the host's own right column stands: a press
+      // asks for that side, so the column closes first and the rail comes in
+      // as soon as its width is back (D94).
+      if (hostColumn.current) findRightbarToggle()?.click()
+      choice.current = { session, mode: 'open' }
+      setOpen(!hostColumn.current)
     }
     setRailToggle(flip)
     return () => { setRailToggle(null) }
-  }, [open, session, close])
+  }, [open, session])
   React.useEffect(() => {
     setRailOpen(open)
   }, [open])
@@ -204,6 +191,13 @@ export function SessionPanelRail() {
   const { id: session, live } = useConversationSession()
   const preset = usePresetLabel()
   const { open, box } = useRailReading(session)
+  // The header's control follows the conversation's own answer: a session id on
+  // a visible conversation is the only page its press can describe (D94). A new
+  // answer that stays available wakes nobody; only the rail's unmount clears it.
+  React.useEffect(() => {
+    setSessionAvailable(session !== null && live)
+  }, [session, live])
+  React.useEffect(() => () => setSessionAvailable(false), [])
   // The page mark squeezes the conversation; it goes with the rail itself, so a
   // hidden rail (a new session, a plugin page) leaves no strip of empty space.
   const shown = session !== null && live && open && box !== null
