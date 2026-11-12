@@ -19,7 +19,7 @@ export default {
       appearance: ['sidebarBrand', 'brandLockup', 'brandInk', 'palette', 'paletteCards', 'inlineCodeColor', 'backgroundOpacity', 'typeface', 'homeLayout', 'homeSessionScope', 'homeRipple', 'mascot', 'mascotScope'],
       'main-window': ['turnNav', 'messageActions', 'conversationWidth', 'viewTabs', 'headerBand', 'processRows', 'answerAnchor', 'sessionPanel', 'composerScope', 'composerBottomGap', 'questionCard', 'permissionsControl', 'modelPicker', 'effortSlider', 'modelDescriptions', 'quickProviders', 'effortAccent', 'contextDisplay', 'contextNumbers', 'statsPosition', 'statsFooterAlign', 'billingCurrency', 'billingTable'],
       sidebar: ['collapseFooter', 'banLocale', 'sidebarSearch', 'searchStyle', 'sidebarEntries', 'workspaceView', 'sidebarPeek', 'sidebarLayout'],
-      motion: ['motion', 'chatAnimations', 'chatWait', 'statusDetail', 'statusMotion', 'chatReveal', 'caretMotion', 'ongoingIndicator', 'ongoingIndicatorSide', 'reasoningDisplay'],
+      motion: ['motion', 'chatAnimations', 'chatWait', 'statusDetail', 'statusMotion', 'chatReveal', 'ongoingIndicator', 'ongoingIndicatorSide', 'reasoningDisplay'],
     }
     // The main window's three groups, each under its label and carrying its own
     // rows: the conversation side, the composer's controls with the model
@@ -160,17 +160,6 @@ export default {
           preview.width === Math.max(...(preview.wordWidths || [0]))
       }),
       JSON.stringify(previews))
-    const caretPreview = settings.caretPreview || {}
-    const typingCaret = caretPreview.typing || {}
-    const standingCaret = caretPreview.standing || {}
-    const offCaret = caretPreview.off || {}
-    check('the caret row previews its two answers on one typed line: a character waiting for its turn is unseen while the typed ones stand, the caret stands where the last typed character ends, and it is lit for the whole time the line is being typed and blinks on the native cycle once the line stands whole',
-      typingCaret.typed === 'visible' && typingCaret.waiting === 'hidden' && typingCaret.x === 34 &&
-        typingCaret.animation === 'none' && standingCaret.animation === 'dsh-claude-caret-blink',
-      JSON.stringify(caretPreview))
-    check('the on card\'s caret glides to each new place the line hands it and the off card\'s arrives there at once',
-      typingCaret.transition === '0.08s' && offCaret.animation === 'dsh-claude-caret-blink' && offCaret.transition === '0s',
-      JSON.stringify(caretPreview))
     const revealPreview = settings.revealPreview || {}
     const fade = revealPreview.fade || {}
     const waiting = revealPreview.waiting || {}

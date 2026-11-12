@@ -4,6 +4,8 @@
     "sendGhost": "[data-dsh-claude-send-ghost]",
     "sendFlight": "[data-dsh-claude-send-flight]",
     "sendLink": "[data-dsh-claude-send-link]",
-    "messageEnter": "[data-dsh-claude-message-enter]"
+    "messageEnter": "[data-dsh-claude-message-enter]",
+    "caretLayer": "[data-dsh-claude-caret-layer]",
+    "caretMark": "[data-dsh-claude-caret]"
   }
 }

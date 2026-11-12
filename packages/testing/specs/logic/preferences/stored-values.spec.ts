@@ -95,12 +95,6 @@ test('the retired overlay search style reads as the standalone button', () => {
   expect(clampPrefs({ searchStyle: 'icon' }).searchStyle).toBe('icon')
 })
 
-test('the caret switch reads the retired explicit-moves tier as on', () => {
-  expect(clampPrefs({ caretMotion: 'typing' }).caretMotion).toBe('typing')
-  expect(clampPrefs({ caretMotion: 'off' }).caretMotion).toBe('off')
-  expect(clampPrefs({ caretMotion: 'move' }).caretMotion).toBe(PREF_DEFAULTS.caretMotion)
-})
-
 test('the brand stored under its earlier name lands on its choice, anything else on Claude', () => {
   expect(clampPrefs({ brand: BRAND_DEEPSEEK }).brand).toBe(BRAND_DEEPSEEK)
   expect(clampPrefs({ brand: BRAND_DEEPSEEK_LEGACY }).brand).toBe(BRAND_DEEPSEEK)

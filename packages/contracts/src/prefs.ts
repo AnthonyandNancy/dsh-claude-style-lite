@@ -50,11 +50,6 @@ export const STATUS_MOTION_SWEEP = 'sweep'
 export const STATUS_MOTION_WASH = 'wash'
 export const STATUS_MOTIONS = [STATUS_MOTION_SWEEP, STATUS_MOTION_WASH] as const
 
-/** The composer caret's motion: `typing` takes the caret over and transitions every move, `off` leaves the browser's own. */
-export const CARET_MOTION_OFF = 'off'
-export const CARET_MOTION_TYPING = 'typing'
-export const CARET_MOTIONS = [CARET_MOTION_TYPING, CARET_MOTION_OFF] as const
-
 /** Whether the characters arriving in a streaming answer fade in. */
 export const CHAT_REVEAL_OFF = 'off'
 export const CHAT_REVEAL_ON = 'on'
@@ -328,7 +323,6 @@ export const PREFS = {
   reasoningDisplay: { type: 'choice', values: REASONING_DISPLAYS, default: REASONING_DISPLAY_STEPPED },
   /** Moves the reading position when an answer starts; default off because this is unsolicited movement. */
   answerAnchor: { type: 'boolean', default: false },
-  caretMotion: { type: 'choice', values: CARET_MOTIONS, default: CARET_MOTION_TYPING },
   processRows: { type: 'choice', values: PROCESS_ROWS_LAYOUTS, default: PROCESS_ROWS_FLAT },
   /** Completion/blocked cue gain; default off to avoid unsolicited interruption (D89). */
   soundCues: { type: 'choice', values: SOUND_LEVELS, default: SOUND_LEVEL_OFF },

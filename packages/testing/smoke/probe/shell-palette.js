@@ -262,63 +262,6 @@
           }
           return out
         })()
-        // The caret row's preview cards: one line is typed out in both cards,
-        // character by character, with the caret standing where the last typed
-        // character ends — lit for the whole time the line is being typed and
-        // blinking on the native cycle once the line stands whole, the on card's
-        // caret gliding to each new place and the off card's arriving there at
-        // once. The stand-in renders the page as a plain tree and the cards'
-        // clock lives in a component, so the cards are stood up here with the
-        // classes and the attributes they carry and read through their own
-        // boxes.
-        var caretHost = document.createElement('div')
-        caretHost.style.cssText = 'position:absolute;left:-10000px;top:-10000px'
-        var caretCard = function (kind, typing) {
-          var card = document.createElement('span')
-          card.className = 'dsh-claude-caret-card'
-          var sample = document.createElement('span')
-          sample.className = 'dsh-claude-caret-sample'
-          sample.style.setProperty('--dsh-claude-caret-x', '34px')
-          var text = document.createElement('span')
-          text.className = 'dsh-claude-caret-sample-text'
-          var typed = document.createElement('span')
-          typed.className = 'dsh-claude-caret-piece'
-          typed.setAttribute('data-in', '')
-          typed.textContent = 'H'
-          var waiting = document.createElement('span')
-          waiting.className = 'dsh-claude-caret-piece'
-          waiting.textContent = 'i'
-          text.appendChild(typed)
-          text.appendChild(waiting)
-          var bar = document.createElement('span')
-          bar.className = 'dsh-claude-caret-sample-bar dsh-claude-caret-' + kind
-          if (typing) bar.setAttribute('data-typing', '')
-          sample.appendChild(text)
-          sample.appendChild(bar)
-          card.appendChild(sample)
-          caretHost.appendChild(card)
-          return { card: card, sample: sample, bar: bar, typed: typed, waiting: waiting }
-        }
-        document.body.appendChild(caretHost)
-        var typingCaret = caretCard('typing', true)
-        var standingCaret = caretCard('typing', false)
-        var offCaret = caretCard('off', false)
-        var caretRead = function (one) {
-          var barStyle = getComputedStyle(one.bar)
-          return {
-            typed: getComputedStyle(one.typed).visibility,
-            waiting: getComputedStyle(one.waiting).visibility,
-            x: Math.round(one.bar.getBoundingClientRect().left - one.sample.getBoundingClientRect().left),
-            animation: barStyle.animationName,
-            transition: barStyle.transitionDuration,
-          }
-        }
-        r.settings.caretPreview = {
-          typing: caretRead(typingCaret),
-          standing: caretRead(standingCaret),
-          off: caretRead(offCaret),
-        }
-        caretHost.remove()
         // The new-text fade row's cards: the fade card hands each character its
         // turn and lets it land faint, settling over the reveal's own duration,
         // while the other card's characters stand solid the moment they arrive

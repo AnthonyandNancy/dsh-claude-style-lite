@@ -402,8 +402,7 @@ body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] :is([class^="dsh-c
    it, and the shorthand's `running` outranks a plain longhand; the mark is spelt
    twice because those two rules, and the skeleton's, come from feature sheets
    later in the cascade at the specificity one mark reaches, so the pause has to
-   stand above them rather than beside them (the way caret.css's layer rule
-   repeats its own attribute). */
+   stand above them rather than beside them. */
 body[data-dsh-claude-style][data-dsh-claude-asleep][data-dsh-claude-asleep] *,
 body[data-dsh-claude-style][data-dsh-claude-asleep][data-dsh-claude-asleep] *::before,
 body[data-dsh-claude-style][data-dsh-claude-asleep][data-dsh-claude-asleep] *::after {

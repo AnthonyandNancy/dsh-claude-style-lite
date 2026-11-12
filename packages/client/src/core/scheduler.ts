@@ -46,7 +46,6 @@ export interface Handles {
   chatAnchor: FeatureHandle
   chatFiles: FeatureHandle
   messageActions: FeatureHandle
-  caret: FeatureHandle
   viewTabs: FeatureHandle
   headerBand: FeatureHandle
   rightbarFit: FeatureHandle

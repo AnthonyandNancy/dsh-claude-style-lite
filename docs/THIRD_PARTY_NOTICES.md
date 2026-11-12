@@ -4,7 +4,7 @@ This package includes material from the projects below. Each keeps its own licen
 
 ## dsh-chat-ux
 
-The chat area's folding (`packages/client/src/features/chat-fold/`), the token reveal (`packages/client/src/features/chat-reveal/`), the send flight (`packages/client/src/features/chat-send/`), the enhanced follow and the capped process group's follow (`packages/client/src/features/chat-follow/`) and the composer caret (`packages/client/src/features/caret/`) are ported from dsh-chat-ux. The ported source files name it in their headers, and each of those features stands down while that plugin is on the page.
+The chat area's folding (`packages/client/src/features/chat-fold/`), the token reveal (`packages/client/src/features/chat-reveal/`) and the enhanced follow and the capped process group's follow (`packages/client/src/features/chat-follow/`) are ported from dsh-chat-ux. The ported source files name it in their headers, and each of those features stands down while that plugin is on the page. The composer caret was ported from the same plugin; dsh-claude-style-lite removes it and uses the browser's native caret.
 
 The context meter's pie (`packages/client/src/features/context-stats/context-meter-pie.ts`) is derived the same way: the occupied share drawn as a pie in the reading's own colour, painted as the trigger's own background image, and the seam cut by stroking a sector's own path are taken from that plugin; the two sectors standing on one centre, the step that follows the split and the seam shared between their two strokes are this plugin's. The browser half draws it while that plugin is off the page and leaves the host's ring standing while it is on.
 

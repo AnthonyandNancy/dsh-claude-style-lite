@@ -149,7 +149,7 @@ export const CHAT_REVEAL_HIGHLIGHT_PREFIX = 'dsh-claude-tok-'
 export const CHAT_REVEAL_COLOR_VAR = '--dsh-claude-run-color'
 /** On a user message the skin holds folded (features/chat-fold/message-fold.ts): the stylesheet clamps the bubble to the fold's own cap and softens its bottom edge. */
 export const MESSAGE_FOLD_ATTR = 'data-dsh-claude-message-fold'
-/** On a node the skin owns purely for its own bookkeeping — the caret motion's probe container and the caret it draws.
+/** On a node the skin owns purely for its own bookkeeping.
  * The shared scheduler ignores mutations against such a node (D40), so measuring or redrawing never wakes a pass that no feature needs. */
 export const QUIET_ATTR = 'data-dsh-claude-quiet'
 /** On a host element the stylesheet keys on, carrying the name of the part it plays (packages/engine/src/parts.ts). Every rule that used to match a fragment of a hashed host class name reads this attribute instead, so a match is exact.
@@ -162,15 +162,6 @@ export const HOLDS_ATTR = 'data-dsh-claude-holds'
 export const SESSION_PANEL_ATTR = 'data-dsh-claude-session-panel'
 /** On the element the fold glide is pressing right now (features/chat-fold/fold-glide.ts): while it stands, the elements inside lay out at their natural height instead of being squeezed by flex (fold-motion.css). */
 export const CHAT_ROLLING_ATTR = 'data-dsh-claude-rolling'
-/** On an editable surface once the caret motion has taken it over (features/caret/). */
-export const CARET_ATTR = 'data-dsh-claude-caret'
-export const CARET_LAYER_ATTR = 'data-dsh-claude-caret-layer'
-export const CARET_VISIBLE_ATTR = 'data-dsh-claude-caret-visible'
-/** On a parent lent the positioning context the drawn caret is placed against. */
-export const CARET_HOST_ATTR = 'data-dsh-claude-caret-host'
-/** On a text field the skin builds for its own interface, which the caret motion takes over like a seat textarea (features/caret/).
- * The host's own fields are reached through their contracts; this one belongs to the skin, so it carries the skin's mark. */
-export const CARET_FIELD_ATTR = 'data-dsh-claude-field'
 /** Present while the ported folding is installed (features/chat-fold/): the stylesheet's header-summary rules hang off it, and switching the feature off hands the chat area back whole. */
 export const CHAT_FOLD_ATTR = 'data-dsh-claude-chat-fold'
 /** Present while the skin takes over the sidebar footer (settings area + account row). */

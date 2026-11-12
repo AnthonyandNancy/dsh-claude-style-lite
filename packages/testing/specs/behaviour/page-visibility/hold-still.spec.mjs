@@ -4,7 +4,7 @@
  * when the page comes back.
  *
  * @capability page-visibility
- * @features caret, effort, home-ripple
+ * @features effort, home-ripple
  * @risk A window left in the background keeps producing frames, and coming back to it stalls for seconds while the compositor catches up.
  */
 import { spec } from '../../fixtures/behaviour.mjs'

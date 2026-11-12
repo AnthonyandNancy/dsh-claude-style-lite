@@ -407,7 +407,6 @@ edit the JSON, not the table.
 <!-- generated:motion (packages/client/src/theme/tokens.json) -->
 | Token | Value | Use |
 |---|---|---|
-| `--dsh-claude-duration-instant` | `80ms` | the composer caret following the insertion point |
 | `--dsh-claude-duration-feedback` | `120ms` | a control answering hover, press or focus: its colour, background, border, shadow, or a small turn or slide of its own parts |
 | `--dsh-claude-duration-reveal` | `120ms` | content entering the chat area: an opened row's body, and each streamed piece of the answer |
 | `--dsh-claude-duration-enter` | `320ms` | one message the reader sends growing into its row, the same growth on the Motion tab's card, and a colour disc lifting out of its row and springing back |
@@ -441,13 +440,11 @@ edit the JSON, not the table.
 | `--dsh-claude-duration-host-sweep-delay` | `300ms` | how long the highlight band waits after its words appear before its first pass |
 | `--dsh-claude-period-preview-swap` | `4000ms` | one turn of the settings page's waiting-line preview: one wording standing, leaving, and standing again |
 | `--dsh-claude-period-preview-reveal` | `4000ms` | one turn of the settings page's new-text fade preview: the sample arriving character by character, then standing before the next wipe |
-| `--dsh-claude-period-preview-caret` | `4000ms` | one turn of the settings page's caret preview: the sample line typed out, then standing whole before the next turn |
 | `--dsh-claude-period-wash-hue` | `4000ms` | one turn of the hue rotation the waiting line's colour wash runs through |
 | `--dsh-claude-period-wash-drift` | `5000ms` | one orbit of the colour washes around the waiting line's glyph box |
 | `--dsh-claude-period-pulse` | `1600ms` | a placeholder breathing while its numbers are computed |
 | `--dsh-claude-period-flash` | `1450ms` | one flash of the reasoning slider's top-rung matrix |
 | `--dsh-claude-period-flow` | `4000ms` | one pass of the reasoning slider's top-rung particle flow |
-| `--dsh-claude-period-blink` | `1000ms` | one blink of the composer caret |
 | `--dsh-claude-period-breathe` | `2400ms` | one breath of the sidebar's ongoing-conversation light |
 | `--dsh-claude-period-spin` | `850ms` | one turn of the sidebar's ongoing-conversation ring |
 | `--dsh-claude-period-landed` | `1400ms` | the mark on the turn the conversation navigator landed on |

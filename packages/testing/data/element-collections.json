@@ -4,7 +4,6 @@
     "packages/client/src/features/account/account-footer.ts": 1,
     "packages/client/src/features/account/footer-mirror.ts": 2,
     "packages/client/src/features/active-first/active-first.ts": 1,
-    "packages/client/src/features/caret/caret.ts": 2,
     "packages/client/src/features/chat-files/file-row-merge.ts": 5,
     "packages/client/src/features/chat-fold/message-fold.ts": 2,
     "packages/client/src/features/chat-fold/process-fold.ts": 3,

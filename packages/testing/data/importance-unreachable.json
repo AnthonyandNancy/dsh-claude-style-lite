@@ -433,8 +433,6 @@
     {
       "reason": "输入光标：宿主的输入框不在走查的页面形态里",
       "selectors": [
-        "body[data-dsh-claude-style] textarea[data-dsh-claude-caret]",
-        "body[data-dsh-claude-style] [data-dsh-claude-caret-host]"
       ]
     },
     {

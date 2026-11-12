@@ -45,8 +45,6 @@
           follow: document.body.hasAttribute('data-dsh-claude-chat-follow'),
           fold: document.body.hasAttribute('data-dsh-claude-chat-fold'),
           reveal: document.body.hasAttribute('data-dsh-claude-chat-reveal'),
-          caretLayer: document.querySelector('[data-dsh-claude-caret-layer]') !== null,
-          caretMark: peerEditor !== null && peerEditor.hasAttribute('data-dsh-claude-caret'),
         },
         seats: (window.__slots || []).filter(function (entry) { return entry.key === 'tool.call.toolview' }).length,
         highlights: peerHighlights(),
@@ -56,7 +54,7 @@
       // The settings page, through the same React-tree walk the settings case
       // uses: the rows of the two tabs the ported controls are registered on —
       // the chat-area animation in the main window's conversation group, the
-      // caret on the Motion tab — which of them refuse input, which carry the
+      // fade on the Motion tab — which of them refuse input, which carry the
       // line naming the owner, and what answer each control shows.
       var PeerSection = (window.__slotComponents || {})['claude-style']
       var PEER_TABS = ['main-window', 'motion']

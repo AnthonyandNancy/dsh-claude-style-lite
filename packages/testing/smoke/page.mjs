@@ -78,7 +78,6 @@ const PROBE_PARTS = [
   'mascot.js',
   'chat-follow.js',
   'chat-anchor.js',
-  'chat-caret.js',
   'chat-fold.js',
   'chat-reveal.js',
   'chat-files.js',
@@ -290,12 +289,6 @@ function page(name, tier, cases, probe = PROBE) {
         '<span class="_crumbSeg_s_1" style="display:inline-flex">' +
         '<span class="_crumb_s_1 _crumbCurrent_s_1" style="padding:4px 8px;font-size:14px;font-weight:500">smoke session</span></span>' +
         '</nav></div></div></header>'
-    : ''
-  // The caret case drives both editable surfaces: the shared contenteditable
-  // composer input, and a plain textarea under a composer seat — the shape a
-  // question card's answer box has.
-  var caretArea = name === 'caret'
-    ? '<div data-composer-seat><textarea id="debugAnswer" rows="3">hello world</textarea></div>'
     : ''
   // The fold case drives the two surfaces the ported folding acts on: a thinking
   // row (opened and folded back by its own control) and process groups — one
@@ -560,7 +553,6 @@ ${dock}
 </div>
 ${heroLayout}
 ${hostControls}
-${caretArea}
 ${sessionTitleArea}
 ${chatSubmit}
 ${foldArea}

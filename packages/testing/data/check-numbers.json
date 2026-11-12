@@ -856,9 +856,6 @@
       "a reader holding the conversation keeps the growth the host's pin pushed up, and nothing slides": [
         0
       ],
-      "the drawn caret is placed with a transform": [
-        0
-      ],
       "a thinking row stays as the host drew it until the reader presses it": [
         0
       ],
@@ -1159,9 +1156,6 @@
         0,
         1,
         2
-      ],
-      "the caret row previews its two answers on one typed line: a character waiting for its turn is unseen while the typed ones stand, the caret stands where the last typed character ends, and it is lit for the whole time the line is being typed and blinks on the native cycle once the line stands whole": [
-        34
       ],
       "the new-text fade row previews its two answers: the fade card's character lands faint and settles over the reveal's own duration, the other stands solid as it arrives, and a character waiting for its turn is unseen": [
         0.12

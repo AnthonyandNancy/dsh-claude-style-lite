@@ -203,11 +203,6 @@ body[data-dsh-claude-style] .dsh-claude-model-search-clear:hover {
 body[data-dsh-claude-style] .dsh-claude-model-search-clear svg {
   display: block;
 }
-/* The drawn caret stands over the mirror and the streak: both paint above the
-   field's own text, and the caret is what the reader follows. */
-body[data-dsh-claude-style] .dsh-claude-model-search-field [data-dsh-claude-caret-layer] {
-  z-index: 5;
-}
 /* The reader's animation choice, resolved onto <body> (D40): reduced takes the
    flight away whole, and the script asks the same question before it starts
    one, so no half state is left behind. */

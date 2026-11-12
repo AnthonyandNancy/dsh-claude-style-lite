@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "removals",
+  "order": 30,
+  "external": true,
+  "zh": "移除自绘光标，输入框恢复浏览器原生光标",
+  "en": "Remove the drawn caret and leave the browser's native caret in every field"
+}

@@ -2,12 +2,11 @@
  * The model picker's second level carries a search field at its top. Typing a
  * name narrows the list to the models that answer to it and keeps the provider
  * label above them; the field's clear puts every model back, and hands its
- * words over the way the reader asked to be moved. Both the card and the
- * field's own caret belong to the skin, so a key or a press lands where the
- * reader expects.
+ * words over the way the reader asked to be moved. The field keeps the
+ * browser's caret, so a key or a press lands where the reader expects.
  *
  * @capability model-picker
- * @features model, caret
+ * @features model
  * @risk A reader who opens More models and types a model's name sees the whole catalog unchanged, a list with no rows at all, or a second Escape folding a card they are still reading.
  */
 import { spec } from '../../fixtures/behaviour.mjs'
@@ -104,15 +103,14 @@ export default spec({ page: 'effort' }, ({ test }) => {
     t.expectThat.equal(await t.read.box(t.surface('model.sub-card')), null, 'the second Escape folded it')
   })
 
-  test('the field draws the skin\'s own caret while the reader types in it', async (t) => {
+  test('the field keeps the browser caret while the reader types in it', async (t) => {
     await openSecondLevel(t)
     // The field took the focus from the press that opened the card; the drawn
     // caret is the blink the skin paints, not the browser's.
     await search(t, 'glm')
     const field = t.surface('model.search-field')
     t.expectThat.equal(await t.page.evaluate((selector) => document.activeElement === document.querySelector(selector), field), true, 'the field holds the focus')
-    t.expectThat.equal(await t.read.computed(field, 'caret-color'), 'rgba(0, 0, 0, 0)', 'the native caret is pressed down')
-    t.expectThat.moving(await t.read.animations(t.surface('caret.layer')), 'the drawn caret blinks')
+    t.expectThat.equal(await t.read.computed(field, 'caret-color') !== 'rgba(0, 0, 0, 0)', true, 'the native caret is visible')
   })
 
   test('under reduced motion the clear lands at once and leaves nothing mid-flight', async (t) => {
@@ -120,8 +118,7 @@ export default spec({ page: 'effort' }, ({ test }) => {
     const every = await clearOneQuery(t)
     t.expectThat.equal(await rows(t).count(), every, 'every model is back on the press itself')
     const field = t.surface('model.search-field')
-    t.expectThat.equal(await t.read.computed(field, 'caret-color'), 'rgba(0, 0, 0, 0)', 'the native caret stays pressed down')
-    t.expectThat.still(await t.read.animations(t.surface('caret.layer')), 'no caret blinks')
+    t.expectThat.equal(await t.read.computed(field, 'caret-color') !== 'rgba(0, 0, 0, 0)', true, 'the native caret stays visible')
   })
 
   test('the second level opens with its field a press away from the whole catalog', async (t) => {

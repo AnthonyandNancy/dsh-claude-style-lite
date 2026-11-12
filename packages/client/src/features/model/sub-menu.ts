@@ -6,7 +6,6 @@ import { motionEaseAt, motionMs, motionValue } from '../../shared/motion'
 import { releaseCardHeight, travelCardHeight } from '../../shared/card-resize'
 import { motionReduced } from '../../core/prefs'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
-import { CARET_FIELD_ATTR } from '../../constants'
 import type { createModelRows } from './rows'
 import type { HostModelCatalogSnapshot, HostModelEntry, HostModelGroup } from '@dsh-claude-style/contracts/services'
 
@@ -70,9 +69,6 @@ export function createModelSubMenu(options: ModelSubMenuOptions) {
   field.type = 'text'
   field.spellcheck = false
   field.setAttribute('autocomplete', 'off')
-  // The mark the caret feature knows a field of the skin's own by
-  // (packages/client/src/features/caret/caret.ts).
-  field.setAttribute(CARET_FIELD_ATTR, '')
   // The words sit in the mirror so they can fly off it; the field keeps its own
   // glyphs transparent while it has any (the sheet).
   const mirror = buildElement('div', 'dsh-claude-model-search-mirror')
@@ -278,11 +274,11 @@ export function createModelSubMenu(options: ModelSubMenuOptions) {
   /**
    * Empty the field and put the insertion point back at its start.
    *
-   * A value written by hand leaves the selection where the old words ended, and
-   * the drawn caret follows the selection: without this it stands over the
-   * placeholder's middle with nothing before it. The write announces itself as
-   * an input, which is what the caret measures again on — a programmatic write
-   * fires no selectionchange.
+   * A value written by hand leaves the selection where the old words ended, so
+   * the browser draws its caret there: without the range write below it would
+   * stand over the placeholder's middle with nothing before it. The write
+   * announces itself as an input, because a programmatic write fires no
+   * selectionchange for the list to hear.
    */
   function emptyField() {
     field.value = ''
@@ -322,7 +318,7 @@ export function createModelSubMenu(options: ModelSubMenuOptions) {
   /**
    * Take a key the reader pressed into the field, as their own typing does.
    *
-   * The write announces itself as an input, which is what the caret measures
+   * The write announces itself as an input, which is what the browser measures
    * again on (see emptyField), and the list under the field follows the words.
    */
   function type(text: string) {
@@ -346,7 +342,7 @@ export function createModelSubMenu(options: ModelSubMenuOptions) {
     travel.style.transform = field.scrollLeft === 0 ? '' : `translateX(${-field.scrollLeft}px)`
   })
   // The press must not take the focus off the field: the reader clears to type
-  // again, and a refocus after the flight would restart the drawn caret.
+  // again, and a refocus after the flight would restart the browser's caret.
   const keepFocus = (event: Event) => {
     if (document.activeElement === field) event.preventDefault()
   }

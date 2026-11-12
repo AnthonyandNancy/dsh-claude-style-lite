@@ -6,6 +6,7 @@
  */
 import parser from 'postcss-selector-parser'
 import registry from '../../data/surface.json' with { type: 'json' }
+import retired from '../../data/retired-skin-marks.json' with { type: 'json' }
 import { loadModule } from '../../../../scripts/shared/ts-module.mjs'
 
 const { HOST_DOM } = loadModule('packages/contracts/src/table.ts')
@@ -203,4 +204,11 @@ const expectThat = {
   },
 }
 
-export { spec, surface, host, readers, expectThat, PredicateError }
+/** A mark a removed upstream feature wrote, by the name the removal record gives it. */
+function retiredMark(id) {
+  const mark = retired.marks[id]
+  if (mark === undefined) throw new Error(`retired: no mark "${id}" in packages/testing/data/retired-skin-marks.json`)
+  return mark
+}
+
+export { spec, surface, host, retiredMark, readers, expectThat, PredicateError }

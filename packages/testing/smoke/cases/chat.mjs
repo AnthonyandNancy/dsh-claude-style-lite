@@ -115,31 +115,6 @@ export default {
       Number.isFinite(hold.gap) && hold.gap >= bound('followHoldGrowthPx') && hold.slides === 0,
       JSON.stringify(hold))
   },
-  caret(r) {
-    basicChecks(r)
-    const caret = r.caret || {}
-    const on = caret.on || {}
-    const off = caret.off || {}
-    const back = caret.back || {}
-    check('the focused composer surface gets a drawn caret and the native one gives way',
-      on.layer === true && on.visible === true && on.marked === true && on.nativeHidden === true,
-      JSON.stringify(on))
-    check('the drawn caret is placed with a transform',
-      typeof on.transform === 'string' && on.transform.indexOf('translate(') === 0, JSON.stringify(on.transform))
-    check('off takes the drawn caret and the mark away and gives the native caret back',
-      off.layer === false && off.marked === false && off.nativeHidden === false, JSON.stringify(off))
-    check('switching it back draws it again', back.layer === true && back.marked === true, JSON.stringify(back))
-    const plain = caret.plain || {}
-    check('a textarea under the composer seat is taken over the same way',
-      plain.layer === true && plain.marked === true && plain.visible === true && plain.nativeHidden === true,
-      JSON.stringify(plain))
-    const caretReduced = caret.reduced || {}
-    check('the animation choice stills the drawn caret without taking it away (D40)',
-      caretReduced.layer === true &&
-        String(caretReduced.transition).split(',').every(value => value.trim() === '0s') &&
-        caretReduced.animation === 'none',
-      JSON.stringify(caretReduced), 'timing')
-  },
   'chat-fold'(r) {
     basicChecks(r)
     const fold = r.fold || {}
