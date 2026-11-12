@@ -426,7 +426,6 @@ edit the JSON, not the table.
 | `--dsh-claude-duration-slide` | `240ms` | the segmented controls' sliding highlight, a sidebar icon's quarter turn, the wording box taking the width of the words arriving, and streamed content sliding up from the bottom edge |
 | `--dsh-claude-duration-fade` | `300ms` | a slow cross-fade: the theme flip, the titlebar tabs' hover reveal, the reasoning knob's glow, a placeholder handing its place to what it stood for |
 | `--dsh-claude-duration-bounce` | `350ms` | a switch's knob travelling across with its double bounce |
-| `--dsh-claude-duration-step` | `500ms` | one step of the reasoning window's text rising two lines |
 | `--dsh-claude-duration-pop` | `500ms` | something popping into place: the overtime badge's own pill |
 | `--dsh-claude-duration-rise` | `500ms` | a line of the home greeting rising into place |
 | `--dsh-claude-duration-stagger` | `70ms` | how far behind the piece before it a staggered piece starts: the greeting's second line |
@@ -448,7 +447,6 @@ edit the JSON, not the table.
 | `--dsh-claude-period-breathe` | `2400ms` | one breath of the sidebar's ongoing-conversation light |
 | `--dsh-claude-period-spin` | `850ms` | one turn of the sidebar's ongoing-conversation ring |
 | `--dsh-claude-period-landed` | `1400ms` | the mark on the turn the conversation navigator landed on |
-| `--dsh-claude-period-hold` | `840ms` | how long the reasoning window's text stands between two steps |
 | `--dsh-claude-period-dot-bounce` | `500ms` | one bounce of the waiting line's loader dots under the Claude brand, and the period each dot's own start is measured against |
 | `--dsh-claude-period-dot-line` | `1250ms` | one round trip of the waiting line's loader dots along their own lines, the motion the dots take while the turn is not thinking |
 | `--dsh-claude-ease-standard` | `ease` | feedback and surfaces: the default curve |
