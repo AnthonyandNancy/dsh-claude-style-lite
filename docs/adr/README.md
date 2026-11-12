@@ -35,6 +35,8 @@
 | [D93](D93-canvas-per-block-motion.md) | 逐格独立相位的动效由一块画布绘制，令牌仍是唯一的取值来源 |  |
 | [D95](D95-stream-slide-counter-pins.md) | 流式输出的跟随由宿主写位置，皮肤只画位移并抵消吸附元素的跳动 | D85、D71 |
 | [D96](D96-session-panel-default-open.md) | 会话详情入口常驻，默认打开由读者决定 | D94 |
+| [D97](D97-host-delivers-desktop-notifications.md) | 桌面通知由宿主半以已安装的 DSH 身份发送 |  |
+| [D98](D98-hand-back-is-one-request.md) | 回到底部只发一次请求，只确认一次交接 |  |
 
 ## 作废的编号
 

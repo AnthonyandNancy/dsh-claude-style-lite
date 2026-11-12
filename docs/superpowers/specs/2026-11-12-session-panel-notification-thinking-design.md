@@ -2,7 +2,7 @@
 
 > 文档性质：根因分析、解决方案与验收依据
 > 编制日期：2026-11-12
-> 适用仓库：`dsh-claude-style-lite`（DSH / CodeBuddy 主题插件）
+> 适用仓库：`dsh-claude-style-lite`（DeepSeek Harness 桌面主题插件）
 > 依据：仓库当前源码、DSH `0.2.2-rc.1` 兼容基线、截图 `6cc00636…`（934×149）
 > 状态：方案与修改计划已完成，尚未修改源码
 

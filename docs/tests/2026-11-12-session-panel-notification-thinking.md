@@ -13,7 +13,7 @@
 dsh plugin install ./dsh-claude-style-lite-0.2.0.tgz
 ```
 
-安装后重启 CodeBuddy 桌面端。测试前把系统通知权限留在「默认」或「允许」，并准备两个以上会话。
+安装后重启 DeepSeek Harness 桌面端。测试前把系统通知权限留在「默认」或「允许」，并准备两个以上会话。
 
 ## 一、会话总览面板
 

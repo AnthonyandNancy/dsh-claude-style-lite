@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "fixes",
+  "order": 1,
+  "external": true,
+  "zh": "修复桌面端提示通知没有系统气泡，以及点回到底部后新内容到达时窗口跳到旧位置的问题",
+  "en": "Deliver system notifications from the desktop host and keep the transcript at the end after the reader returns to it"
+}
