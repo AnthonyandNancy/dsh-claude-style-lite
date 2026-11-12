@@ -2,15 +2,15 @@
 
 - 分支：`feat/session-panel-notification-thinking`
 - 基线：`master` 的 `352c0584`
-- 插件包：`.debug/runs/package/dsh-claude-style-lite-0.1.0.tgz`
-- 包摘要（sha256）：`437594f838bc604206822c9321225a0c23f6109f818d8aae21aa4434dd49fbf4`
+- 插件包：`./dsh-claude-style-lite-0.2.0.tgz`
+- 包摘要（sha256）：`59a12062b87ecb48420044c4426b1b154b2042296fd228bd3815785e4fa3a653`
 - 本轮已通过：`npm run verify`（lint、docs、changelog、agents、numbers、scope、build、unit 共 677 项）、`npm run stand-in`（254 项 behaviour 与安装检查）
 - 未执行：真实宿主的 `e2e` 场景（本机没有 `dsh` 命令行），请在测试环境补跑
 
 ## 安装
 
 ```powershell
-dsh plugin install .debug/runs/package/dsh-claude-style-lite-0.1.0.tgz
+dsh plugin install ./dsh-claude-style-lite-0.2.0.tgz
 ```
 
 安装后重启 CodeBuddy 桌面端。测试前把系统通知权限留在「默认」或「允许」，并准备两个以上会话。
