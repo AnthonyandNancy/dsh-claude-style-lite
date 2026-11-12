@@ -38,6 +38,9 @@ export default {
     // window and the footer alignment for the footer position the page opens away
     // from.
     const expectedGrey = { appearance: ['homeSessionScope'], 'main-window': ['headerBand', 'statsFooterAlign'] }
+    // A row can carry a line while it still takes input: the notification row
+    // names the browser's own permission state and offers the request beside it.
+    const expectedNotes = { general: ['notifications'], appearance: ['homeSessionScope'], 'main-window': ['headerBand', 'statsFooterAlign'] }
     const pages = settings.pages || {}
     for (const tab of Object.keys(expected)) {
       const page = pages[tab] || {}
@@ -45,7 +48,7 @@ export default {
         JSON.stringify(page.tabs) === JSON.stringify(Object.keys(expected)) && page.selected === tab &&
           JSON.stringify(page.rows) === JSON.stringify(expected[tab]) &&
           JSON.stringify(page.disabled || []) === JSON.stringify(expectedGrey[tab] || []) &&
-          JSON.stringify(page.notes || []) === JSON.stringify(expectedGrey[tab] || []),
+          JSON.stringify(page.notes || []) === JSON.stringify(expectedNotes[tab] || []),
         JSON.stringify(page))
     }
     const mainWindow = pages['main-window'] || {}

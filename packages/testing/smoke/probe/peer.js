@@ -27,7 +27,7 @@
       // draw on them within a pass or two.
       var peerChat = document.createElement('div')
       peerChat.innerHTML = '<div data-chat-flow><div data-streaming><p>streaming text</p></div>' +
-        '<div data-variant="think" data-state="running"><button type="button">Thinking</button></div>' +
+        '<div data-variant="think" data-state="running"><button type="button" aria-expanded="false">Thinking</button></div>' +
         '<div data-step-process><button type="button" data-process-activity><span data-shimmer>Working</span></button>' +
         '<div data-step-process-body hidden="until-found"><div data-step-process-content>x</div></div></div></div>'
       document.body.appendChild(peerChat)
@@ -48,7 +48,7 @@
         },
         seats: (window.__slots || []).filter(function (entry) { return entry.key === 'tool.call.toolview' }).length,
         highlights: peerHighlights(),
-        thinkExpanded: document.querySelector('[data-variant="think"]').hasAttribute('data-expanded'),
+        thinkExpanded: document.querySelector('[data-variant="think"] button').getAttribute('aria-expanded') === 'true',
         groupOpen: !document.querySelector('[data-step-process-body]').hasAttribute('hidden'),
       }
       // The settings page, through the same React-tree walk the settings case
