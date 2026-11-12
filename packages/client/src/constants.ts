@@ -5,14 +5,14 @@ import { PACKAGE_NAME } from '@dsh-claude-style/contracts/package'
 import { PLUGIN_ENTRY_UPDATE_SELECTOR } from '@dsh-claude-style/contracts/dom'
 export { PACKAGE_NAME }
 
-export const STYLE_ID = 'dsh-claude-style-style'
+export const STYLE_ID = 'dsh-claude-style-lite-style'
 /** The surface sheets' own element, which stays while ds-bot's surface has the page (D74). */
-export const SURFACE_STYLE_ID = 'dsh-claude-style-surface'
+export const SURFACE_STYLE_ID = 'dsh-claude-style-lite-surface'
 /** Optional Anthropic faces are declared only here, so absent files cause no requests. */
-export const WEBFONTS_STYLE_ID = 'dsh-claude-style-webfonts'
+export const WEBFONTS_STYLE_ID = 'dsh-claude-style-lite-webfonts'
 
 /** Fallback profile entry id used when the running loader id is unavailable. */
-export const SETTINGS_ENTRY_FALLBACK = 'ui-skin-claude-style'
+export const SETTINGS_ENTRY_FALLBACK = 'ui-skin-claude-style-lite'
 /** These tags keep host and sibling stylesheet removal away from this package (D9). */
 export const STYLE_PLUGIN_CSS = `${PACKAGE_NAME}/client.css`
 export const SURFACE_PLUGIN_CSS = `${PACKAGE_NAME}/surface.css`
@@ -21,7 +21,7 @@ export const WEBFONTS_PLUGIN_CSS = `${PACKAGE_NAME}/webfonts.css`
 export const FOREIGN_SHEET_TAG = `${PACKAGE_NAME}/foreign-sheet`
 export const BUNDLE_CONFIG_SLOT = 'plugins.bundle.config'
 export const SETTINGS_SECTION_SLOT = 'settings.section'
-export const REPOSITORY_URL = 'https://github.com/Nwflower/dsh-claude-style'
+export const REPOSITORY_URL = 'https://github.com/guojianlin/dsh-claude-style-lite'
 
 /** The document attribute the stylesheet switches on. */
 export const BRAND_ATTR = 'data-dsh-claude-brand'

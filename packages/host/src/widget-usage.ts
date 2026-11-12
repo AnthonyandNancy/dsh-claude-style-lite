@@ -15,11 +15,11 @@ import type { DshContext } from '@dsh-claude-style/engine/node/dsh'
 import { createUsage } from './usage.js'
 import type { UsageSummary } from './usage-summary.js'
 
-/** The name the widget manifest declares (`dsh-claude-style:usage`). */
+/** The name the widget manifest declares (`dsh-claude-style-lite:usage`). */
 export const WIDGET_USAGE_CAPABILITY = 'usage'
 
 /** How the board names this capability's provider. */
-export const WIDGET_USAGE_PROVIDER = 'dsh-claude-style'
+export const WIDGET_USAGE_PROVIDER = 'dsh-claude-style-lite'
 
 /** The board service version this capability registers against. */
 const WIDGET_BOARD_API_VERSION = 3

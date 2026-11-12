@@ -17,9 +17,9 @@
 
 /** The routes under test (packages/contracts/src/routes.ts). */
 const ROUTES = {
-  status: '/dsh-claude-style/brand',
-  mark: '/dsh-claude-style/brand/mark',
-  wordmark: '/dsh-claude-style/brand/wordmark',
+  status: '/dsh-claude-style-lite/brand',
+  mark: '/dsh-claude-style-lite/brand/mark',
+  wordmark: '/dsh-claude-style-lite/brand/wordmark',
 }
 
 /** One step past the host half's size limit (packages/contracts/src/brand.ts). */

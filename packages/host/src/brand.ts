@@ -1,6 +1,6 @@
 /**
  * The reader's own brand images (D30), kept under the harness home's
- * `dsh-claude-style/brand/` as `mark.<ext>` and `wordmark.<ext>`.
+ * `dsh-claude-style-lite/brand/` as `mark.<ext>` and `wordmark.<ext>`.
  *
  * The status route answers which images are in place; each image's route serves,
  * replaces or removes its bytes. The files are the reader's and a write changes

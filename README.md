@@ -8,11 +8,15 @@
 
 [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md)
-[![version](https://img.shields.io/npm/v/dsh-claude-style?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![downloads](https://img.shields.io/npm/dm/dsh-claude-style?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
+[![version](https://img.shields.io/npm/v/dsh-claude-style-lite?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style-lite)
+[![downloads](https://img.shields.io/npm/dm/dsh-claude-style-lite?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style-lite)
+[![GitHub stars](https://img.shields.io/github/stars/guojianlin/dsh-claude-style-lite?style=flat&label=%E2%98%85&color=08C)](https://github.com/guojianlin/dsh-claude-style-lite)
 
 </div>
+
+> 本包 fork 自 Nwflower/dsh-claude-style，固定上游提交 `8cafcacd5aa574faa75b1912b8934bede7936b73`（0.20.3）。与上游的差异见 [CHANGES-FROM-UPSTREAM](docs/CHANGES-FROM-UPSTREAM.md)。
+>
+> 本地开发与验证只使用 `.debug/runs/e2e/<run-id>/` 下的隔离 `DSH_HOME` 与 `DSH_AGENTS_HOME`，不读取也不写入用户的 `~/.dsh` 与 `~/.agents`。测试 Web 监听 `127.0.0.1` 的随机端口，并使用 `--no-open`。
 
 ## 预览
 
@@ -67,12 +71,12 @@
 官方插件页添加这个包名，或从终端安装：
 
 ```
-dsh-claude-style
+dsh-claude-style-lite
 ```
 
 ```bash
-dsh plugin --profile web add dsh-claude-style                    # npm 包（推荐）
-dsh plugin --profile web add Nwflower/dsh-claude-style#dist      # GitHub 发布分支
+dsh plugin --profile web add dsh-claude-style-lite                    # npm 包（推荐）
+dsh plugin --profile web add guojianlin/dsh-claude-style-lite#dist      # GitHub 发布分支
 ```
 
 也可从[插件市场](https://github.com/dsh-market/dsh-market)或 dsh-web-all 的皮肤中心安装。同一时刻只启用一个主题；
@@ -81,10 +85,10 @@ dsh plugin --profile web add Nwflower/dsh-claude-style#dist      # GitHub 发布
 
 ## 字体
 
-> Anthropic 没有公开发行这三款字体；本仓库只提供下载与研究的[副本](https://github.com/Nwflower/dsh-claude-style/tree/master/packages/assets/src/fonts/anthropic)。
+> Anthropic 没有公开发行这三款字体；本仓库只提供下载与研究的[副本](https://github.com/guojianlin/dsh-claude-style-lite/tree/master/packages/assets/src/fonts/anthropic)。
 
 
-启用时二选一：装进系统，或把 `.ttf` 复制到 `$DSH_HOME/dsh-claude-style/fonts/`。
+启用时二选一：装进系统，或把 `.ttf` 复制到 `$DSH_HOME/dsh-claude-style-lite/fonts/`。
 
 ## 文档
 
@@ -115,4 +119,4 @@ dsh plugin --profile web add Nwflower/dsh-claude-style#dist      # GitHub 发布
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://star-history.com/#Nwflower/dsh-claude-style&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=guojianlin/dsh-claude-style-lite&type=Date)](https://star-history.com/#guojianlin/dsh-claude-style-lite&Date)

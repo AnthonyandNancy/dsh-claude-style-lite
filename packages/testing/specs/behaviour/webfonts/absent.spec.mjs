@@ -8,13 +8,14 @@
  * @features contracts
  * @risk Every load asks for three files the package does not carry, filling the network panel with 404s on an install that never had them.
  */
+import { FONT_FILES_PATH } from '@dsh-claude-style/contracts/routes'
 import { spec } from '../../fixtures/behaviour.mjs'
 
 /** The file names the page requested under the fonts route. */
 const requestedFaces = (t) => t.page.evaluate(() => performance.getEntriesByType('resource')
   .map(entry => entry.name)
-  .filter(name => name.includes('/dsh-claude-style/fonts/'))
-  .map(name => name.slice(name.indexOf('/dsh-claude-style/fonts/') + '/dsh-claude-style/fonts/'.length)))
+  .filter(name => name.includes(FONT_FILES_PATH))
+  .map(name => name.slice(name.indexOf(FONT_FILES_PATH) + FONT_FILES_PATH.length)))
 
 export default spec({ page: 'shell' }, ({ test }) => {
   test('a host without the optional faces is asked for none of them, and the faces the package ships still load', async (t) => {

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve `dsh-claude-style`!
+Thanks for helping improve `dsh-claude-style-lite`, the lite fork of `dsh-claude-style`!
 
 ## Report an issue
 
@@ -34,6 +34,8 @@ Port `3080` belongs to the reader's own local service. A test host never asks fo
 
 - Small edits and one-off investigations can use the independent temporary-file commands; tasks that need continuity use a work order. The criteria and commands are in [AGENTS.md](AGENTS.md#work-orders-and-temporary-files).
 - Continuous integration is described where it is defined: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) says what each lane reads and which events run it, and [AGENTS.md](AGENTS.md#change-workflow) states the workflow the repository follows. A pull request, a merge-queue entry and a manual run walk the whole matrix; a push to master runs the checks, the build and the spec lane, and a separate observation workflow runs the stand-in page's quick tier and every behaviour spec without joining the branch rule. Open the pull request as a draft once the change has a shape: its run is how the cloud judges the branch, and it answers while the code is still being written. Locally, start only the narrowest run that answers the question in hand, in the background, and compare the tree hash it prints with the tree you have: `node scripts/checks/verify.mjs --help` names every selector and what it walks.
+- This fork keeps its upstream baseline in `UPSTREAM_COMMIT`, `UPSTREAM_VERSION` and `LITE_VERSION`. Change those files only with a recorded upstream move.
+- Build and verify through the isolated environment: source `.debug/runs/toolchain/env.sh` or set `DSH_HOME` and `DSH_AGENTS_HOME` below `.debug/runs/` yourself, then run `npm run build`. The TypeScript test lane needs `node --import ./packages/testing/register.mjs` so workspace sources resolve outside `node_modules`.
 - `lib/` is generated — never edit it by hand. Change `packages/client/src/` (or the host half in `packages/host/src/`), run `npm install` once for the dev dependencies, then `npm run build`: it type-checks the TypeScript sources, bundles them with esbuild and checks the result.
 - Code submitted to the Sodium rendering engine (`packages/client/src/features/sodium/`, `packages/engine/src/sheet-rewrite.ts`) is licensed under the PolyForm Shield License 1.0.0; the rest of the repository stays MIT.
 - A feature's code and stylesheets live together under `packages/client/src/features/<feature>/`; parts several features share are in `packages/client/src/shared/`. The shape of the tree and the constraints that cross it are in [ARCHITECTURE.md](docs/ARCHITECTURE.md); the reasoning behind a direction is in [docs/adr/](docs/adr/README.md); the rules the build enforces and the working rules are in [AGENTS.md](AGENTS.md).

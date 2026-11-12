@@ -1,11 +1,11 @@
 {
-  "id": "claude-style",
-  "name": "Claude Code Style",
-  "tagline": "Claude Code Desktop 深度定制化主题",
+  "id": "claude-style-lite",
+  "name": "Claude Code Style Lite",
+  "tagline": "Claude Code Desktop 深度定制化主题（轻量版）",
   "accent": "#d97757",
   "bodyAttr": "data-dsh-claude-style",
-  "package": "dsh-claude-style",
+  "package": "dsh-claude-style-lite",
   "wiring": {
-    "id": "ui-skin-claude-style"
+    "id": "ui-skin-claude-style-lite"
   }
 }

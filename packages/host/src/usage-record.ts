@@ -1,6 +1,6 @@
 /**
  * The usage record: this plugin's own account of usage, at
- * `$DSH_HOME/dsh-claude-style/usage.json`.
+ * `$DSH_HOME/dsh-claude-style-lite/usage.json`.
  *
  * One entry per session: the fingerprint of the log it was folded from, while
  * that log exists, and the days it settled on. An entry whose log is gone stays

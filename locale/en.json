@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Claude Code Style",
-    "description": "Claude Code Desktop theme for the DeepSeek Harness web GUI — ivory and warm-black canvases, the clay accent, a Claude-style model picker, permission segments and an account drawer."
+    "title": "Claude Code Style Lite",
+    "description": "A lite fork of dsh-claude-style: keeps the Claude / DeepSeek themes, model picker, sessions and statistics, while removing automatic reasoning folds, the peak-rate meter, sent-message entrance animations and the drawn caret; the effort slider paints its fill on a canvas."
   }
 }

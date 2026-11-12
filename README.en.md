@@ -8,13 +8,17 @@
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.en.md) [![简体中文](https://img.shields.io/badge/lang-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-red.svg)](README.md)
 
-[![version](https://img.shields.io/npm/v/dsh-claude-style?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![downloads](https://img.shields.io/npm/dm/dsh-claude-style?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style)
-[![GitHub stars](https://img.shields.io/github/stars/Nwflower/dsh-claude-style?style=flat&label=%E2%98%85&color=08C)](https://github.com/Nwflower/dsh-claude-style)
-[![dsh.so install](https://www.dsh.so/badge/install/dsh-claude-style.svg)](https://www.dsh.so/artifact/dsh-claude-style/)
+[![version](https://img.shields.io/npm/v/dsh-claude-style-lite?style=flat&label=version&color=D97757)](https://www.npmjs.com/package/dsh-claude-style-lite)
+[![downloads](https://img.shields.io/npm/dm/dsh-claude-style-lite?style=flat&label=downloads&color=D97757)](https://www.npmjs.com/package/dsh-claude-style-lite)
+[![GitHub stars](https://img.shields.io/github/stars/guojianlin/dsh-claude-style-lite?style=flat&label=%E2%98%85&color=08C)](https://github.com/guojianlin/dsh-claude-style-lite)
+[![dsh.so install](https://www.dsh.so/badge/install/dsh-claude-style-lite.svg)](https://www.dsh.so/artifact/dsh-claude-style-lite/)
 [![license](https://img.shields.io/badge/license-MIT%20%2B%20PolyForm%20Shield-2EA44F?style=flat)](LICENSE)
 
 </div>
+
+> This package is a fork of Nwflower/dsh-claude-style, pinned to upstream commit `8cafcacd5aa574faa75b1912b8934bede7936b73` (0.20.3). See [CHANGES-FROM-UPSTREAM](docs/CHANGES-FROM-UPSTREAM.md) for the differences.
+>
+> Local development and verification use only the isolated `DSH_HOME` and `DSH_AGENTS_HOME` under `.debug/runs/e2e/<run-id>/`; they never read or write the reader's `~/.dsh` or `~/.agents`. The test web host binds a random `127.0.0.1` port and passes `--no-open`.
 
 ## Preview
 
@@ -74,12 +78,12 @@ The settings page switches between the two palettes; light and dark follow the s
 From the official plugin page add the package below, or from a terminal:
 
 ```
-dsh-claude-style
+dsh-claude-style-lite
 ```
 
 ```bash
-dsh plugin --profile web add dsh-claude-style                    # npm package (recommended)
-dsh plugin --profile web add Nwflower/dsh-claude-style#dist      # GitHub release branch
+dsh plugin --profile web add dsh-claude-style-lite                    # npm package (recommended)
+dsh plugin --profile web add guojianlin/dsh-claude-style-lite#dist      # GitHub release branch
 ```
 
 Also from the [plugin market](https://github.com/dsh-market/dsh-market) or the Skin Center of the dsh-web-all plugin. Keep one theme enabled at a time; dsh ≥ 0.2.2-rc.1 is required, and a restart of DeepSeek Harness brings the full feature set.
@@ -94,9 +98,9 @@ Hover a message you sent and **Retract** and **Edit** join the clock and copy bu
 
 ## Fonts
 
-> The Anthropic fonts have no public release; this repository only offers [copies](https://github.com/Nwflower/dsh-claude-style/tree/master/packages/assets/src/fonts/anthropic) for download and study.
+> The Anthropic fonts have no public release; this repository only offers [copies](https://github.com/guojianlin/dsh-claude-style-lite/tree/master/packages/assets/src/fonts/anthropic) for download and study.
 
-To enable them, install the `.ttf` files on your system, or copy them into `$DSH_HOME/dsh-claude-style/fonts/`.
+To enable them, install the `.ttf` files on your system, or copy them into `$DSH_HOME/dsh-claude-style-lite/fonts/`.
 
 The mascot bubble's pixel text is set in [PoxiaoPixel](https://diaowinner.itch.io/poxiaopixel) by DWNfonts (SIL OFL 1.1); the package carries only the characters the bubble uses.
 
@@ -132,4 +136,4 @@ The Sodium rendering engine is licensed under the [PolyForm Shield License 1.0.0
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Nwflower/dsh-claude-style&type=Date)](https://star-history.com/#Nwflower/dsh-claude-style&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=guojianlin/dsh-claude-style-lite&type=Date)](https://star-history.com/#guojianlin/dsh-claude-style-lite&Date)

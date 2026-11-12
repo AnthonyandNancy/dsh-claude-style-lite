@@ -25,8 +25,8 @@ export const PRICES_FILE = 'prices.json'
 
 /** Where the snapshot is published: the CDN first, the repository's raw file second. */
 export const PRICES_URLS = [
-  'https://cdn.jsdelivr.net/gh/Nwflower/dsh-claude-style@master/packages/host/data/prices.json',
-  'https://raw.githubusercontent.com/Nwflower/dsh-claude-style/master/packages/host/data/prices.json',
+  'https://cdn.jsdelivr.net/gh/guojianlin/dsh-claude-style-lite@master/packages/host/data/prices.json',
+  'https://raw.githubusercontent.com/guojianlin/dsh-claude-style-lite/master/packages/host/data/prices.json',
 ]
 
 /** How long a fetched snapshot counts as current. */

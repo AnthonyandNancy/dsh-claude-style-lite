@@ -32,7 +32,12 @@ export default {
     // Greyed by the page itself rather than by a preference: the title-bar
     // band waits for the Windows desktop window, and the footer alignment for
     // the footer position the page opens away from.
-    const expectedGrey = { 'main-window': ['headerBand', 'statsFooterAlign'] }
+    // The appearance tab opens on the classic layout and the skin's own palette,
+    // so the studio-only session scope and the palette-gated inline-code row wait
+    // there as the page draws them. The main window's band waits for the Windows
+    // window and the footer alignment for the footer position the page opens away
+    // from.
+    const expectedGrey = { appearance: ['homeSessionScope'], 'main-window': ['headerBand', 'statsFooterAlign'] }
     const pages = settings.pages || {}
     for (const tab of Object.keys(expected)) {
       const page = pages[tab] || {}
@@ -78,7 +83,7 @@ export default {
       JSON.stringify(customCards))
     const off = settings.parentsOff || {}
     check('a sub-row greys out while its parent is off: the accent colour with the colours following the host, the mascot\'s place with the mascot off, the model descriptions, the effort accent colour, the quick providers and the peak rate meter with the model picker off, the custom price table with the billing off, the search button\'s style with the sidebar search off, and the title-bar band for the window on every page',
-      !!off.appearance && JSON.stringify(off.appearance.disabled) === '["mascotScope"]' &&
+      !!off.appearance && JSON.stringify(off.appearance.disabled) === '["inlineCodeColor","homeSessionScope","mascotScope"]' &&
         !!off.mainWindow && JSON.stringify(off.mainWindow.disabled) === '["headerBand","effortSlider","modelDescriptions","quickProviders","peakrate","effortAccent","statsFooterAlign","billingTable"]' &&
         !!off.sidebar && JSON.stringify(off.sidebar.disabled) === '["searchStyle"]',
       JSON.stringify(off))
@@ -124,7 +129,7 @@ export default {
     const link = settings.link || {}
     const mark = settings.mark || {}
     check('the heading carries the plugin\'s repository link, opening in a new tab with an accessible name',
-      link.href === 'https://github.com/Nwflower/dsh-claude-style' && link.target === '_blank' &&
+      link.href === 'https://github.com/guojianlin/dsh-claude-style-lite' && link.target === '_blank' &&
         (link.rel || '').includes('noopener') && typeof link.label === 'string' && link.label.length > 0,
       JSON.stringify(link))
     check('the link\'s mark is the inlined asset, painted as a mask in the quiet ink',

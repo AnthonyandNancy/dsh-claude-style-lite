@@ -158,7 +158,7 @@ function reasoningStreamScenario({ check }) {
     script: 'think',
     prompt: 'think it through',
     patch: [
-      '- id: ui-skin-claude-style',
+      '- id: ui-skin-claude-style-lite',
       '  config:',
       '    reasoningDisplay: stepped',
     ],
@@ -293,7 +293,7 @@ function reasoningContinuousScenario({ check }) {
     script: 'think',
     prompt: 'think it through',
     patch: [
-      '- id: ui-skin-claude-style',
+      '- id: ui-skin-claude-style-lite',
       '  config:',
       '    motion: full',
       '    reasoningDisplay: continuous',

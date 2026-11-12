@@ -88,7 +88,7 @@ async function playSoundRequest(req: DshRequest, res: DshResponse) {
  * contract, so no path outside the two directories below is reachable.
  *
  * A name is looked up in the user's own drop point first — the harness home's
- * `dsh-claude-style/fonts/` — and then in the package's `lib/fonts/` (D75). The
+ * `dsh-claude-style-lite/fonts/` — and then in the package's `lib/fonts/` (D75). The
  * Anthropic faces are not in the npm package (copyright), so only a copy the user
  * dropped in answers them; a name neither directory holds is absent, and the
  * browser half registers no `@font-face` for a name this route does not report.

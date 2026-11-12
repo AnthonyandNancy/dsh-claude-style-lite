@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Claude Code 风格",
-    "description": "为 DeepSeek Harness 网页界面复刻 Claude Code Desktop 的主题插件——象牙白与暖黑双画布、陶烬橙强调色、Claude 风格模型选择器、权限分段与账户抽屉。"
+    "title": "Claude Code 风格 Lite",
+    "description": "dsh-claude-style 的轻量派生版：保留 Claude / DeepSeek 主题、模型选择、会话与统计能力，移除思考自动开合、峰谷费率、消息入场动画与自绘光标，推理滑块改用 Canvas 填充。"
   }
 }

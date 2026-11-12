@@ -82,12 +82,12 @@ async function hostPanel({ mod, fakeHost, request, browser, crossSite, scratchHo
       readAt: () => ({ chunks: [{ text: 'panel job output\n' }], lossy: false }),
     },
   })
-  const refusedPanel = await request(panelHost, '/dsh-claude-style/session-panel?id=session-overview', 'GET', '', crossSite)
+  const refusedPanel = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=session-overview', 'GET', '', crossSite)
   check('cross-site page: the session overview is refused',
     refusedPanel.status === 401 || refusedPanel.status === 403, `HTTP ${refusedPanel.status}`)
-  const shapedPanel = await request(panelHost, '/dsh-claude-style/session-panel?id=..%2Fetc', 'GET', '', browser)
+  const shapedPanel = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=..%2Fetc', 'GET', '', browser)
   check('a session id that names a path is refused by the overview', shapedPanel.status === 400, `HTTP ${shapedPanel.status}`)
-  const panelAnswer = await request(panelHost, '/dsh-claude-style/session-panel?id=session-overview', 'GET', '', browser)
+  const panelAnswer = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=session-overview', 'GET', '', browser)
   const panelBody = panelAnswer.status === 200 ? JSON.parse(panelAnswer.body) : null
   check('the overview answers the working directory, the context reading and the presented file',
     panelBody !== null && panelBody.ok === true &&
@@ -115,25 +115,25 @@ async function hostPanel({ mod, fakeHost, request, browser, crossSite, scratchHo
   check('a settled command stays in the kept history after the registry drops it',
     finished !== undefined && finished.status === 'completed' && finished.detail === 'exit code: 0',
     JSON.stringify(finished ?? null))
-  const jobAnswer = await request(panelHost, '/dsh-claude-style/session-panel?id=session-overview&job=bash-panel-job', 'GET', '', browser)
+  const jobAnswer = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=session-overview&job=bash-panel-job', 'GET', '', browser)
   const jobBody = jobAnswer.status === 200 ? JSON.parse(jobAnswer.body) : null
   check('one job\'s retained output answers the expanded row when asked for it',
     jobBody !== null && jobBody.ok === true && jobBody.value?.text === 'panel job output\n' && jobBody.value.status === 'completed',
     JSON.stringify(jobBody?.value ?? jobBody))
-  const keptOutput = await request(panelHost, '/dsh-claude-style/session-panel?id=session-overview&job=bash-foreground', 'GET', '', browser)
+  const keptOutput = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=session-overview&job=bash-foreground', 'GET', '', browser)
   const keptBody = keptOutput.status === 200 ? JSON.parse(keptOutput.body) : null
   check('a dropped job keeps the output the session log carries',
     keptBody !== null && keptBody.ok === true && keptBody.value?.text === 'finished-line\n',
     JSON.stringify(keptBody?.value ?? keptBody))
-  const pendingAnswer = await request(panelHost, '/dsh-claude-style/session-panel?id=split-write', 'GET', '', browser)
+  const pendingAnswer = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=split-write', 'GET', '', browser)
   check('a pending write is absent until its result arrives', JSON.parse(pendingAnswer.body).value.outputs.length === 0)
   splitWrite.push({ seq: 2, type: 'tool/result', data: { message: { source: { callId: 'split-write' }, content: [] } } })
   // The panel's answer cache lasts 1200ms; the next request must fold a new batch.
   await new Promise(resolve => setTimeout(resolve, 1300))
-  const splitAnswer = await request(panelHost, '/dsh-claude-style/session-panel?id=split-write', 'GET', '', browser)
+  const splitAnswer = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=split-write', 'GET', '', browser)
   const splitOutputs = JSON.parse(splitAnswer.body).value.outputs
   check('a write completed in a later poll remains an output', splitOutputs.length === 1 && splitOutputs[0].path === 'split-note.md', JSON.stringify(splitOutputs))
-  const shapedJob = await request(panelHost, '/dsh-claude-style/session-panel?id=session-overview&job=..%2Fetc', 'GET', '', browser)
+  const shapedJob = await request(panelHost, '/dsh-claude-style-lite/session-panel?id=session-overview&job=..%2Fetc', 'GET', '', browser)
   check('a job id that names a path is refused', shapedJob.status === 400, `HTTP ${shapedJob.status}`)
 }
 
