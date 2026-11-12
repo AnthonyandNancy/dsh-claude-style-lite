@@ -1,5 +1,5 @@
 /**
- * The context legend and colour bar allocate the provider reading once (D94).
+ * The context legend and colour bar allocate the provider reading once (D96).
  * @capability session-panel
  * @features session-panel
  * @risk Source estimates double-count injected instructions, disagree with the

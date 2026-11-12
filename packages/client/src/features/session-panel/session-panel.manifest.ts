@@ -7,7 +7,7 @@ export default {
   // only decides whether a session's rail starts open.
   ungated: '会话详情入口常驻在会话头部；设置只决定每个会话是否默认展开，栏本身随入口安装',
   // The rail mounts its own root on the page; it joins the first frames so a
-  // late chunk cannot land inside a settled page's quiet window (D94).
+  // late chunk cannot land inside a settled page's quiet window (D96).
   contracts: ['conversation.session-attribute', 'conversation.session', 'sidebar.chat', 'chat.scroller', 'chat.user-row', 'header.action-chips', 'shell.rightbar-column', 'shell.rightbar-toggle'],
   stylesheets: [{ file: 'session-panel.css', rank: 122 }],
   settingsRows: [{

@@ -16,7 +16,7 @@ const h = React.createElement
 const CENTER = `[${PART_ATTR}~="center-column"]`
 const PRESET = `[${PART_ATTR}~="header-label"]`
 
-/** The rail's width (D94). */
+/** The rail's width (D96). */
 const RAIL_WIDTH = 320
 
 /** One box in the page's pixels, as a fixed rail is placed from it. */
@@ -35,7 +35,7 @@ function useConversationSession() {
     const sessionNode = cacheFirstMatch<HTMLElement>(CONVERSATION_SESSION_SELECTOR)
     // The rail belongs to the conversation the reader is looking at: not a new
     // session without a turn yet, not a plugin page's hidden conversation, and
-    // not a subagent's own column (D94).
+    // not a subagent's own column (D96).
     const live = () => {
       const node = sessionNode()
       if (node === null || node === undefined || !node.isConnected) return false
@@ -61,7 +61,7 @@ function useConversationSession() {
   return reading
 }
 
-/** The preset's own words, as the header's label carries them (D94). */
+/** The preset's own words, as the header's label carries them (D96). */
 function usePresetLabel() {
   const [label, setLabel] = React.useState('')
   React.useEffect(() => {
@@ -78,7 +78,7 @@ function usePresetLabel() {
 }
 
 /**
- * Whether the details rail stands open, and where (D94).
+ * Whether the details rail stands open, and where (D96).
  *
  * The setting decides the first state of each session; a reader who opens or
  * closes the rail keeps that choice for the session they are reading, and a
@@ -110,7 +110,7 @@ function useRailReading(session: string | null) {
       if (choice.current.session !== session) choice.current = { session, mode: 'default' }
       // The host's own right column stands on this same side, so it comes
       // first: while it holds width the rail keeps away, and the reader's
-      // choice stands again once that column closes (D94). Its width is the
+      // choice stands again once that column closes (D96). Its width is the
       // host's to give, so it is read from its box.
       hostColumn.current = host !== null && host.isConnected && host.getBoundingClientRect().width > 0
       const preferred = readPrefs().sessionPanelOpenByDefault
@@ -169,7 +169,7 @@ function useRailReading(session: string | null) {
       }
       // The rail stands where the host's own right column stands: a press
       // asks for that side, so the column closes first and the rail comes in
-      // as soon as its width is back (D94).
+      // as soon as its width is back (D96).
       if (hostColumn.current) findRightbarToggle()?.click()
       choice.current = { session, mode: 'open' }
       setOpen(!hostColumn.current)
@@ -183,13 +183,13 @@ function useRailReading(session: string | null) {
   return { open, box }
 }
 
-/** The conversation's details rail: the session overview the reader keeps beside the chat (D94). */
+/** The conversation's details rail: the session overview the reader keeps beside the chat (D96). */
 export function SessionPanelRail() {
   const { id: session, live } = useConversationSession()
   const preset = usePresetLabel()
   const { open, box } = useRailReading(session)
   // The header's control follows the conversation's own answer: a session id on
-  // a visible conversation is the only page its press can describe (D94). A new
+  // a visible conversation is the only page its press can describe (D96). A new
   // answer that stays available wakes nobody; only the rail's unmount clears it.
   React.useEffect(() => {
     setSessionAvailable(session !== null && live)

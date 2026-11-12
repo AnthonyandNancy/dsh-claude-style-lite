@@ -538,8 +538,9 @@ const SCENARIOS = {
   dsBot: dsBotScenario({ check }),
   /**
    * The session overview in the right column (packages/testing/scenarios/session-panel.mjs,
-   * D94): its five sections on a blank and a worked session, the two-row folding,
-   * the view switch on the title's line, and the column's opening width.
+   * D96): its five sections on a blank and a worked session, the two-row folding,
+   * the view switch on the title's line, the control that stays in the header,
+   * and the setting that decides whether each session opens the rail.
    */
   sessionPanel: sessionPanelScenario({ check }),
   /** Both palettes captured to the run's out directory and swept for personal data. */

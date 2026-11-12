@@ -1,6 +1,6 @@
 /**
  * The session's settled cost in the currency the reader's billing setting chose
- * (D94): both totals arrive from the host, and the setting decides which one the
+ * (D96): both totals arrive from the host, and the setting decides which one the
  * rail prints. Billing off leaves no cost row at all.
  */
 import { formatMoneyMicro } from '@dsh-claude-style/contracts/prices'

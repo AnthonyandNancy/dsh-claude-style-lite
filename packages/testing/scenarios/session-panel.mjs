@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * session-panel.mjs — the conversation's details rail on the real host (D94,
+ * session-panel.mjs — the conversation's details rail on the real host (D96,
  * D92). Registered in the lane's scenario table
  * (packages/testing/scenarios.mjs).
  *
@@ -206,7 +206,7 @@ export function sessionPanelScenario({ check }) {
       await page.waitForFunction(() => /panel-command-three/.test(document.querySelector('.dsh-claude-details')?.textContent ?? ''), undefined, { timeout: 30000 })
       // The header's own control leads to the rail; the guide card does not
       // (the rail is not a right-column tab any more). The entry stays whether
-      // the setting opens the rail or only leaves it on demand (D94).
+      // the setting opens the rail or only leaves it on demand (D96).
       notes.entry = await page.evaluate(() => {
         const control = document.querySelector('.dsh-claude-session-panel-button')
         return {
@@ -220,7 +220,7 @@ export function sessionPanelScenario({ check }) {
       notes.preset = await readPreset(page)
       notes.rail = await readRail(page)
       // Section controls are independent, retain their choice through a poll,
-      // and keep the browser's Enter and Space activation (D94).
+      // and keep the browser's Enter and Space activation (D96).
       const sectionToggles = page.locator('.dsh-claude-details summary')
       notes.disclosures = { initial: await readDisclosures(page) }
       const refreshed = page.waitForResponse(response => response.url().includes(SESSION_PANEL_PATH) && response.ok())
@@ -306,7 +306,7 @@ export function sessionPanelScenario({ check }) {
       notes.utilitiesOpen = await readUtilities(page)
       // The figures are the host's own words: exact grouped counts, no compact
       // k/M suffix; and the environment answers the working folder, never the
-      // repositories lying beside it (D94).
+      // repositories lying beside it (D96).
       notes.wording = await page.evaluate(async (path) => {
         const id = document.querySelector('[data-conversation-session]')?.getAttribute('data-conversation-session') ?? ''
         const response = await fetch(`${path}?id=${encodeURIComponent(id)}`, { credentials: 'same-origin', headers: { accept: 'application/json' } })
@@ -341,7 +341,7 @@ export function sessionPanelScenario({ check }) {
       await page.waitForTimeout(2500)
       notes.closedAsks = notes.panelAsks.length - quiet
       // A measurement from the frame keeps the reader's close instead of
-      // returning the rail to the setting's default (D94).
+      // returning the rail to the setting's default (D96).
       await page.setViewportSize({ width: 1280, height: 900 })
       await page.waitForTimeout(400)
       await page.setViewportSize({ width: 1440, height: 900 })
@@ -351,7 +351,7 @@ export function sessionPanelScenario({ check }) {
         rail: document.querySelector('.dsh-claude-details') !== null,
       }))
       // A further turn leaves the reader's close standing: the entry stays and
-      // the rail does not open itself again for this session (D94).
+      // the rail does not open itself again for this session (D96).
       await sendPrompt(page, 'One more turn with the rail put away.')
       await waitForTurn(page)
       await page.waitForTimeout(500)
@@ -379,7 +379,7 @@ export function sessionPanelScenario({ check }) {
       }
       // The host's own right column stands on this side as well: the rail keeps
       // away while that column holds width, and the header's control hands the
-      // side over by closing it first (D94).
+      // side over by closing it first (D96).
       notes.rightPanel = await readRightPanel(page)
       await pressRightPanel(page)
       notes.rightPanelOpen = await readRightPanel(page)

@@ -1,6 +1,6 @@
 /**
  * The details rail's open state, shared by the rail and the header's control
- * (D94). The rail owns the decision (the setting's default and the reader's own
+ * (D96). The rail owns the decision (the setting's default and the reader's own
  * choice); the header's button reads that decision and asks the rail to flip it.
  * The conversation also reports whether it holds a session the rail can
  * describe, so the header's control stands disabled on the hero page.

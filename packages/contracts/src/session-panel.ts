@@ -1,5 +1,5 @@
 /**
- * The session overview panel's data (D94): one answer describes a session's
+ * The session overview panel's data (D96): one answer describes a session's
  * Environment, Context, Outputs, Changes and Background tasks, folded on the
  * host from its own projections, session log and services. The browser half
  * renders sections in that order and leaves out the ones with nothing to show.
@@ -47,7 +47,7 @@ export interface PanelContext {
   parts?: readonly PanelContextPart[]
 }
 
-/** Context categories recovered from the request header and retained message sources (D94). */
+/** Context categories recovered from the request header and retained message sources (D96). */
 export type PanelContextKind = 'messages' | 'tools' | 'mcp' | 'system' | 'memory' | 'skills' | 'other'
 
 export interface PanelContextPart {

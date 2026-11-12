@@ -1,4 +1,4 @@
-/* The conversation's details rail and its sections (D94). The rail is the
+/* The conversation's details rail and its sections (D96). The rail is the
    skin's own fixed column beside the chat, and the body inside keeps the
    column's own fill, inset and scroll (STYLE.md); every rule is scoped by the
    skin's own body mark so a page without the skin never sees it. Sections use
@@ -45,14 +45,14 @@ body[data-dsh-claude-style] .dsh-claude-panel-heading {
   font-size: calc(13px * var(--dsh-claude-interface-font-scale, 1));
   font-weight: 400;
   /* The rail's section titles use UI type; the page's display headings use
-     the serif family and tighter tracking (D9, D30, D94). */
+     the serif family and tighter tracking (D9, D30, D96). */
   font-family: var(--dsw-font-family);
   letter-spacing: normal;
   line-height: 20px;
 }
 
 /* Native disclosures keep keyboard activation and expose their open state;
-   only the compact reading disappears while the content stands open (D94). */
+   only the compact reading disappears while the content stands open (D96). */
 body[data-dsh-claude-style] .dsh-claude-panel-section-toggle {
   display: block;
   list-style: none;
@@ -292,7 +292,7 @@ body[data-dsh-claude-style] .dsh-claude-panel-chip.is-pending {
   color: var(--dsw-alias-label-primary, #161616);
 }
 
-/* Context categories share their colour between the bar and legend (D9, D94). */
+/* Context categories share their colour between the bar and legend (D9, D96). */
 
 body[data-dsh-claude-style] .dsh-claude-panel-context-head {
   display: flex;
@@ -456,7 +456,7 @@ body[data-dsh-claude-style] .dsh-claude-panel-job-output {
 
 /* The host's own background-work chips beside the title step aside while the
    details rail stands: the same work is the panel's Background tasks section,
-   where a row opens the child session or the job's output (D94). The team and
+   where a row opens the child session or the job's output (D96). The team and
    preset chips keep their seats. */
 body[data-dsh-claude-style][data-dsh-claude-session-panel] [data-dsh-claude-part~="header-actions"] button[aria-haspopup="tree"],
 body[data-dsh-claude-style][data-dsh-claude-session-panel] [data-dsh-claude-part~="header-actions"] button[aria-expanded]:not([aria-haspopup]) {
@@ -501,7 +501,7 @@ body[data-dsh-claude-style] .dsh-claude-panel-group:first-of-type .dsh-claude-pa
   margin-top: 0;
 }
 
-/* The conversation's details rail (D94): the skin's own column beside the chat,
+/* The conversation's details rail (D96): the skin's own column beside the chat,
    placed against the conversation column's edge and filled like the column's
    other pages. The reader's setting decides whether it starts open, so it
    carries no tab chrome of its own; the body inside keeps the panel's inset and
@@ -542,7 +542,7 @@ body[data-dsh-claude-style][data-dsh-claude-session-panel] [data-dsh-claude-part
 }
 
 /* Full-width metric rows keep long durations readable; the token buckets form
-   a second group beneath the session's figures (D94). */
+   a second group beneath the session's figures (D96). */
 body[data-dsh-claude-style] .dsh-claude-panel-stats {
   display: flex;
   flex-direction: column;

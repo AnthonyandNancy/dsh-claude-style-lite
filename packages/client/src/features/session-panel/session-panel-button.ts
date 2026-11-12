@@ -4,7 +4,7 @@ import { copy } from './copy'
 import { railOpen, sessionAvailable, subscribeRail, subscribeSessionAvailable, toggleRail } from './session-panel-state'
 
 /**
- * The header's own control for the details rail (D94).
+ * The header's own control for the details rail (D96).
  *
  * The control stays in the header whether the default is on or off. The rail
  * opens itself on a session when the setting says so; this control puts it

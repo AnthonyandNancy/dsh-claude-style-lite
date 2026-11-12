@@ -20,7 +20,7 @@ export interface PanelBodyProps {
 }
 
 /**
- * The session details rail's body (D94): the sections the rail shows for the
+ * The session details rail's body (D96): the sections the rail shows for the
  * conversation's session, mounted by the rail beside the chat.
  *
  * The body is one column of sections in the order a reader asks about a
@@ -57,7 +57,7 @@ function PanelView({ sessionId, preset }: { sessionId: string, preset: string })
     hasBackgroundWork(value.background) ? h(BackgroundSection, { key: 'background', sessionId, background: value.background }) : null)
 }
 
-/** Each section owns a native disclosure (D94): its children stay mounted so
+/** Each section owns a native disclosure (D96): its children stay mounted so
  * folding preserves list expansion and an opened job's output. An unchanged
  * `open` prop lets the browser keep the reader's choice across data refreshes.
  */
@@ -199,7 +199,7 @@ function EnvironmentSection({ environment, preset }: { environment: PanelEnviron
   ]
   const checkout = environment.checkout
   // A directory that is no checkout names the folder alone: the branch belongs
-  // to a checkout, and a folder without one has none to show (D94).
+  // to a checkout, and a folder without one has none to show (D96).
   if (checkout !== null) {
     rows.push(h(RepositoryRow, {
       key: `checkout:${checkout.root}`,
@@ -216,7 +216,7 @@ function EnvironmentSection({ environment, preset }: { environment: PanelEnviron
 }
 
 function RepositoryRow(props: { name?: string, branch: string | null, linked: boolean, detail?: string, commit?: string | null }) {
-  // A checkout already named by the directory needs only its branch (D94).
+  // A checkout already named by the directory needs only its branch (D96).
   // Additional checkouts keep their folder row immediately above the branch.
   return h(React.Fragment, null,
     props.name === undefined ? null : h(Row, {
@@ -275,7 +275,7 @@ function ContextSection({ context }: { context: PanelContext | null }) {
           h('dd', { className: 'dsh-claude-panel-share' }, `${(free / context.window * 100).toFixed(1)}%`)))))
 }
 
-/** The session's own figures, followed by its token buckets (D94). Each figure
+/** The session's own figures, followed by its token buckets (D96). Each figure
  * gets a full row so a long elapsed time keeps its value beside its label.
  */
 function StatsSection({ stats }: { stats: PanelStats }) {

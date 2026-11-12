@@ -20,7 +20,7 @@ const WAKE_KEYS = ['sessionStats', 'tokenUsage'] as const
 const WAKE_MIN_MS = 400
 
 /**
- * Follow one session's overview panel (D94).
+ * Follow one session's overview panel (D96).
  *
  * The rail mounts this body for the session it shows; a session switch replaces
  * the body and restarts this hook. The reading is kept with the session that
@@ -76,7 +76,7 @@ export function usePanelReading(sessionId: string): PanelReading {
     // The host lands its figures as projection frames (D40), and a streaming turn
     // moves them every few hundred milliseconds. The rail asks again on those
     // frames — past the host's kept answer — so its numbers move with the
-    // composer's readout instead of one poll behind it (D94).
+    // composer's readout instead of one poll behind it (D96).
     const throttle = createWakeThrottle({
       minMs: WAKE_MIN_MS,
       now: () => Date.now(),

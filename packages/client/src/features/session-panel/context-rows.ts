@@ -1,4 +1,4 @@
-/** The context bar and legend share calibrated parts and ordering (D94).
+/** The context bar and legend share calibrated parts and ordering (D96).
  * Provider occupancy is authoritative; the host meter's source-attributed
  * estimates divide that occupancy. Integer allocation keeps their sum exact.
  */

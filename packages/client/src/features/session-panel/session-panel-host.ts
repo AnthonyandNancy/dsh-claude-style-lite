@@ -1,5 +1,5 @@
 /**
- * The panel's way back into the host (D94): it opens a produced file in the
+ * The panel's way back into the host (D96): it opens a produced file in the
  * host's own preview and a subagent or Team member's session in the
  * conversation view.
  *
