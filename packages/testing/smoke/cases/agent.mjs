@@ -163,8 +163,8 @@ export default {
   },
   'sync-fault'(r) {
     check('apply() completes', r.applyError === null, r.applyError)
-    check('only the three features that read the session list were switched off: the permission control, the model picker and the manual unread marks; the date view reads it only once the bell is pressed, and the sound cues stand down with their setting',
-      r.errors.length === 3 && r.errors.some((e) => e.includes('"permissions"')) && r.errors.some((e) => e.includes('"model"')) &&
+    check('the features that read the session list or status were switched off, and the date view that reads it only on demand was not',
+      r.errors.length === 4 && r.errors.some((e) => e.includes('"notifications"')) && r.errors.some((e) => e.includes('"permissions"')) && r.errors.some((e) => e.includes('"model"')) &&
         r.errors.some((e) => e.includes('"manualUnread"')) && !r.errors.some((e) => e.includes('"dateGroups"')),
       r.errors.join(' | '))
     check("the host's own access button is handed back", r.hostAccessVisible === true, JSON.stringify(r.hostAccessVisible))

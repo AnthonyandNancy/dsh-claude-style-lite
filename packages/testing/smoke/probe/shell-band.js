@@ -47,21 +47,23 @@
         'overflow: clip; }'
       document.head.append(hostCluster)
       // The desktop shell's two answers: the caption row is on the page, and
-      // the Window Controls Overlay API reports the three caption buttons.
+      // the Window Controls Overlay API reports the three caption buttons. The
+      // overlay is the browser's own event target: the skin listens for its
+      // geometry changes, so a plain object would fail the listener.
       document.documentElement.setAttribute('data-windows-titlebar', '')
       // The overlay's measurement is authoritative when the host's alias differs.
       document.documentElement.style.setProperty('--dsh-windows-titlebar-height', '56px')
+      var bandOverlay = new EventTarget()
+      bandOverlay.visible = true
+      bandOverlay.getTitlebarAreaRect = function () {
+        return {
+          x: 0, y: 0, width: window.innerWidth - CONTROLS, height: BAND,
+          top: 0, left: 0, right: window.innerWidth - CONTROLS, bottom: BAND,
+        }
+      }
       Object.defineProperty(navigator, 'windowControlsOverlay', {
         configurable: true,
-        value: {
-          visible: true,
-          getTitlebarAreaRect: function () {
-            return {
-              x: 0, y: 0, width: window.innerWidth - CONTROLS, height: BAND,
-              top: 0, left: 0, right: window.innerWidth - CONTROLS, bottom: BAND,
-            }
-          },
-        },
+        value: bandOverlay,
       })
       var header = document.createElement('header')
       header.className = '_header_b_1'
