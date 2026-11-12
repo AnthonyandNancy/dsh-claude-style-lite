@@ -794,64 +794,135 @@ git commit -m "feat: 通知改走宿主系统通道"
 
 ---
 
-### Task 4: 把手回改成一次交接
+### Task 4: 增长写回先判断读者位置
 
 **Files:**
-- Modify: `packages/engine/src/scroll-owner.ts:35-39, 512-551`
-- Modify: `packages/client/src/features/chat-follow/chat-follow.ts:521-550`
-- Test: `packages/testing/specs/mechanism/scroll-ownership/owner.spec.ts`
-- Add: `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`
+- Modify: `packages/client/src/features/chat-follow/chat-follow.ts:440-470`
+- Test: `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`
 
 **Interfaces:**
-- Consumes: `easeScrollToEndFor`, `isScrollEasing`, `findFollowTailButton`, `held`
-- Produces: `handBackFollow(request: HandBackRequest)`, `handBackPending(container): boolean`
+- Consumes: `readerScrollPosition(container): number | null`, `writeScroll(container, value, source): boolean`
+- Produces: no new export; `holdGrowth` keeps its signature and gains the empty-position guard.
 
-- [ ] **Step 1: Write the failing one-click test**
+- [ ] **Step 1: Write the failing growth-after-hand-back test**
 
-Create `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`:
+Replace `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts` with this file:
 
 ```ts
-import { expect, test } from 'vitest'
+/**
+ * A hand-back returns the conversation to the host: the reader hold goes, the
+ * host button is pressed once, and a growth that arrives afterwards is written
+ * to the tail by the host alone. The position the growth path reads is gone,
+ * so that path returns instead of writing a cleared value (D40, D99).
+ *
+ * @capability scroll-ownership
+ * @features engine
+ * @risk After the reader presses the host's back-to-end button, the next piece of content makes the skin write its cleared reader position over the tail and the window jumps to the top.
+ */
+import { afterEach, expect, test } from 'vitest'
 import { adoptSkin } from '@dsh-claude-style/engine/skin'
-import { handBackFollow, handBackPending, readerHolds } from '@dsh-claude-style/engine/scroll-owner'
-import { CONVERSATION_SCROLL_SELECTOR } from '@dsh-claude-style/contracts/dom'
+import { handBackFollow, handBackPending, readerHolds, readerScrollPosition } from '@dsh-claude-style/engine/scroll-owner'
+import { CHAT_FLOW_SELECTOR, CONVERSATION_SCROLL_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE } from '@dsh-claude-style/contracts/dom'
 import { TEST_SKIN } from '../../fixtures/vocabulary'
+import { hostElement } from '../../fixtures/host-markup'
 import { createScrollOwnerFixture } from '../../fixtures/scroll-owner'
 
 adoptSkin(TEST_SKIN)
 
-test('a hand-back clicks the host button once and stops watching', async () => {
+const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+const cleanups: (() => void)[] = []
+afterEach(() => {
+  while (cleanups.length > 0) cleanups.pop()!()
+})
+
+const { scrollBox, join } = createScrollOwnerFixture(cleanups)
+
+/**
+ * The host's shape around the follow button: the flow column sits in the
+ * scroller, the scroller's parent is the frame, and the frame's next sibling
+ * holds the button. The button stands outside the scroller, so its press is no
+ * scroll intent the owner hears.
+ */
+function followFrame() {
+  const following = document.createElement('div')
   const pressed: number[] = []
+  const settled: number[] = []
   const button = document.createElement('button')
-  button.addEventListener('click', () => { pressed.push(performance.now()) })
-  const cleanups: (() => void)[] = []
-  const { scrollBox, join } = createScrollOwnerFixture(cleanups)
+  button.type = 'button'
+  button.addEventListener('click', () => {
+    pressed.push(performance.now())
+    following.setAttribute(FOLLOWING_TAIL_ATTRIBUTE, '')
+    scroller.scrollTop = scroller.scrollHeight
+  })
   join()
   const scroller = scrollBox(CONVERSATION_SCROLL_SELECTOR)
-  // findFollowTailButton reads the conversation column's grandparent frame, then
-  // the button in the next sibling slot. The fixture mounts the scroller itself
-  // as the column; give it the two parents that shape names.
+  const column = hostElement(CHAT_FLOW_SELECTOR)
+  column.style.height = '2000px'
+  scroller.replaceChildren(following)
+  following.append(column)
   const frame = document.createElement('div')
-  const outer = document.createElement('div')
   const slot = document.createElement('div')
+  const outer = document.createElement('div')
   slot.append(button)
   frame.append(scroller)
   outer.append(frame)
   outer.append(slot)
   document.body.append(outer)
   cleanups.push(() => outer.remove())
+  return {
+    scroller,
+    column,
+    pressed,
+    settled,
+    settle: () => { settled.push(performance.now()) },
+  }
+}
+
+test('a hand-back presses the host button once and clears the reader position', async () => {
+  const { scroller, pressed } = followFrame()
   scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
   expect(readerHolds(scroller)).toBe(true)
   handBackFollow({ source: 'reader', reason: 'reader' })
-  await new Promise(resolve => setTimeout(resolve, 800))
-  for (const cleanup of cleanups.reverse()) cleanup()
+  await wait(800)
   expect(pressed).toHaveLength(1)
   expect(readerHolds(scroller)).toBe(false)
+  expect(readerScrollPosition(scroller)).toBeNull()
   expect(handBackPending(scroller)).toBe(false)
+})
+
+test('growth after the hand-back stays at the host tail', async () => {
+  const { scroller, column, pressed } = followFrame()
+  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
+  expect(readerHolds(scroller)).toBe(true)
+  handBackFollow({ source: 'reader', reason: 'reader' })
+  // The host's own write to the tail, on the press.
+  expect(readerHolds(scroller)).toBe(false)
+  expect(readerScrollPosition(scroller)).toBeNull()
+  const piece = document.createElement('div')
+  piece.style.height = '600px'
+  column.append(piece)
+  // The host's follow pins the end on growth.
+  scroller.scrollTop = scroller.scrollHeight
+  await wait(50)
+  expect(pressed).toHaveLength(1)
+  expect(readerHolds(scroller)).toBe(false)
+  expect(readerScrollPosition(scroller)).toBeNull()
+  expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
+})
+
+test('the position stays readable for the growth path after a hand-back', async () => {
+  const { scroller } = followFrame()
+  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
+  expect(readerHolds(scroller)).toBe(true)
+  expect(readerScrollPosition(scroller)).not.toBeNull()
+  handBackFollow({ source: 'reader', reason: 'reader' })
+  expect(readerHolds(scroller)).toBe(false)
+  // The write-back guard reads exactly this value: a hand-back leaves none.
+  expect(readerScrollPosition(scroller)).toBeNull()
 })
 ```
 
-- [ ] **Step 2: Run the one-click test and confirm it fails**
+- [ ] **Step 2: Run the test and confirm it fails**
 
 Run:
 
@@ -859,90 +930,29 @@ Run:
 node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
 ```
 
-Expected: FAIL with `handBackPending is not a function`.
+Expected: FAIL: the growth test reads `scrollTop` as `0` even though `readerScrollPosition` is null.
 
-- [ ] **Step 3: Replace the loop with one request and one confirmation**
+- [ ] **Step 3: Guard the growth write-back against a cleared reader position**
 
-In `packages/engine/src/scroll-owner.ts`, replace `handBackFollow` with:
+In `packages/client/src/features/chat-follow/chat-follow.ts`, change `holdGrowth` to:
 
 ```ts
-const HAND_BACK_SETTLE_MS = 500
-const HAND_BACK_LOOK_MS = 100
-const HAND_BACK_LOOKS = 5
-const handBackTokens = new WeakMap<Element, number>()
-const handBackUntil = new WeakMap<Element, number>()
-
-export interface HandBackRequest {
-  source: ScrollSource
-  reason: 'structure' | 'reader'
-  stillWanted?: () => boolean
-  onSettled?: () => void
-}
-
-function releaseReaderHold(container: Element) {
-  setHeld(container, false)
-}
-
-export function handBackPending(container: Element) {
-  const until = handBackUntil.get(container)
-  return until !== undefined && performance.now() < until
-}
-
-export function handBackFollow(request: HandBackRequest) {
-  const stillWanted = request.stillWanted ?? (() => true)
-  const onSettled = request.onSettled ?? null
-  const scroller = conversationScroller()
-  if (scroller === null) {
-    if (onSettled !== null) onSettled()
-    return
-  }
-  const token = (handBackTokens.get(scroller) ?? 0) + 1
-  handBackTokens.set(scroller, token)
-  handBackUntil.set(scroller, performance.now() + HAND_BACK_SETTLE_MS)
-  releaseReaderHold(scroller)
-  const button = findFollowTailButton()
-  if (button !== null) {
-    if (!stillWanted()) {
-      if (onSettled !== null) onSettled()
-      return
-    }
-    button.click()
-  }
-  let looks = 0
-  const look = () => {
-    if (handBackTokens.get(scroller) !== token || !stillWanted() || looks >= HAND_BACK_LOOKS) {
-      if (onSettled !== null) onSettled()
-      return
-    }
-    looks += 1
-    if (findFollowTailButton() === null) {
-      // The host has switched its follow back on: the one request is done.
-      if (onSettled !== null) onSettled()
-      return
-    }
-    window.setTimeout(look, HAND_BACK_LOOK_MS)
-  }
-  window.setTimeout(look, HAND_BACK_LOOK_MS)
+const holdGrowth = (column: HTMLElement) => {
+  const scroller = column.closest(CONVERSATION_SCROLL_SELECTOR)
+  if (scroller === null || column.closest(FOLLOWING_TAIL_SELECTOR) === null) return
+  if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) return
+  if (foldBusy()) return
+  // The host's follow has written the new tail. Give it back only where the
+  // reader still holds a position of his own; a hand-back has cleared it.
+  const position = readerScrollPosition(scroller)
+  if (position === null) return
+  writeScroll(scroller, position, 'reader')
 }
 ```
 
-> `releaseReaderHold` lives beside `setHeld` because the held set is module-private. `handBackUntil` stays set for the full 500ms even after the button disappears, so the reader-position write-back skips that window.
+Remove `handBackPending` from the import; no other line in the file reads it.
 
-- [ ] **Step 4: Skip the reader write-back while a hand-back is pending**
-
-In `packages/client/src/features/chat-follow/chat-follow.ts`, import `handBackPending` and change the write-back condition at line 454:
-
-```ts
-if (!handBackPending(scroller)) writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')
-```
-
-Change the `ensure` call at line 546 to the new signature:
-
-```ts
-handBackFollow({ source: 'follow', reason: 'structure', stillWanted: () => !stopped && !readerAway() })
-```
-
-- [ ] **Step 5: Run the mechanism specs**
+- [ ] **Step 4: Run the mechanism specs**
 
 Run:
 
@@ -950,23 +960,25 @@ Run:
 node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership
 ```
 
-Expected: PASS, existing owner and touch-hold cases plus the new one-click case.
+Expected: PASS, every owner, touch-hold and return case.
 
-- [ ] **Step 6: Run the chat-follow behaviour spec**
+- [ ] **Step 5: Run the chat-follow page lane**
 
 Run:
 
 ```powershell
+node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
+node packages/testing/stand-in.mjs --case chat-follow
 node packages/testing/stand-in.mjs --spec chat-follow
 ```
 
-Expected: PASS.
+Expected: PASS. If the stand-in smoke reports `a structural moment hands the scroll back` as `{"before":60,"after":60}`, that is the lane's own fixture lacking a host button press and not this change; record the output and run the case again on a tree with the fix applied.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```powershell
-git add packages/engine/src/scroll-owner.ts packages/client/src/features/chat-follow/chat-follow.ts packages/testing/specs/mechanism/scroll-ownership
-git commit -m "fix: 回到底部只交接一次"
+git add packages/client/src/features/chat-follow/chat-follow.ts packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
+git commit -m "fix: 增长写回先判断读者位置"
 ```
 
 ---
@@ -975,7 +987,7 @@ git commit -m "fix: 回到底部只交接一次"
 
 **Files:**
 - Add: `docs/adr/D97-host-delivers-desktop-notifications.md`
-- Add: `docs/adr/D98-hand-back-is-one-request.md`
+- Add: `docs/adr/D99-growth-checks-the-reader-position.md`
 - Modify: `docs/adr/README.md`
 - Add: `docs/changes/desktop-notifications-and-scroll-return.json`
 - Modify: `docs/INSTALL.md`
@@ -985,7 +997,7 @@ git commit -m "fix: 回到底部只交接一次"
 
 - [ ] **Step 1: Write the two ADRs**
 
-Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D98 records that a hand-back is one request, one confirmation, and never a repeated click.
+Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D99 records that a growth checks whether the reader position still exists before writing it back, and it carries 「取代：D98」.
 
 - [ ] **Step 2: Regenerate the ADR index**
 
@@ -1046,7 +1058,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add docs/adr docs/changes docs/INSTALL.md README.md README.en.md docs/tests
+git add docs/adr docs/changes docs/INSTALL.md README.md README.en.md docs/tests docs/superpowers
 git commit -m "docs: 记录桌面通知与回到底部的行为"
 ```
 
