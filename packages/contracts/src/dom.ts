@@ -220,11 +220,6 @@ export const SHIMMER_DECORATION_SELECTOR = '[data-shimmer-decoration]'
 export const THINK_PREVIEW_ATTRIBUTE = 'data-preview'
 /** The row of a call no named tool row draws: its title is the generic word, its description the tool and its purpose. */
 export const GENERIC_TOOL_ROW_SELECTOR = '[data-variant="others"]'
-/**
- * On a row the host lets the reader open and fold: present while it stands
- * open. A thinking row is folded when this is absent.
- */
-export const EXPANDED_ATTRIBUTE = 'data-expanded'
 export const FOLD_TOGGLE_SELECTOR = '[aria-expanded]'
 /** Controls whose opening is skipped whole: a turn's header and its trigger notice. */
 export const FOLD_SKIPPED_CONTROL_SELECTOR = '[data-turn-process], [data-turn-trigger]'

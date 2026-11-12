@@ -291,17 +291,17 @@ function page(name, tier, cases, probe = PROBE) {
         '</nav></div></div></header>'
     : ''
   // The fold case drives the two surfaces the ported folding acts on: a thinking
-  // row (opened and folded back by its own control) and process groups — one
-  // running and capped, holding a thought and a tool call, and one in a tier
-  // that does not cap its body. The host's own behaviour is modelled in the
-  // script: each row's control flips its own aria-expanded, a group's header
-  // flips its body's hidden. A header is the host's: a decorative icon span, then
-  // its words. A thinking row carries its reasoning body the way the pinned host
-  // renders it: a wrapper with the Markdown inside, no slot of its own. The chat
-  // flow holds a DisclosureRow in both of the host's shapes: the row with its
-  // body beside it, and — first in the flow, so the other's body stays the flow's
-  // last child — the row wrapped in a header beside its accessory, the expanded
-  // content inside that same wrapper.
+  // row (opened once by the skin while it runs, then its own control flips it)
+  // and process groups — one running and capped, holding a thought and a tool
+  // call, and one in a tier that does not cap its body. The host's own behaviour
+  // is modelled in the script: each row's control flips its own aria-expanded, a
+  // group's header flips its body's hidden. A header is the host's: a decorative
+  // icon span, then its words. A thinking row carries its reasoning body the way
+  // the pinned host renders it: a wrapper with the Markdown inside, no slot of
+  // its own. The chat flow holds a DisclosureRow in both of the host's shapes:
+  // the row with its body beside it, and — first in the flow, so the other's body
+  // stays the flow's last child — the row wrapped in a header beside its
+  // accessory, the expanded content inside that same wrapper.
   var foldReasoning = ''
   for (var line = 1; line <= 12; line += 1) foldReasoning += '思考第 ' + line + ' 行。' + (line < 12 ? '<br>' : '')
   // The second row mirrors the host's own capped reasoning body in the Standard
@@ -358,11 +358,12 @@ function page(name, tier, cases, probe = PROBE) {
       '</div>' +
       '<script>' +
       '(function () {' +
-      '  window.__foldClicks = { group: 0, expanded: 0 };' +
+      '  window.__foldClicks = { think: 0, group: 0, expanded: 0 };' +
       '  window.__disclosureClicks = 0;' +
       '  document.querySelectorAll("[data-variant=\\"think\\"] > button").forEach(function (button) {' +
       '    button.addEventListener("click", function () {' +
       '      var row = this.parentElement;' +
+      '      if (row.id === "debugThink") window.__foldClicks.think += 1;' +
       '      var open = row.querySelector("[aria-expanded=\\"true\\"]") !== null;' +
       '      row.querySelector("button").setAttribute("aria-expanded", open ? "false" : "true");' +
       '    });' +

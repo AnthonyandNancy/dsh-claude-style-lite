@@ -55,7 +55,7 @@ body[data-dsh-claude-style][data-dsh-claude-process-column] [data-step-process-c
 
 /* A folded thought is a fixed box the host sizes to its own 24px line under
    `contain: size`, so the row's height is restated on that box. */
-body[data-dsh-claude-style][data-dsh-claude-process-column] [data-step-process-content] [data-variant="think"]:not([data-expanded]) {
+body[data-dsh-claude-style][data-dsh-claude-process-column] [data-step-process-content] [data-variant="think"]:not([data-dsh-claude-think-open]) {
   height: calc(36px + var(--dsh-content-font-delta, 0px));
 }
 

@@ -4,6 +4,7 @@ import { installChatFoldGlide } from './fold-glide'
 import { createMessageFold } from './message-fold'
 import { createProcessFold } from './process-fold'
 import { createProcessSummary } from './process-summary'
+import { createReasoningOpen } from './reasoning-open'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureHandle } from '@dsh-claude-style/engine/scheduler'
 import type { FeatureUi } from '../../core/feature'
@@ -18,6 +19,7 @@ export interface ChatFoldHandle extends FeatureHandle {
    ui.chatFold lets the follow guard exclude an active glide and disappears on teardown. */
 export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   document.body.setAttribute(CHAT_FOLD_ATTR, '')
+  const reasoningOpen = createReasoningOpen()
   const stopProcess = createProcessFold()
   const summary = createProcessSummary()
   const messageFold = createMessageFold(() => ui.schedule?.())
@@ -40,6 +42,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   }
   return () => {
     delete ui.chatFold
+    reasoningOpen.stop()
     stopProcess()
     summary.stop()
     messageFold.stop()
