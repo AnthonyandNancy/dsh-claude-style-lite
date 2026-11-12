@@ -1,0 +1,7 @@
+{
+  "soundCuesTitle": { "zh": "提示音效", "en": "Sound cue" },
+  "soundCuesDesc": { "zh": "任务完成或受阻时，播放提示音", "en": "Play a cue when a task finishes or is blocked" },
+  "soundLevelOff": { "zh": "关闭", "en": "Off" },
+  "soundLevelSoft": { "zh": "轻柔", "en": "Soft" },
+  "soundLevelClear": { "zh": "清晰", "en": "Clear" }
+}

@@ -1,0 +1,40 @@
+/* @composer-gate */
+/* Only the figures' line leaves the host dock; every host node keeps its React
+   parent, and the meter keeps the row the host draws it in, so the ring stands
+   where the popover position draws it too. */
+body[data-dsh-claude-style][data-dsh-claude-stats-position="footer"] [data-dsh-claude-part~="composer-stack"] {
+  position: relative;
+}
+body[data-dsh-claude-style][data-dsh-claude-stats-position="footer"] [data-dsh-claude-footer-line] {
+  flex: none;
+}
+/* The host's row holds figures that keep a line under the toolbar. While they
+   ride the toolbar as an overlay — and while a session holds no figures yet —
+   the row would stand blank, and releasing it then also keeps the composer's
+   height from changing when the first numbers arrive. */
+body[data-dsh-claude-style][data-dsh-claude-stats-position="footer"] [data-dsh-claude-part~="composer-dock"]:not([data-dsh-claude-holds~="footer-below"]) {
+  min-height: 0;
+  padding-top: 0;
+}
+/* The first frame carries the mark before its measured mode. Keep that frame
+   off the screen, and out of the dock's flow, so the line never paints and
+   never holds a row open — or spills past the dock's foot — for the frame
+   before its mode is measured. Its natural width is what the mode is read from,
+   so the box stays white-space: nowrap's own size. */
+body[data-dsh-claude-style][data-dsh-claude-stats-position="footer"] [data-dsh-claude-footer-line=""] {
+  visibility: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+}
+body[data-dsh-claude-style][data-dsh-claude-stats-position="footer"] [data-dsh-claude-footer-line="overlay"] {
+  position: absolute;
+  left: var(--dsh-claude-footer-left);
+  bottom: var(--dsh-claude-footer-bottom);
+  height: var(--dsh-claude-footer-height);
+  width: max-content;
+  margin: 0;
+  padding: 0;
+  z-index: 3;
+}

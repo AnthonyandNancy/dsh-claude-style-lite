@@ -1,0 +1,43 @@
+/* message-fold.ts reads these tokens for its threshold so measurement and clamping agree.
+   Rules apply only while the feature owns the page (D74). */
+
+body[data-dsh-claude-style][data-dsh-claude-chat-fold] {
+  --dsh-claude-message-fold-cap: 320px;
+  --dsh-claude-message-fold-fade: 40px;
+}
+
+body[data-dsh-claude-style][data-dsh-claude-chat-fold] [data-dsh-claude-message-fold="collapsed"] {
+  /* border-box makes the cap the box the reader sees, which is what the module
+     compares its own reading against. */
+  box-sizing: border-box;
+  max-height: var(--dsh-claude-message-fold-cap);
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - var(--dsh-claude-message-fold-fade)), transparent 100%);
+  mask-image: linear-gradient(to bottom, black calc(100% - var(--dsh-claude-message-fold-fade)), transparent 100%);
+}
+
+/* The toggle: the host's own type and ink at a smaller step, with the composer
+   controls' 7px corners. It sits under the bubble, right-aligned by the message
+   stack's own alignment. */
+body[data-dsh-claude-style] .dsh-claude-message-fold-toggle {
+  margin-top: 2px;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+body[data-dsh-claude-style] .dsh-claude-message-fold-toggle:hover {
+  background: var(--dsh-claude-chip);
+  color: var(--dsw-alias-label-primary);
+}
+
+body[data-dsh-claude-style] .dsh-claude-message-fold-toggle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary, #d97757);
+  outline-offset: 1px;
+}

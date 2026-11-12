@@ -1,0 +1,464 @@
+/* ---------- chat wait: the live turn's running row ---------- */
+/* The host draws the live turn's row as the flow's LAST row, where every burst
+   pushes it down and the follow's glide pulls it back. The row is pinned at the
+   place it already comes to rest — composer height, fade band, the host's 16px
+   transcript padding — plus 1px, because content height is fractional while the
+   scroll offset lands on whole pixels. A burst then costs it nothing, and a row
+   scrolled away from the tail keeps its document place.
+
+   The pin needs the body's chat follow mark (CHAT_FOLLOW_ATTR) and the row's own
+   tail mark — a card mounted after the row takes the tail mark away and leaves
+   both in ordinary flow. Under the follow mark, the host's follow attribute or
+   the glide's hold mark (FOLLOW_HOLD_ATTR) says the tail is followed, and the
+   reader's takeover (READER_HOLD_ATTR, engine/src/scroll-owner.ts) drops the pin
+   where the host still reports its follow (D9). */
+body[data-dsh-claude-style][data-dsh-claude-chat-follow] [data-conversation-scroll]:not([data-dsh-claude-reader-hold]) [data-chat-following-tail] [data-chat-running][data-dsh-claude-wait-tail],
+body[data-dsh-claude-style][data-dsh-claude-chat-follow] [data-conversation-scroll]:not([data-dsh-claude-reader-hold]) [data-dsh-claude-follow-hold] [data-chat-running][data-dsh-claude-wait-tail] {
+  position: sticky;
+  bottom: calc(var(--dsh-composer-height, 0px) + var(--dsh-composer-fade-h, 40px) + 16px + 1px);
+  z-index: 1;
+  /* Pinned, the row floats over the tail of the transcript, and the words there
+     would show through it. The canvas it already stands on paints the band, the
+     way the composer seat paints its own: at rest the two are the same colour
+     and nothing changes. */
+  background: var(--dsh-claude-canvas, var(--dsw-alias-bg-base, #ffffff));
+}
+
+/* The host clips the transcript 16px below the flow's last row, and the pin
+   stands 1px above that row's resting place; the 17px strip between them is the
+   one place a slid line can show. The row's canvas is carried down to the
+   composer's top, so at rest the strip is the same canvas and it covers the line
+   the stream slide brings up. The fade band lies outside the host's clip. */
+body[data-dsh-claude-style][data-dsh-claude-chat-follow] [data-conversation-scroll]:not([data-dsh-claude-reader-hold]) [data-chat-following-tail] [data-chat-running][data-dsh-claude-wait-tail]::after,
+body[data-dsh-claude-style][data-dsh-claude-chat-follow] [data-conversation-scroll]:not([data-dsh-claude-reader-hold]) [data-dsh-claude-follow-hold] [data-chat-running][data-dsh-claude-wait-tail]::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--dsh-composer-fade-h, 40px) + 17px);
+  background-color: inherit;
+  pointer-events: none;
+}
+
+/* The host's running row keeps its whale and its live region; only its words,
+   marked by chat-wait.ts, step aside for the skin's line — the turn's activity,
+   a quiet clock and the overtime badge — so the row still reads and announces.
+   The wording's own change runs transitions.dev's "Text states swap" (MIT). */
+body[data-dsh-claude-style] [data-chat-running][data-dsh-claude-wait] [data-dsh-claude-wait-words] {
+  display: none;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+/* How much of the wording shows is the row's own width and nothing else: the
+   host's content span is a flex item that takes its content's width, so a long
+   clause would run past the row instead of giving way. Bounded, the label clips
+   and its copies draw the ellipsis where the room runs out
+   (shared/swapping-text.css), with the loader, clock and badge keeping their
+   places beside it. */
+body[data-dsh-claude-style] [data-chat-running][data-dsh-claude-wait] [data-dsh-claude-part~="running-content"] {
+  max-width: 100%;
+}
+
+/* The whale tail is DeepSeek's own character: under the Claude brand it is hidden
+   and the skin's loader stands where it was, leading the line. The snippet the
+   bouncing motion is ported from is recorded in docs/THIRD_PARTY_NOTICES.md. */
+body[data-dsh-claude-style][data-dsh-claude-brand="claude"] [data-chat-running][data-dsh-claude-wait] [data-dsh-claude-part~="running-icon"] {
+  display: none;
+}
+
+/* Hidden under every other brand, where the host's own whale tail stands. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-loader {
+  display: none;
+}
+
+body[data-dsh-claude-style][data-dsh-claude-brand="claude"] .dsh-claude-chat-wait-loader {
+  display: inline-flex;
+  position: relative;
+  flex: none;
+  width: 18px;
+  height: 14px;
+  margin-right: 6px;
+}
+
+/* The loader carries every motion at once, one lane each, so a change is a
+   hand-over rather than a redraw: each dot of the leaving lane gives its place,
+   at its own still moment, to its partner in the arriving lane (wait-loader.ts).
+   A lane out of play leaves the page, which lets it start from the top when it
+   comes back. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane {
+  position: absolute;
+  inset: 0;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-resting {
+  display: none;
+}
+
+/* One dot of a lane, built at the lane's left edge and placed by the values it
+   carries, so the lane and the line travel with it and neither is written twice.
+   Its colour is the accent in force; it draws only while its lane is in play. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-dot {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--dsw-alias-brand-primary, #d97757);
+  transform-origin: 50% 100%;
+  opacity: 0;
+  /* How far this dot travels to reach the loader's centre line, the unit
+     direction of the line it walks, and that line's far end — worked out here so
+     the keyframes read it instead of repeating the geometry. */
+  --dsh-claude-dot-centre: 0px;
+  --dsh-claude-dot-line-x: 0;
+  --dsh-claude-dot-line-y: -1;
+  --dsh-claude-dot-end-x: calc(var(--dsh-claude-dot-centre) + var(--dsh-claude-dot-line-x) * var(--dsh-claude-distance-travel));
+  --dsh-claude-dot-end-y: calc((var(--dsh-claude-dot-line-y) - 1) * var(--dsh-claude-distance-travel));
+}
+
+/* The lane in play draws its dots, and the leaving one keeps drawing until each
+   has been handed over; the hand-over animations decide each dot's frame. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-active .dsh-claude-chat-wait-dot,
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-leaving .dsh-claude-chat-wait-dot {
+  opacity: 1;
+}
+
+/* The three places the bounce runs in, seven pixels apart; the walk keeps the
+   same places and walks the lines that meet in their middle — one up, one down
+   and left, one down and right, 120° apart — with the second walked the other
+   way, so its far end is the one up and to the left. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot:nth-child(2),
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(2) {
+  left: 7px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot:nth-child(3),
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(3) {
+  left: 14px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(1) {
+  --dsh-claude-dot-centre: 7px;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(2) {
+  --dsh-claude-dot-line-x: -0.866;
+  --dsh-claude-dot-line-y: -0.5;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(3) {
+  --dsh-claude-dot-centre: -7px;
+  --dsh-claude-dot-line-x: -0.866;
+  --dsh-claude-dot-line-y: 0.5;
+}
+
+/* The third lane: four dots swapping the corners of a 9.5 × 11.6 rectangle, each
+   on its own corner. A turn is four runs of one shape — the A pair swapping,
+   then B, then back — with a rest after each, so every dot ends where it started
+   and turns join without a seam. The stops below are that arc read at eight even
+   angles on cubic-bezier(0.16, 0.75, 0.29, 0.97). Nothing here fades; the
+   hand-over owns that (wait-loader.ts). */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-orbit .dsh-claude-chat-wait-dot {
+  top: 50%;
+  bottom: auto;
+  left: 50%;
+  margin: -2px 0 0 -2px;
+  animation: dsh-claude-wait-dot-orbit-1 var(--dsh-claude-period-dot-orbit) linear infinite;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-orbit .dsh-claude-chat-wait-dot:nth-child(2) {
+  animation-name: dsh-claude-wait-dot-orbit-2;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-orbit .dsh-claude-chat-wait-dot:nth-child(3) {
+  animation-name: dsh-claude-wait-dot-orbit-4;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-orbit .dsh-claude-chat-wait-dot:nth-child(4) {
+  animation-name: dsh-claude-wait-dot-orbit-3;
+}
+
+@keyframes dsh-claude-wait-dot-orbit-1 {
+  0% { translate: -4.75px -5.8px; }
+  0.46% { translate: -4.57px -3.54px; }
+  0.97% { translate: -4.03px -1.36px; }
+  1.55% { translate: -3.15px 0.64px; }
+  2.26% { translate: -1.97px 2.4px; }
+  3.21% { translate: -0.53px 3.85px; }
+  4.6% { translate: 1.11px 4.92px; }
+  7.09% { translate: 2.9px 5.58px; }
+  16.67%, 25%, 50% { translate: 4.75px 5.8px; }
+  50.46% { translate: 4.57px 3.54px; }
+  50.97% { translate: 4.03px 1.36px; }
+  51.55% { translate: 3.15px -0.64px; }
+  52.26% { translate: 1.97px -2.4px; }
+  53.21% { translate: 0.53px -3.85px; }
+  54.6% { translate: -1.11px -4.92px; }
+  57.09% { translate: -2.9px -5.58px; }
+  66.67%, 75%, 100% { translate: -4.75px -5.8px; }
+}
+
+@keyframes dsh-claude-wait-dot-orbit-2 {
+  0%, 25% { translate: 4.75px -5.8px; }
+  25.46% { translate: 4.57px -3.54px; }
+  25.97% { translate: 4.03px -1.36px; }
+  26.55% { translate: 3.15px 0.64px; }
+  27.26% { translate: 1.97px 2.4px; }
+  28.21% { translate: 0.53px 3.85px; }
+  29.6% { translate: -1.11px 4.92px; }
+  32.09% { translate: -2.9px 5.58px; }
+  41.67%, 50%, 75% { translate: -4.75px 5.8px; }
+  75.46% { translate: -4.57px 3.54px; }
+  75.97% { translate: -4.03px 1.36px; }
+  76.55% { translate: -3.15px -0.64px; }
+  77.26% { translate: -1.97px -2.4px; }
+  78.21% { translate: -0.53px -3.85px; }
+  79.6% { translate: 1.11px -4.92px; }
+  82.09% { translate: 2.9px -5.58px; }
+  91.67%, 100% { translate: 4.75px -5.8px; }
+}
+
+@keyframes dsh-claude-wait-dot-orbit-4 {
+  0% { translate: 4.75px 5.8px; }
+  0.46% { translate: 4.57px 3.54px; }
+  0.97% { translate: 4.03px 1.36px; }
+  1.55% { translate: 3.15px -0.64px; }
+  2.26% { translate: 1.97px -2.4px; }
+  3.21% { translate: 0.53px -3.85px; }
+  4.6% { translate: -1.11px -4.92px; }
+  7.09% { translate: -2.9px -5.58px; }
+  16.67%, 25%, 50% { translate: -4.75px -5.8px; }
+  50.46% { translate: -4.57px -3.54px; }
+  50.97% { translate: -4.03px -1.36px; }
+  51.55% { translate: -3.15px 0.64px; }
+  52.26% { translate: -1.97px 2.4px; }
+  53.21% { translate: -0.53px 3.85px; }
+  54.6% { translate: 1.11px 4.92px; }
+  57.09% { translate: 2.9px 5.58px; }
+  66.67%, 75%, 100% { translate: 4.75px 5.8px; }
+}
+
+@keyframes dsh-claude-wait-dot-orbit-3 {
+  0%, 25% { translate: -4.75px 5.8px; }
+  25.46% { translate: -4.57px 3.54px; }
+  25.97% { translate: -4.03px 1.36px; }
+  26.55% { translate: -3.15px -0.64px; }
+  27.26% { translate: -1.97px -2.4px; }
+  28.21% { translate: -0.53px -3.85px; }
+  29.6% { translate: 1.11px -4.92px; }
+  32.09% { translate: 2.9px -5.58px; }
+  41.67%, 50%, 75% { translate: 4.75px -5.8px; }
+  75.46% { translate: 4.57px -3.54px; }
+  75.97% { translate: 4.03px -1.36px; }
+  76.55% { translate: 3.15px 0.64px; }
+  77.26% { translate: 1.97px 2.4px; }
+  78.21% { translate: 0.53px 3.85px; }
+  79.6% { translate: -1.11px 4.92px; }
+  82.09% { translate: -2.9px 5.58px; }
+  91.67%, 100% { translate: -4.75px 5.8px; }
+}
+
+/* The bouncing lane, ported from the snippet (docs/THIRD_PARTY_NOTICES.md): the
+   three start behind each other by two and three fifths of the period, and every
+   delay is negative and at least a period, so the wave never begins at the
+   snippet's first frame — the hand-over finds the dots already on their way. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot {
+  animation: dsh-claude-wait-dot var(--dsh-claude-period-dot-bounce) var(--dsh-claude-ease-standard) infinite alternate;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot:nth-child(1) {
+  animation-delay: calc(-1 * var(--dsh-claude-period-dot-bounce));
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot:nth-child(2) {
+  animation-delay: calc(-3 * var(--dsh-claude-period-dot-bounce) / 5);
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce .dsh-claude-chat-wait-dot:nth-child(3) {
+  animation-delay: calc(-2 * var(--dsh-claude-period-dot-bounce) / 5);
+}
+
+/* The walking lane: each dot walks its own line at a simple harmonic pace — at
+   rest at the ends, fastest through the middle — and is smallest as it crosses,
+   so it never draws larger than the bouncing one. Keyframes stand only at the
+   ends (the size at the middle too), so every stretch runs on
+   --dsh-claude-ease-harmonic; a curve written into a keyframe would be dropped
+   for linear. The dots stand a third of the period apart — a half would draw the
+   mirrored lines' motion twice — and every delay is negative, so each already
+   stands on its own place. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot {
+  animation: dsh-claude-wait-dot-line var(--dsh-claude-period-dot-line) var(--dsh-claude-ease-harmonic) infinite;
+  animation-delay: calc(-1 * var(--dsh-claude-period-dot-line) / 4);
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(2) {
+  animation-delay: calc(-7 * var(--dsh-claude-period-dot-line) / 12);
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line .dsh-claude-chat-wait-dot:nth-child(3) {
+  animation-delay: calc(-11 * var(--dsh-claude-period-dot-line) / 12);
+}
+
+/* What the hand-over needs from a lane's own motion, read by wait-loader.ts: the
+   shares at which a dot fades in as the loader opens and how long that fade
+   takes, and the shares at which a dot stands still and can be handed over. The
+   bounce fades in at the top of its hop, the walk at the middle of its line;
+   which curve the opening fade runs on is read from the token sheet (D9). */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-bounce {
+  --dsh-claude-dot-arrives: 1;
+  --dsh-claude-dot-leaves: 1;
+  --dsh-claude-dot-fade: 0.5;
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-line {
+  --dsh-claude-dot-arrives: 0.25 0.75;
+  --dsh-claude-dot-leaves: 0 0.5;
+  --dsh-claude-dot-fade: 0.25;
+}
+
+/* The swapping lane fades in at the top of its turn, the pose every dot already
+   stands on, and is handed over in the middle of the four rests between runs. */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-lane.is-orbit {
+  --dsh-claude-dot-arrives: 0;
+  --dsh-claude-dot-leaves: 0.2083 0.4583 0.7083 0.9583;
+  --dsh-claude-dot-fade: 0.125;
+}
+
+/* The reader's animation choice (D40): the theme presses every animation to a
+   hundredth of a millisecond but leaves the iteration count alone, so pausing
+   holds each dot at its own phase instead of strobing. wait-loader.ts lays a
+   change down at once under that choice. */
+body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-chat-wait-lane .dsh-claude-chat-wait-dot {
+  animation-play-state: paused;
+}
+
+/* The dot flattens against the floor as it leaves and rounds out on the way up.
+   The stops at two and three fifths are where the wave's second and third dots
+   stand when the bounce takes over. The snippet's radius stops are left out: on
+   a 4px box they clamp to the curve the dot already carries, and a radius among
+   the keyframes would keep the animation off the compositor. */
+@keyframes dsh-claude-wait-dot {
+  0% {
+    translate: 0 0;
+    scale: 1.7 0.25;
+    animation-timing-function: linear;
+  }
+
+  40% {
+    translate: 0 calc(-2 * var(--dsh-claude-distance-travel) / 5);
+    scale: 1;
+    animation-timing-function: linear;
+  }
+
+  60% {
+    translate: 0 calc(-3 * var(--dsh-claude-distance-travel) / 5);
+  }
+
+  100% {
+    translate: 0 calc(-1 * var(--dsh-claude-distance-travel));
+  }
+}
+
+@keyframes dsh-claude-wait-dot-line {
+  0%, 100% {
+    translate: calc(2 * var(--dsh-claude-dot-centre) - var(--dsh-claude-dot-end-x))
+      calc(-2 * var(--dsh-claude-distance-travel) - var(--dsh-claude-dot-end-y));
+    scale: 1;
+  }
+
+  25%, 75% {
+    scale: var(--dsh-claude-scale-dot-mid);
+  }
+
+  50% {
+    translate: var(--dsh-claude-dot-end-x) var(--dsh-claude-dot-end-y);
+    scale: 1;
+  }
+}
+
+/* The words sweep under the host's own TextShimmer: a tinted copy inside a masked
+   window laid over them, so the words keep their colour (shared/sweep-band.ts).
+   The band and its cadence are the host's, so the line, a group header and the
+   host's rows sweep as one; the swap motion is shared/swapping-text.css's. The
+   helper writes the shimmer class on the copy showing the words, since the
+   label's box stands taller than the text by the swap's travel; the reader's
+   animation choice (D40) is the gate (shared/swapping-text.ts). */
+/* The label's words can be a clause the model wrote, so the label is what gives
+   way when the row is narrow: clock and badge keep their places and the words
+   are cut with an ellipsis inside the box (shared/swapping-text.css). */
+body[data-dsh-claude-style] .dsh-claude-chat-wait-label {
+  min-width: 0;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* What the words wear lives in shared/motion.css beside the presets and periods
+   it reads, written once for the line and the settings page's preview cards;
+   this sheet only says which box carries the words (D40 gates it there too). */
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-clock {
+  margin-left: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-caption);
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-badge {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-state-warn-label);
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-label) 16%, transparent);
+  /* The badge slides in from below and left while it pops out of nothing, and
+     shrinks back faster on its way out (transitions.dev's "Notification badge",
+     MIT). Slide and pop are `translate` and `scale`, so neither undoes the
+     other; @starting-style is needed because it arrives from `hidden`
+     (chat-wait.ts keeps it laid out until its exit has played). */
+  transform-origin: center;
+  scale: 1;
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    scale var(--dsh-claude-duration-pop) var(--dsh-claude-ease-spring),
+    opacity var(--dsh-claude-duration-pop) var(--dsh-claude-ease-spring),
+    filter var(--dsh-claude-duration-pop) var(--dsh-claude-ease-spring);
+  animation: dsh-claude-wait-badge-in var(--dsh-claude-duration-open) var(--dsh-claude-ease-settle);
+}
+
+@starting-style {
+  body[data-dsh-claude-style] .dsh-claude-chat-wait-badge {
+    scale: 0;
+    opacity: 0;
+    filter: blur(var(--dsh-claude-blur-soft));
+  }
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait-badge[data-dsh-claude-wait-badge-leaving] {
+  scale: 0;
+  opacity: 0;
+  filter: blur(var(--dsh-claude-blur-soft));
+  transition:
+    scale var(--dsh-claude-duration-exit) var(--dsh-claude-ease-standard),
+    opacity var(--dsh-claude-duration-exit) var(--dsh-claude-ease-standard),
+    filter var(--dsh-claude-duration-exit) var(--dsh-claude-ease-standard);
+}
+
+@keyframes dsh-claude-wait-badge-in {
+  from { translate: calc(-1 * var(--dsh-claude-distance-travel)) var(--dsh-claude-distance-rise); }
+  to { translate: 0 0; }
+}
+
+body[data-dsh-claude-style] .dsh-claude-chat-wait [hidden] {
+  display: none;
+}

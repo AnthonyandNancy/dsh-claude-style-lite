@@ -1,0 +1,5 @@
+/* Theme changes must repaint in one recalculation; ordinary hover transitions would trail it.
+   Higher-specificity input and attachment transitions are cancelled in theme-flip.ts. */
+html[data-dsh-theme-transitioning] body[data-dsh-claude-style][data-dsh-theme-transitioning] * {
+  transition: none !important;
+}

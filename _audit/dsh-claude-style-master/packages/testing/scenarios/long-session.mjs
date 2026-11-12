@@ -1,0 +1,272 @@
+#!/usr/bin/env node
+/**
+ * long-session.mjs — what a frame costs once the conversation is long (D92).
+ *
+ * Registered in the lane's scenario table (packages/testing/scenarios.mjs).
+ *
+ * The scenario grows a transcript first, then streams one more answer while an
+ * in-page probe times the frames, so what a frame costs once the conversation is
+ * long is judged on the numbers a long session really pays — a pass that grew
+ * with the page, or with its square, trips the bounds below. The bounds are loose on
+ * purpose — a lane runner is a shared machine — and the readings are printed
+ * with every check so a regression is visible before it trips one.
+ *
+ * The frame timer is a `requestAnimationFrame` interval, so its readings are
+ * the wall clock between frames: on a headless runner without a GPU the p50
+ * sits above one 60 Hz frame for reasons that have nothing to do with the
+ * skin, and the comparison that matters is the same runner before and after a
+ * change to the pass (a `git worktree` of the previous revision runs the same
+ * scenario).
+ */
+import { sendPrompt, waitForTurn } from '../prompt.mjs'
+import { bound } from '../bounds.mjs'
+import { CONVERSATION_SESSION_ATTRIBUTE, CONVERSATION_SESSION_SELECTOR, SESSION_ROW_KEY_ATTRIBUTE, SIDEBAR_NEW_SESSION_SELECTOR } from '@dsh-claude-style/contracts/dom'
+
+/**
+ * How many turns the transcript is grown by before the measured one. The
+ * default keeps the scenario's own runtime near a minute; a run judging a
+ * change to what a long transcript costs raises it (`DSH_LONG_SESSION_TURNS`)
+ * to put hundreds of rows on the page.
+ */
+const FILL_TURNS = Number(process.env.DSH_LONG_SESSION_TURNS ?? 8)
+/** The transcript the first measured round streams into: two turns, so the second round compares against a page several times longer. */
+const SHORT_TURNS = 2
+/** The pause between the scripted answer's pieces: fast enough for eight fill turns, slow enough to stream. */
+const STREAM_DELAY_MS = 60
+const MIN_SPAN_MS = bound('longSessionMinSpanMs')
+/** How many more times the switch round leaves the long session and comes back: the node count is read after each return. */
+const SWITCH_ROUNDS = 3
+/** Long tasks together stay under this over the measured turn; the value and its reason are in packages/testing/data/bounds.json. */
+const LONG_TASK_BUDGET_MS = bound('longSessionLongTaskBudgetMs')
+/**
+ * The two lengths of the same turn as one ratio, and the growth the longer one
+ * may cost: its own page is about four times the shorter one's, so a cost that
+ * follows the page's size travels with that factor, and one that follows its
+ * square (a scan per row, a document query per element) lands near sixteen and
+ * trips. The slack covers what a shared runner adds between two rounds. Every
+ * value and its reason are in packages/testing/data/bounds.json.
+ */
+const GROWTH_RATIO = bound('longSessionGrowthRatio')
+const GROWTH_SLACK = bound('longSessionGrowthSlack')
+const QUERY_SLACK = bound('longSessionQuerySlack')
+const COLUMN_QUERY_SLACK = bound('longSessionColumnQuerySlack')
+const MOUNT_LONG_TASK_MS = bound('longSessionMountLongTaskMs')
+const SWITCH_NODE_RATIO = bound('longSessionSwitchNodeRatio')
+const GROWTH_FLOOR_MS = bound('longSessionGrowthFloorMs')
+
+/** Keep both measured rounds' counters on the same reset boundary. */
+async function resetRound(page) {
+  await page.evaluate(() => {
+    window.__longSession.frames.length = 0
+    window.__longSession.longtasks.length = 0
+    window.__longSession.queries = 0
+    window.__longSession.columnQueries = 0
+  })
+}
+
+async function measureTurn(page, prompt) {
+  await resetRound(page)
+  await sendPrompt(page, prompt)
+  await waitForTurn(page)
+  return read(page)
+}
+
+/**
+ * Leave the long session for a fresh one and switch back, counting what the
+ * return costs. A switch mounts a whole transcript the skin has seen before,
+ * which is the other half of what a switch costs beside the streaming round
+ * above (D90); the two are read apart because nothing streams in this one.
+ */
+async function measureReturn(page, expectedRows) {
+  const sessionId = await page.evaluate(([selector, attribute]) => {
+    const column = document.querySelector(selector)
+    return column === null ? null : column.getAttribute(attribute)
+  }, [CONVERSATION_SESSION_SELECTOR, CONVERSATION_SESSION_ATTRIBUTE])
+  if (sessionId === null) throw new Error('long-session: the page names no session before the switch')
+  await page.locator(SIDEBAR_NEW_SESSION_SELECTOR).first().click()
+  await page.waitForFunction(() => document.querySelectorAll('[data-chat-flow-kind]').length === 0, undefined, { timeout: 15000 })
+  await sendPrompt(page, 'a short aside')
+  await waitForTurn(page)
+  await resetRound(page)
+  const started = Date.now()
+  await page.locator(`[${SESSION_ROW_KEY_ATTRIBUTE}="session:${sessionId}"]`).click()
+  await page.waitForFunction((rows) => document.querySelectorAll('[data-chat-flow-kind]').length >= rows - 2, expectedRows, { timeout: 30000 })
+  return { ...(await read(page)), ms: Date.now() - started }
+}
+
+/** What the page counted: the frames, the long tasks and every whole-document lookup. */
+async function read(page) {
+  return page.evaluate(() => ({
+    frames: window.__longSession.frames.slice(),
+    longtasks: window.__longSession.longtasks.slice(),
+    queries: window.__longSession.queries,
+    columnQueries: window.__longSession.columnQueries,
+    tracing: window.__e2eTrace !== undefined,
+    nodes: document.querySelectorAll('body *').length,
+    rows: document.querySelectorAll('[data-chat-flow-kind]').length,
+  }))
+}
+
+/** The p95 frame of a round, and its long tasks' total, as the two cost readings. */
+function cost(round) {
+  const sorted = round.frames.slice().sort((left, right) => left - right)
+  return {
+    p95: sorted.length === 0 ? 0 : sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))],
+    longTotal: round.longtasks.reduce((sum, duration) => sum + duration, 0),
+  }
+}
+
+function longSessionScenario({ check }) {
+  return {
+    script: 'long',
+    // Both rounds use only initScript's probe; the lane's layout trace adds document queries per frame.
+    trace: false,
+    prompt: 'write a long answer',
+    delayMs: STREAM_DELAY_MS,
+    // A tall window, so the measured turn streams into a transcript that is
+    // already several screens long rather than into an empty page.
+    viewport: { width: 1280, height: 900 },
+    /**
+     * The frame timer, the long-task observer and the lookup counter, running
+     * from the page's first script. Every whole-document lookup the page makes
+     * is counted: the skin's own share is what a long transcript multiplies,
+     * and a lookup per element is what the two rounds below tell apart.
+     */
+    initScript: () => {
+      window.__longSession = { frames: [], longtasks: [], queries: 0, columnQueries: 0 }
+      const counted = (original) => function (...args) {
+        window.__longSession.queries += 1
+        return original.apply(this, args)
+      }
+      // A lookup taken on the conversation column, or on anything inside it, is
+      // what a long transcript multiplies; one on a row's own subtree is not.
+      // The column is read through the method saved before the wrapper, so the
+      // reading is not counted as a lookup of its own.
+      const plainQuery = Element.prototype.querySelector
+      const column = () => {
+        const kept = window.__longSessionColumn
+        if (kept !== null && kept !== undefined && kept.isConnected) return kept
+        window.__longSessionColumn = plainQuery.call(document.documentElement, '[data-chat-flow]')
+        return window.__longSessionColumn
+      }
+      const countedOnElement = (original) => function (...args) {
+        const flow = column()
+        if (flow !== null && flow !== undefined && this instanceof Node && flow.contains(this)) {
+          window.__longSession.columnQueries += 1
+        }
+        return original.apply(this, args)
+      }
+      Document.prototype.querySelector = counted(Document.prototype.querySelector)
+      Document.prototype.querySelectorAll = counted(Document.prototype.querySelectorAll)
+      Element.prototype.querySelector = countedOnElement(Element.prototype.querySelector)
+      Element.prototype.querySelectorAll = countedOnElement(Element.prototype.querySelectorAll)
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) window.__longSession.longtasks.push(Math.round(entry.duration))
+      }).observe({ entryTypes: ['longtask'] })
+      let last = performance.now()
+      const tick = (now) => {
+        window.__longSession.frames.push(Math.round((now - last) * 100) / 100)
+        last = now
+        // The lane's own scenarios run for minutes; a cap keeps a forgotten page from filling memory.
+        if (window.__longSession.frames.length < 60000) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    },
+    /**
+     * Measure the same scripted turn twice — once into a short transcript, once
+     * into one grown by the fill turns — and hand the lane the second round to
+     * read, so the two lengths are compared with the same script, the same
+     * pause and the same machine.
+     */
+    async beforeSend(context) {
+      const { page } = context
+      for (let index = 0; index < SHORT_TURNS; index += 1) {
+        await sendPrompt(page, `fill the transcript ${index + 1}`)
+        await waitForTurn(page)
+      }
+      context.notes.short = await measureTurn(page, 'write a long answer')
+      for (let index = SHORT_TURNS; index < FILL_TURNS - 1; index += 1) {
+        await sendPrompt(page, `fill the transcript ${index + 1}`)
+        await waitForTurn(page)
+      }
+      const filled = await page.evaluate(() => ({
+        nodes: document.querySelectorAll('body *').length,
+        rows: document.querySelectorAll('[data-chat-flow-kind]').length,
+      }))
+      context.notes.filled = filled
+      await resetRound(page)
+    },
+    async assert({ page, session, notes }) {
+      const measured = await read(page)
+      // The stretch of wall clock the sampled frames cover: a display that draws fewer frames a second is judged on the same span.
+      const span = measured.frames.reduce((sum, duration) => sum + duration, 0)
+      const longTotal = measured.longtasks.reduce((sum, duration) => sum + duration, 0)
+      const filled = notes.filled ?? { nodes: 0, rows: 0 }
+      const rounds = [
+        check('测量前已经积累了多轮对话，测量那一轮又长了',
+          filled.rows >= FILL_TURNS * 2 && measured.rows > filled.rows,
+          `rows ${filled.rows} → ${measured.rows}, nodes ${filled.nodes} → ${measured.nodes}`),
+        check('采样覆盖了整条流式回答', span >= MIN_SPAN_MS, `${Math.round(span)}ms over ${measured.frames.length} frames`),
+        check('长时间任务没有占满这一轮', longTotal < LONG_TASK_BUDGET_MS,
+          `${measured.longtasks.length} long tasks totalling ${longTotal}ms`),
+        check('控制台没有异常', session.problems.length === 0, session.problems.slice(0, 3).join(' | ')),
+      ]
+      const short = notes.short
+      if (short === undefined) return [...rounds, check('同一轮在两个长度的会话上都量过', false, 'the short round recorded nothing')]
+      const shortCost = cost(short)
+      const longCost = cost(measured)
+      const ratio = short.rows === 0 ? 0 : measured.rows / short.rows
+      const allowed = ratio * GROWTH_SLACK
+      const readings = `rows ${short.rows} → ${measured.rows} (×${ratio.toFixed(2)}), queries ${short.queries} → ${measured.queries}, ` +
+        `column queries ${short.columnQueries} → ${measured.columnQueries}, ` +
+        `long tasks ${shortCost.longTotal}ms → ${longCost.longTotal}ms, p95 ${shortCost.p95}ms → ${longCost.p95}ms`
+      rounds.push(
+        check('两轮都只使用性能探针，没有逐帧布局追踪',
+          short.tracing === false && measured.tracing === false, `trace short=${short.tracing}, long=${measured.tracing}`),
+        check('长会话与短会话的行数比达到比较要求',
+          ratio >= GROWTH_RATIO && measured.rows > short.rows,
+          readings),
+        check('整份文档查找次数的增长不超过行数倍率、查询容差与固定余量', measured.queries <= short.queries * ratio * QUERY_SLACK + 1, readings),
+        // A query taken on a row's own subtree is proportional to that subtree;
+        // one taken on the column or the document is proportional to the whole
+        // transcript, which is the cost this reading exists to show.
+        check('整栏查找次数的增长不超过行数倍率与查询容差', measured.columnQueries <= short.columnQueries * ratio * COLUMN_QUERY_SLACK + 1, readings),
+        // The long tasks are printed with the two checks below and bounded by
+        // the budget above, not compared between the rounds: the host commits
+        // every streamed batch in a frame task of its own, and on a long
+        // transcript that task alone is over the long-task mark, so the sum
+        // measures the host's frame size as much as the skin's pass. A cost
+        // that follows the rows or their square shows in the two checks that
+        // do compare — the whole-document lookups and the p95 frame.
+        check('p95 帧时的增长不超过行数倍率、增长容差与固定余量',
+          longCost.p95 <= shortCost.p95 * allowed + GROWTH_FLOOR_MS, readings),
+      )
+      // The other half of a switch: away from the long session and back, with
+      // nothing streaming, so the mount of a whole transcript is read alone.
+      const mounted = await measureReturn(page, measured.rows)
+      const mountCost = cost(mounted)
+      rounds.push(
+        check('切回看过的长会话后整段转写回到页面',
+          mounted.rows >= measured.rows - 2,
+          `rows ${measured.rows} → ${mounted.rows} in ${mounted.ms}ms`),
+        check('切回长会话的挂载没有占满这一趟',
+          mountCost.longTotal < MOUNT_LONG_TASK_MS,
+          `${mounted.frames.length} frames, long tasks ${mountCost.longTotal}ms, p95 ${mountCost.p95}ms`),
+      )
+      // The standing switch: away and back a few more times, counting the page's
+      // own nodes after each return. A mount that keeps what it replaced shows as
+      // a curve climbing with the rounds (the leak class of the switch round).
+      const nodes = [mounted.nodes]
+      for (let round = 0; round < SWITCH_ROUNDS; round += 1) {
+        nodes.push((await measureReturn(page, measured.rows)).nodes)
+      }
+      const last = nodes[nodes.length - 1]
+      rounds.push(check('连续往返切回后页面的节点数不再增长',
+        last <= nodes[0] * SWITCH_NODE_RATIO,
+        `nodes ${nodes.join(' → ')} over ${nodes.length - 1} returns`))
+      return rounds
+    },
+  }
+}
+
+export { longSessionScenario }
