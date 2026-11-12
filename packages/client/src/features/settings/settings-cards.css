@@ -317,116 +317,6 @@ body[data-dsh-claude-style]:not([data-dsh-claude-motion="reduced"]) [data-dsh-cl
   animation: dsh-claude-swap-in var(--dsh-claude-swap-duration) var(--dsh-claude-swap-ease) both;
 }
 
-/* A message-entrance card holds a two-row conversation of the reader's own
-   messages. Each turn the picker appends one new message to the column — with
-   the arrival the card stands for — and lifts the column by the row the message
-   takes, so the messages already there are pushed up and the top one leaves
-   through the card's own top edge, the way the transcript does it. The two
-   cards differ in nothing but that arrival: the message growing where it lands
-   (shared/motion.css) or the message coming up from below the box it was typed
-   in (features/chat-send/, constants.ts MESSAGE_ENTER_MODES). */
-body[data-dsh-claude-style] .dsh-claude-enter-card {
-  min-height: 64px;
-  padding: 14px 12px;
-  color: var(--dsw-alias-label-secondary);
-  /* One bubble is 25px tall and two of them are a row apart: the card's own
-     geometry, read by the column and by the picker's lift (settings-tab-motion.ts). */
-  --dsh-claude-enter-row: 28px;
-  --dsh-claude-enter-gap: 3px;
-}
-
-/* Two rows, and nothing of a third: a message arriving from outside the box
-   shows itself the moment it crosses the bottom edge, which is where the box it
-   was typed in sits below the card. */
-body[data-dsh-claude-style] .dsh-claude-enter-sample {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-self: stretch;
-  width: 100%;
-  box-sizing: border-box;
-  height: calc(2 * var(--dsh-claude-enter-row) - var(--dsh-claude-enter-gap));
-  overflow: hidden;
-  font-size: calc(12px * var(--dsh-claude-interface-font-scale, 1));
-  line-height: 17px;
-  white-space: nowrap;
-}
-
-/* The column of messages, against the right edge and a gap apart. Its lift is a
-   transform, so the box stands still while the messages inside it move. */
-body[data-dsh-claude-style] .dsh-claude-enter-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--dsh-claude-enter-gap);
-  transition: transform var(--dsh-claude-duration-enter) var(--dsh-claude-ease-settle);
-}
-
-body[data-dsh-claude-style] .dsh-claude-enter-bubble {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 4px 9px;
-  border-radius: 13px;
-  background: var(--dsw-specific-bubble);
-  color: var(--dsw-alias-label-primary);
-  /* The corner the message grows about: its own bottom-right one, the side it
-     was sent from. */
-  transform-origin: 100% 100%;
-}
-
-/* The message growing where it lands: the row's own entrance, so the card and
-   the conversation play the same animation. */
-body[data-dsh-claude-style] .dsh-claude-enter-card[data-enter="grow"] .dsh-claude-enter-bubble {
-  animation: dsh-claude-enter-grow var(--dsh-claude-duration-enter) var(--dsh-claude-ease-enter) both;
-}
-
-/* The message coming up from below, size and position together: the spring the
-   landing has, written out as sixteen linear steps (damping ratio 0.68, angular
-   frequency 22 rad/s — a 5.4% overshoot, settled in about a quarter of a second)
-   over a travel of one row, which is where the box it was typed in sits below
-   the card. */
-body[data-dsh-claude-style] .dsh-claude-enter-card[data-enter="flight"] .dsh-claude-enter-bubble {
-  animation: dsh-claude-enter-card-rise var(--dsh-claude-duration-enter) linear both;
-}
-
-@keyframes dsh-claude-enter-card-rise {
-  0% { transform: translateY(var(--dsh-claude-enter-row)) scale(0.6); }
-  6.25% { transform: translateY(25.79px) scale(0.632); }
-  12.5% { transform: translateY(20.88px) scale(0.702); }
-  18.75% { transform: translateY(15.19px) scale(0.783); }
-  25% { transform: translateY(9.88px) scale(0.859); }
-  31.25% { transform: translateY(5.55px) scale(0.921); }
-  37.5% { transform: translateY(2.37px) scale(0.966); }
-  43.75% { transform: translateY(0.28px) scale(0.996); }
-  50% { transform: translateY(-0.9px) scale(1.013); }
-  56.25% { transform: translateY(-1.43px) scale(1.02); }
-  62.5% { transform: translateY(-1.51px) scale(1.022); }
-  68.75% { transform: translateY(-1.34px) scale(1.019); }
-  75% { transform: translateY(-1.05px) scale(1.015); }
-  81.25% { transform: translateY(-0.75px) scale(1.011); }
-  87.5% { transform: translateY(-0.47px) scale(1.007); }
-  93.75% { transform: translateY(-0.25px) scale(1.004); }
-  100% { transform: none; }
-}
-
-/* A message already on the card when the reader arrives, and the one the lift
-   has left behind: neither plays the arrival. This rule is written after the two
-   above on purpose — same specificity, so order is what decides. */
-body[data-dsh-claude-style] .dsh-claude-enter-bubble[data-standing] {
-  animation: none;
-}
-
-/* The reader's animation choice (D40): the messages stand where they are and the
-   column does not move. */
-body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-enter-bubble {
-  animation: none;
-}
-
-body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-enter-stack {
-  transition: none;
-}
-
 /* The label stays outside the preview paint. Shared ongoing classes own the
    effect and its motion/color fallbacks; settings owns only the layout. */
 body[data-dsh-claude-style] .dsh-claude-ongoing-card {
@@ -553,7 +443,7 @@ body[data-dsh-claude-style] .dsh-claude-context-sample[data-face="ring-band"] .d
    as stills that keep the two choices apart: the choice stays editable and the
    row says it takes no effect. The cards are dimmed with the row's note, and each
    still is a frame of the effect the card stands for. */
-body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] :is(.dsh-claude-motion-card, .dsh-claude-caret-card, .dsh-claude-reveal-card, .dsh-claude-enter-card) {
+body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] :is(.dsh-claude-motion-card, .dsh-claude-caret-card, .dsh-claude-reveal-card) {
   opacity: 0.72;
 }
 
@@ -604,16 +494,6 @@ body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-reveal
 
 body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-reveal-card[data-fade] .dsh-claude-reveal-piece:nth-last-child(4) {
   opacity: 0.8;
-}
-
-/* The arriving message caught mid-way: grown part of the size about its own
-   corner, or still below its place on the way up. */
-body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-enter-card[data-enter="grow"] .dsh-claude-enter-bubble:not([data-standing]) {
-  transform: scale(0.78);
-}
-
-body[data-dsh-claude-style][data-dsh-claude-motion="reduced"] .dsh-claude-enter-card[data-enter="flight"] .dsh-claude-enter-bubble:not([data-standing]) {
-  transform: translateY(10px) scale(0.92);
 }
 
 /* The precise card keeps both wordings in the box so the swap can play between

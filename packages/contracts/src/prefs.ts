@@ -65,11 +65,6 @@ export const REASONING_DISPLAY_CONTINUOUS = 'continuous'
 export const REASONING_DISPLAY_STEPPED = 'stepped'
 export const REASONING_DISPLAYS = [REASONING_DISPLAY_CONTINUOUS, REASONING_DISPLAY_STEPPED] as const
 
-/** How a message the reader sends arrives: a stand-in flying up from the composer, or the row growing in place. */
-export const MESSAGE_ENTER_FLIGHT = 'flight'
-export const MESSAGE_ENTER_GROW = 'grow'
-export const MESSAGE_ENTER_MODES = [MESSAGE_ENTER_FLIGHT, MESSAGE_ENTER_GROW] as const
-
 /** How an open process group lays out its rows: the host's own list, or one bordered card of single-line rows. */
 export const PROCESS_ROWS_FLAT = 'flat'
 export const PROCESS_ROWS_COLUMN = 'column'
@@ -329,13 +324,11 @@ export const PREFS = {
   /** The legacy choices all mean on except `off`. */
   chatAnimations: { type: 'boolean', default: true, legacy: { [CHAT_ANIMATIONS_OFF]: false, enhanced: true, redraw: true } },
   chatWait: { type: 'boolean', default: true },
-  chatSend: { type: 'boolean', default: true },
   chatReveal: { type: 'choice', values: CHAT_REVEAL_MODES, default: CHAT_REVEAL_OFF },
   reasoningDisplay: { type: 'choice', values: REASONING_DISPLAYS, default: REASONING_DISPLAY_STEPPED },
   /** Moves the reading position when an answer starts; default off because this is unsolicited movement. */
   answerAnchor: { type: 'boolean', default: false },
   caretMotion: { type: 'choice', values: CARET_MOTIONS, default: CARET_MOTION_TYPING },
-  messageEnter: { type: 'choice', values: MESSAGE_ENTER_MODES, default: MESSAGE_ENTER_FLIGHT },
   processRows: { type: 'choice', values: PROCESS_ROWS_LAYOUTS, default: PROCESS_ROWS_FLAT },
   /** Completion/blocked cue gain; default off to avoid unsolicited interruption (D89). */
   soundCues: { type: 'choice', values: SOUND_LEVELS, default: SOUND_LEVEL_OFF },

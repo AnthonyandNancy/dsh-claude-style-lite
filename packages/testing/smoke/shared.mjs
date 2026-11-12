@@ -27,7 +27,7 @@ const setTier = (value) => { tier = value }
 const tierName = () => tier
 
 /** Cases that observe frames are skipped whole by the quick tier. */
-const TIMING_CASES = ['chat-follow', 'chat-fold', 'chat-reveal', 'chat-send', 'crab-states', 'deepy', 'whalegirl', 'popovers']
+const TIMING_CASES = ['chat-follow', 'chat-fold', 'chat-reveal', 'crab-states', 'deepy', 'whalegirl', 'popovers']
 
 /** `--feature` refuses directories without their own cases rather than running unrelated ones (D72). */
 const MANIFESTS = readManifests()

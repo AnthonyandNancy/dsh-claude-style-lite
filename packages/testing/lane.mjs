@@ -33,14 +33,11 @@ const HOST = {
 }
 
 /**
- * The skin's own marks (packages/client/src/constants.ts): the stand-in the composer leaves
- * behind for the send flight, and the attribute it puts on the real row while
- * that stand-in flies, which the flight stylesheet hides.
+ * The skin's marks the lane reads (packages/client/src/constants.ts): the echo
+ * attribute while the host's own submission row stands, and the hold a door
+ * rolling at the tail puts on the scroller.
  */
 const SKIN = {
-  sendGhost: '[data-dsh-claude-send-ghost]', // CHAT_SEND_GHOST_ATTR
-  sendLink: '[data-dsh-claude-send-link]', // CHAT_SEND_LINK_ATTR
-  flyingMark: 'data-dsh-claude-send-flight', // CHAT_FLYING_ATTR
   echoAttribute: 'data-submission-echo', // SUBMISSION_ECHO_SELECTOR without its brackets
   // The other mark the pin reads while a door rolls (FOLLOW_HOLD_ATTR).
   hold: '[data-dsh-claude-follow-hold]', // FOLLOW_HOLD_ATTR

@@ -498,10 +498,7 @@
     },
     {
       "reason": "消息气泡动画选「在原地长出来」：走查的发送按出厂默认飞上来，这一档不在它的轮次里",
-      "selectors": [
-        "body[data-dsh-claude-style] [data-dsh-claude-message-enter]",
-        "body[data-dsh-claude-style][data-dsh-claude-motion=reduced] [data-dsh-claude-message-enter]"
-      ]
+      "selectors": []
     },
     {
       "reason": "宿主的按键提示按运行平台给出：这台浏览器上宿主没有为新建会话给出按键，newSessionShortcut 里没有 kbd",

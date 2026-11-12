@@ -5,7 +5,7 @@ import { MESSAGE_FOLD_ATTR } from '../../constants'
 import { MESSAGE_BUBBLE_SELECTOR, SUBMISSION_ECHO_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { copy } from './copy'
 
-/* Fold both the submission echo and durable row: send-flight measures the echo immediately.
+/* Fold both the submission echo and durable row: the echo is clamped before it paints.
    Reader expansion is remembered per bubble; cap and fade come from message-fold.css so the
    threshold and clamp share one source. */
 
@@ -250,7 +250,7 @@ export function createMessageFold(requestPass: () => void) {
     if (bubble !== null) touched.add(bubble)
   }
 
-  /* This observer is installed before send-flight's, so the echo is clamped before flight measures it. */
+  /* The echo is settled in the batch that mounted it, before the next paint. */
   const stopEchoWatch = subscribeMutations(document.body, { childList: true, subtree: true, skipQuiet: true }, records => {
     for (const record of records) {
       for (const node of record.addedNodes) {

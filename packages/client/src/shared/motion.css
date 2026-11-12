@@ -66,16 +66,6 @@ body[data-dsh-claude-style] {
   to { opacity: 0; }
 }
 
-/* A message the reader sends growing into its row: the bubble from nothing,
-   about the bottom-right corner its own sheet names as the transform-origin,
-   while the row itself stays where it lands. The whole of it is a scale, so
-   nothing beside the message moves (features/chat-send/send-flight.css, and
-   the Motion tab's card in settings-cards.css). */
-@keyframes dsh-claude-enter-grow {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
-}
-
 /* One half of a wording swap, for a swap driven by mounting rather than by
    shared/swapping-text.ts: the old words leave upward through the blur, the new
    ones rise from below, both over the same distance. */

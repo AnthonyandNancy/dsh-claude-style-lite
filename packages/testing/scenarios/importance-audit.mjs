@@ -48,7 +48,6 @@ const TRANSIENT_SELECTORS = [
   '[data-dsh-claude-rolling]', '[data-dsh-claude-composer-active]',
   '[data-dsh-claude-revealing]', '[data-dsh-claude-page-enter]', '[data-dsh-claude-page-leave]',
   '[data-dsh-claude-search-closing]', '[data-dsh-claude-turn-nav-landed]',
-  '[data-dsh-claude-send-ghost]', '[data-dsh-claude-send-flight]', '[data-dsh-claude-send-link]',
   '[data-dsh-claude-follow-tail]', '[data-dsh-claude-follow-hold]',
   '[data-dsh-claude-reader-hold]', '[data-dsh-claude-summary-running]', '[data-dsh-claude-wait-badge-leaving]',
   '[data-dsh-claude-file-merge]', '[data-dsh-claude-chat-reveal]', '[data-dsh-claude-roll]',

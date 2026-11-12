@@ -147,11 +147,7 @@ export const CHAT_REVEAL_STEPS = 24
 export const CHAT_REVEAL_MIN_OPACITY = 0.2
 export const CHAT_REVEAL_HIGHLIGHT_PREFIX = 'dsh-claude-tok-'
 export const CHAT_REVEAL_COLOR_VAR = '--dsh-claude-run-color'
-/** On the real message row while the send bubble's stand-in is flying (features/chat-send/): the stylesheet hides that row, keeping its layout box so the stand-in can measure the destination from it every frame. */
-export const CHAT_FLYING_ATTR = 'data-dsh-claude-send-flight'
-/** On the row of a message just sent while it grows in place (features/chat-send/): the stylesheet hangs the entrance animation off it, so that row animates once — a row rendered by a restored session never carries the mark. */
-export const MESSAGE_ENTER_ATTR = 'data-dsh-claude-message-enter'
-/** On a user message the skin holds folded (features/chat-fold/message-fold.ts): the stylesheet clamps the bubble to the fold's own cap and softens its bottom edge. The send flight reads it too: a message the fold holds is not one to carry up whole. */
+/** On a user message the skin holds folded (features/chat-fold/message-fold.ts): the stylesheet clamps the bubble to the fold's own cap and softens its bottom edge. */
 export const MESSAGE_FOLD_ATTR = 'data-dsh-claude-message-fold'
 /** On a node the skin owns purely for its own bookkeeping — the caret motion's probe container and the caret it draws.
  * The shared scheduler ignores mutations against such a node (D40), so measuring or redrawing never wakes a pass that no feature needs. */

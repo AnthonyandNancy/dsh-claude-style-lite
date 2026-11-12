@@ -37,10 +37,6 @@
       "count": 3,
       "reason": "The process groups, read once at install and again when the shell language changes, and the summary marks swept at teardown."
     },
-    "packages/client/src/features/chat-send/send-rows.ts": {
-      "count": 3,
-      "reason": "The submission echo row and the sent row, read once per batch of mutations around one send. The echo and row selectors carry attributes the host renders with the node, and the callers hold no registry lifetime for a bus list to be released against; moving them is a change to how send-flight and send-grow own their seats."
-    },
     "packages/client/src/features/context-stats/stats-panel.ts": {
       "count": 2,
       "reason": "The stray context block and panel marks swept once when the statistics are installed; composer cards come from the engine's card registry."
@@ -48,10 +44,6 @@
     "packages/client/src/features/context-stats/session-stats.ts": {
       "count": 2,
       "reason": "The context statistics' own block and panel marks, swept at teardown."
-    },
-    "packages/client/src/features/chat-send/send-flight.ts": {
-      "count": 2,
-      "reason": "The composer's input, read when a send begins and when the flight's seat is measured."
     },
     "packages/client/src/features/ban-screen/ban-screen.ts": {
       "count": 1,
@@ -68,10 +60,6 @@
     "packages/client/src/features/chat-reveal/reveal-engine.ts": {
       "count": 1,
       "reason": "The streaming containers, read once when the reveal engine is installed."
-    },
-    "packages/client/src/features/chat-send/send-grow.ts": {
-      "count": 1,
-      "reason": "The echo rows lying on the page, noted once at install."
     },
     "packages/client/src/features/chat-wait/chat-wait.ts": {
       "count": 1,

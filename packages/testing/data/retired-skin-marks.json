@@ -1,0 +1,9 @@
+{
+  "about": "The skin marks a removed upstream feature wrote, read by the lanes that prove Lite leaves no trace of it. A mark leaves this table only when its feature's own removal spec is retired.",
+  "marks": {
+    "sendGhost": "[data-dsh-claude-send-ghost]",
+    "sendFlight": "[data-dsh-claude-send-flight]",
+    "sendLink": "[data-dsh-claude-send-link]",
+    "messageEnter": "[data-dsh-claude-message-enter]"
+  }
+}

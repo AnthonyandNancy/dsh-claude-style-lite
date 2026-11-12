@@ -77,10 +77,6 @@ export default {
       Array.isArray(submitted.echo) && Array.isArray(submitted.row) &&
         submitted.echo.concat(submitted.row).filter((count) => count !== 0).length === 0,
       JSON.stringify({ echo: submitted.echo, row: submitted.row }))
-    check('the same message growing into its row does not slide either: both entrances stand the slide down',
-      Array.isArray(submitted.growWaiting) && Array.isArray(submitted.growPlaying) &&
-        submitted.growWaiting.concat(submitted.growPlaying).filter((count) => count !== 0).length === 0,
-      JSON.stringify({ waiting: submitted.growWaiting, playing: submitted.growPlaying }))
     // A growth wider than a slide carries is a burst, not a replaced column:
     // it is slid from the stretch a slide carries rather than jumped whole
     // (chat-follow.ts's startSlide).
@@ -702,48 +698,5 @@ export default {
       check(`the waiting line returns when the replacement stops owning the words (${name})`,
         owner.line === true && owner.marked === true && owner.wordsMarked === true, JSON.stringify(owner))
     }
-  },
-  'chat-send'(r) {
-    basicChecks(r)
-    const send = r.send || {}
-    const flying = send.flying || {}
-    const landed = send.landed || {}
-    check('a submission finds the composer input', send.inputFound === true, JSON.stringify(send.inputFound))
-    check('a submission lifts a stand-in off the composer card',
-      flying.ghost === true && flying.clone === true, JSON.stringify(flying))
-    check('the real row is hidden while the stand-in flies',
-      flying.hidden === true && flying.visibility === 'hidden', JSON.stringify(flying))
-    check('the flight plays an animation', flying.animations > 0, JSON.stringify(flying.animations))
-    check('when the flight lands the stand-in is gone', landed.ghost === false, JSON.stringify(landed))
-    check('the row is visible again when the flight lands',
-      landed.hidden === false && landed.visibility === 'visible', JSON.stringify(landed))
-    // The plate the flight is drawn on (send-morph.ts): the bubble's own fill as
-    // the screen paints it, on the shape, from the first frame — with nothing
-    // light left over the destination once it gets there.
-    const plate = send.plate || {}
-    check('the stand-in is drawn in the destination bubble\'s own colour from the first frame',
-      plate.frames > 5 && plate.wrong === 0 && plate.light === 0, JSON.stringify(plate))
-    // The hand-over (send-flight.ts's land): with the echo taken away and no row
-    // mounted, the stand-in holds instead of fading into the page.
-    const hold = send.hold || {}
-    const handed = send.handed || {}
-    check('the stand-in holds while no row is on the page to land on',
-      hold.ghost === true && hold.opacity === 1, JSON.stringify(hold))
-    check('a row mounting later takes the hand-over',
-      handed.ghost === false && handed.hidden === false && handed.visibility === 'visible', JSON.stringify(handed))
-    const sendReduced = send.reduced || {}
-    check('the animation choice reaches it too: Reduced flies nothing and leaves the row visible (D40)',
-      sendReduced.ghost === false && sendReduced.hidden === false && sendReduced.visibility === 'visible',
-      JSON.stringify(sendReduced))
-    // The row's own entrance (send-grow.ts, the Motion tab's other card): the
-    // echo waits hidden, no stand-in goes up, and the row that takes the echo's
-    // place is marked with the growth the stylesheet hangs off it.
-    const grow = send.grow || {}
-    check('the other entrance flies nothing: the echo waits hidden and no stand-in goes up',
-      grow.waiting === true && grow.ghost === false, JSON.stringify(grow))
-    check('the row that takes the echo\'s place grows about its own bottom-right corner, and can be seen from the first frame',
-      grow.marked === true && grow.animation === 'dsh-claude-enter-grow' && grow.duration !== '0s' && grow.visibility === 'visible' &&
-        grow.grownLeft > 2 && grow.grownLeft + grow.grownTop > 4 * (grow.grownRight + grow.grownBottom),
-      JSON.stringify(grow))
   },
 }

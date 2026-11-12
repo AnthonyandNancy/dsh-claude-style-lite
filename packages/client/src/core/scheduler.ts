@@ -8,7 +8,6 @@ import type { FooterHandle } from '../features/account/account-footer'
 import type { BanHandle } from '../features/ban-screen/ban-screen'
 import type { ChatFoldHandle } from '../features/chat-fold/chat-fold'
 import type { ComposerHandle } from '../features/composer/composer'
-import type { ChatSendHandle } from '../features/chat-send/send-flight'
 import type { ContextStatsHandle } from '../features/context-stats/context-stats'
 import type { MeterRingHandle } from '../features/context-stats/meter-ring'
 import type { ModelHandle } from '../features/model/model-picker'
@@ -47,7 +46,6 @@ export interface Handles {
   chatAnchor: FeatureHandle
   chatFiles: FeatureHandle
   messageActions: FeatureHandle
-  chatSend: ChatSendHandle
   caret: FeatureHandle
   viewTabs: FeatureHandle
   headerBand: FeatureHandle

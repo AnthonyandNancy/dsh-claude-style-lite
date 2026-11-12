@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "removals",
+  "order": 20,
+  "external": true,
+  "zh": "移除消息气泡入场动画，发送后的消息直接以可见行出现",
+  "en": "Remove the sent-message entrance animation so a sent message arrives as its visible row"
+}

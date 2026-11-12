@@ -122,10 +122,9 @@ async function captureFailure(session, out, name, say) {
  * The trace holds what each frame painted. The scroll offset a frame later reads
  * is the one the previous frame left, so a decrease between two samples is a
  * frame the reader saw slide backward, and the gap is what sat below the fold.
- * The same samples carry the send flight: the stand-in the composer leaves behind
- * (`send-snapshot.ts`), the mark on the real row while it flies, and — taken once,
- * on the stand-in's first frame — the type and card colors it copied, so a
- * take-off that changes the reader's own look is visible in the trace.
+ * The reader's own row, its words and its visibility ride along, so a
+ * submission that never reaches the page or arrives without its words is
+ * visible in the trace.
  */
 async function startTrace(page) {
   await page.evaluate((host) => {
@@ -135,20 +134,6 @@ async function startTrace(page) {
     const words = (element) => element === null ? null : [...element.querySelectorAll('*')]
       .filter((node) => node.children.length === 0 && (node.textContent ?? '').trim() !== '' && visible(node))
       .map((node) => (node.textContent ?? '').trim().slice(0, 24))
-    const type = (element) => {
-      if (element === null) return null
-      const style = getComputedStyle(element)
-      return { family: style.fontFamily, size: style.fontSize, weight: style.fontWeight, color: style.color }
-    }
-    const cardOf = (element) => element === null ? null : element.querySelector(host.composerCard)
-    let takeOff = null
-    // The row the skin marks while the stand-in flies is the row it replaces, and
-    // it stays the measured row after the mark clears, when the row is shown
-    // again. Reading the last user row in the document instead measures whichever
-    // row the host renders last, which is not the newest message: on a full
-    // transcript the stand-in then looks hundreds of pixels off the row it lands
-    // on. The stand-in's own words ride along in the same trace.
-    let adopted = null
     const sample = () => {
       const frame = { t: Math.round(performance.now()) }
       const scroller = document.querySelector(host.scroller)
@@ -159,56 +144,10 @@ async function startTrace(page) {
         frame.following = document.querySelector(host.followingTail) !== null
         frame.hold = document.querySelector(host.hold) !== null
       }
-      const ghost = document.querySelector(host.sendGhost)
       const rows = [...document.querySelectorAll(host.userRow)]
-      // The element the skin marks while the stand-in flies is the one it
-      // replaces, wherever the host keeps it: a fresh message may sit in the
-      // host's own echo element rather than in a user row. It stays the measured
-      // row after the mark clears, when the row is shown again, and it is
-      // dropped once the host re-renders it away.
-      const marked = [...document.querySelectorAll(`[${host.flyingMark}]`)]
-      if (marked.length > 0) adopted = marked[marked.length - 1]
-      if (adopted !== null && !adopted.isConnected) adopted = null
-      const last = adopted ?? (rows.length === 0 ? null : rows[rows.length - 1])
-      frame.ghost = ghost !== null
-      // The stand-in's own shape against the row it stands in for. Both marks are
-      // read every frame: the stand-in has to cover that row whole, because the
-      // part of the row left outside it keeps the page's own paint while the
-      // covered part carries the stand-in's faded paint on top — one bubble with
-      // a stripe across it, which is what send-shape.ts's destination-height
-      // floor and send-snapshot.ts's flattened fill exist to prevent.
-      const shell = ghost === null ? null : ghost.firstElementChild?.children[1] ?? null
-      // The bubble is the first element inside the row that paints a fill, as
-      // engine/chat-dom.ts's userBubble looks for it: the host's class names are
-      // not a contract this lane may lean on.
-      const bubble = last === null ? null : [...last.querySelectorAll('*')].find((node) => {
-        const value = getComputedStyle(node).backgroundColor
-        const match = /rgba?\(([^)]+)\)/.exec(value)
-        if (match === null) return false
-        const parts = match[1].split(',').map(Number)
-        return (parts[3] ?? 1) > 0.01 && node.getBoundingClientRect().width > 60
-      }) ?? null
-      const shellRect = shell === null ? null : shell.getBoundingClientRect()
-      const bubbleRect = bubble === null || bubble === undefined ? null : bubble.getBoundingClientRect()
-      // Both boxes whole, not just their vertical extent: the row may only be
-      // shown once the stand-in is on it (send-flight.ts's arrived()), and a row
-      // shown while the stand-in is still travelling paints the same message
-      // twice, tens of pixels apart, for as long as the landing fade lasts.
-      frame.shell = shellRect === null ? null : [shellRect.left, shellRect.top, shellRect.right, shellRect.bottom]
-      frame.bubble = bubbleRect === null ? null : [bubbleRect.left, bubbleRect.top, bubbleRect.right, bubbleRect.bottom]
-      frame.shellFill = shell === null ? null : getComputedStyle(shell).backgroundColor
-      // The ancestor chain's links are there for selector matching alone: a
-      // pseudo-element one of them generates paints inside the stand-in.
-      const links = ghost === null ? [] : [...ghost.querySelectorAll(host.sendLink)]
-      frame.links = links.length
-      frame.linkPaints = links.flatMap((link) => ['::before', '::after']
-        .filter((pseudo) => !['none', 'normal'].includes(getComputedStyle(link, pseudo).content))
-        .map((pseudo) => `${link.className}${pseudo}`))
-      frame.bubbleFill = bubble === null || bubble === undefined ? null : getComputedStyle(bubble).backgroundColor
+      const last = rows.length === 0 ? null : rows[rows.length - 1]
       frame.echo = document.querySelector(host.echo) !== null || (last !== null && last.hasAttribute(host.echoAttribute))
-      frame.ghostWords = words(ghost)
       frame.rows = rows.length
-      frame.rowFlying = last !== null && last.hasAttribute(host.flyingMark)
       frame.rowVisible = visible(last)
       frame.rowWords = words(last)
       // The live turn's own status line at the end of the flow: the skin pins it
@@ -245,20 +184,6 @@ async function startTrace(page) {
       frame.stats = statsRect === null ? null : [Math.round(statsRect.top * 10) / 10, Math.round(statsRect.bottom * 10) / 10]
       frame.statsMode = statsLine?.getAttribute(host.statsFooterLine) ?? null
       frame.lag = rowRect === null || scrollerRect === null ? null : Math.round((rowRect.bottom - scrollerRect.bottom) * 10) / 10
-      if (ghost !== null && takeOff === null) {
-        // The stand-in is a clone of the composer card appended to the page, so
-        // the real card is the first one the stand-in does not contain.
-        const real = (selector) => [...document.querySelectorAll(selector)].find((element) => !ghost.contains(element)) ?? null
-        const cloneCard = ghost.querySelector(host.composerCard)
-        const card = real(host.composerCard)
-        takeOff = {
-          clone: type(ghost.querySelector(host.composer)),
-          composer: type(real(host.composer)),
-          cloneCard: cloneCard === null ? null : getComputedStyle(cloneCard).backgroundColor,
-          composerCard: card === null ? null : getComputedStyle(card).backgroundColor,
-        }
-        frame.takeOff = takeOff
-      }
       trace.push(frame)
       if (trace.length < 6000) requestAnimationFrame(sample)
     }

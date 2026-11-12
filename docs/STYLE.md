@@ -427,7 +427,6 @@ edit the JSON, not the table.
 | `--dsh-claude-duration-slide` | `240ms` | the segmented controls' sliding highlight, a sidebar icon's quarter turn, the wording box taking the width of the words arriving, and streamed content sliding up from the bottom edge |
 | `--dsh-claude-duration-fade` | `300ms` | a slow cross-fade: the theme flip, the titlebar tabs' hover reveal, the reasoning knob's glow, a placeholder handing its place to what it stood for |
 | `--dsh-claude-duration-bounce` | `350ms` | a switch's knob travelling across with its double bounce |
-| `--dsh-claude-duration-flight` | `400ms` | the sent message flying from the composer to its row |
 | `--dsh-claude-duration-step` | `500ms` | one step of the reasoning window's text rising two lines |
 | `--dsh-claude-duration-pop` | `500ms` | something popping into place: the overtime badge's own pill |
 | `--dsh-claude-duration-rise` | `500ms` | a line of the home greeting rising into place |
@@ -443,7 +442,6 @@ edit the JSON, not the table.
 | `--dsh-claude-period-preview-swap` | `4000ms` | one turn of the settings page's waiting-line preview: one wording standing, leaving, and standing again |
 | `--dsh-claude-period-preview-reveal` | `4000ms` | one turn of the settings page's new-text fade preview: the sample arriving character by character, then standing before the next wipe |
 | `--dsh-claude-period-preview-caret` | `4000ms` | one turn of the settings page's caret preview: the sample line typed out, then standing whole before the next turn |
-| `--dsh-claude-period-preview-enter` | `2600ms` | one turn of the Motion tab's message-entrance card: one message arriving, standing, and giving way to the next |
 | `--dsh-claude-period-wash-hue` | `4000ms` | one turn of the hue rotation the waiting line's colour wash runs through |
 | `--dsh-claude-period-wash-drift` | `5000ms` | one orbit of the colour washes around the waiting line's glyph box |
 | `--dsh-claude-period-pulse` | `1600ms` | a placeholder breathing while its numbers are computed |
@@ -458,7 +456,6 @@ edit the JSON, not the table.
 | `--dsh-claude-period-dot-line` | `1250ms` | one round trip of the waiting line's loader dots along their own lines, the motion the dots take while the turn is not thinking |
 | `--dsh-claude-ease-standard` | `ease` | feedback and surfaces: the default curve |
 | `--dsh-claude-ease-out` | `ease-out` | something arriving and settling: a fold's door, content entering the chat area, the landing mark, a hint appearing and leaving |
-| `--dsh-claude-ease-enter` | `cubic-bezier(0.34, 1.3, 0.64, 1)` | a message the reader sends growing into its row: the slight overshoot as it takes its full size |
 | `--dsh-claude-ease-status-title` | `cubic-bezier(0.45, 0, 0.55, 1)` | the middle travel segment of the strong running-title shimmer |
 | `--dsh-claude-ease-in-out` | `ease-in-out` | something that leaves and returns, or swaps in place: wording swaps, pulses, flashes |
 | `--dsh-claude-ease-glide` | `cubic-bezier(0.22, 0.61, 0.36, 1)` | travel along a track: the sliding highlight, the reasoning slider, the search dialog's entrance, the reasoning window's step, the wording box's width, the stream's slide |

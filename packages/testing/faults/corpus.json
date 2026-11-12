@@ -9,25 +9,11 @@
       "defect": "undoes: 会话检索被取代的一轮不再清掉新一轮的状态"
     },
     {
-      "id": "chat-send-27603238",
-      "from": "history 27603238",
-      "apply": "reverse",
-      "patch": "patches/chat-send-27603238.patch",
-      "defect": "undoes: 等待落点稳定加上硬上限，页面一直在动也不扣住消息"
-    },
-    {
       "id": "context-stats-b0fb6171",
       "from": "history b0fb6171",
       "apply": "reverse",
       "patch": "patches/context-stats-b0fb6171.patch",
       "defect": "undoes: 修复 Firefox 悬停统计弹层反复闪烁"
-    },
-    {
-      "id": "chat-send-14ddf739",
-      "from": "history 14ddf739",
-      "apply": "reverse",
-      "patch": "patches/chat-send-14ddf739.patch",
-      "defect": "undoes: 落地回弹回到原来的阻尼比"
     },
     {
       "id": "effort-509a5efb",

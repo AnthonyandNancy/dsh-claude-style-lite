@@ -680,7 +680,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
      * chunk has not arrived, its switch is off, or another plugin owns the
      * entrance.
      */
-    submissionHeld: () => (ui.chatSend === undefined ? submissionHolds() : ui.chatSend.isEntering()),
+    submissionHeld: () => submissionHolds(),
   })
   const stopProcess = createChatProcessFollow()
   const tailStamp = createStamp<HTMLElement>(FOLLOW_TAIL_ATTR)

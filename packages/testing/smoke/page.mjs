@@ -82,7 +82,6 @@ const PROBE_PARTS = [
   'chat-fold.js',
   'chat-reveal.js',
   'chat-files.js',
-  'chat-send.js',
   'chat-wait.js',
   'sidebar-layout.js',
   'model-rows.js',
@@ -544,12 +543,10 @@ ${anchorArea}
 <div data-composer-card${name === 'automode-hero' ? ' data-phase="hero"' : ''}>
 ${heroRow}
   ${name === 'composer' ? composerAttachmentRail : ''}
-  ${name === 'chat-send' ? '<div data-input-scroll style="overflow:auto;max-height:120px">' : ''}
   ${name === 'composer' ? '<div data-dsh-claude-part="input-grow" class="_grow_x_1">' : ''}
   <div data-composer-input contenteditable="true" id="editor">/comp</div>
   ${hintFixture}
   ${name === 'composer' ? '</div>' : ''}
-  ${name === 'chat-send' ? '</div>' : ''}
   <div class="_row_x_1">
     <div class="_tools_x_1">
       <button class="_add_x_1" aria-label="Add files or run commands" aria-haspopup="listbox" id="commands"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 2v12M2 8h12"/></svg></button>

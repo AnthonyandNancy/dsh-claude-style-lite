@@ -19,9 +19,6 @@
       ]
     },
     "packages/testing/scenarios.mjs": {
-      "真行显形期间替身一直落在它身上": [
-        0
-      ],
       "读者的消息成为一行": [
         1
       ],
@@ -40,7 +37,7 @@
       "再窄一些时控件仍留在卡片里，输入区也不再横向滚动": [
         0
       ],
-      "控制台没有异常 (line 290)": [
+      "控制台没有异常 (line 240)": [
         0
       ],
       "收起时那枚按钮不占位置，宿主自己的打开按钮在": [
@@ -53,7 +50,7 @@
       "按下它面板收起，宿主的打开按钮回到原处": [
         0
       ],
-      "控制台没有异常 (line 343)": [
+      "控制台没有异常 (line 293)": [
         0
       ],
       "工具调用单独成行": [
@@ -65,7 +62,7 @@
       "过程组收住了整轮": [
         1
       ],
-      "控制台没有异常 (line 358)": [
+      "控制台没有异常 (line 308)": [
         0
       ],
       "逐帧采样真的在跑": [
@@ -93,53 +90,42 @@
         0,
         10
       ],
-      "控制台没有异常 (line 405)": [
+      "控制台没有异常 (line 355)": [
         0
       ],
-      "替身起飞后离开页面": [
+      "the reader's message reaches the transcript": [
+        0
+      ],
+      "one submission leaves one reader row": [
+        0,
         1
       ],
-      "真行在飞行期间不可见": [
+      "no entrance stand-in, hidden row or entrance mark is left behind": [
         0
       ],
-      "真行落定后可见并带着字": [
+      "the console carries no problem": [
         0
       ],
-      "替身落地时不低于它替换的那一行": [
+      "a full transcript glides to the new row": [
+        0,
+        1
+      ],
+      "no entrance stand-in, hidden row or entrance mark is left behind (line 435)": [
         0
       ],
-      "替身的底色是画面上的颜色，不是半透明的令牌": [
-        0
-      ],
-      "Windows 标题栏标记下，替身里的祖先链不画伪元素": [
-        0
-      ],
-      "控制台没有异常 (line 481)": [
-        0
-      ],
-      "满屏的对话里也读到了飞行": [
-        1,
-        5
-      ],
-      "替身落地时不低于它替换的那一行 (line 515)": [
-        0
-      ],
-      "落定后那一行带着字": [
-        0
-      ],
-      "控制台没有异常 (line 517)": [
+      "the console carries no problem (line 438)": [
         0
       ],
       "没有页面形态的条目已逐条列出": [
         0
       ],
-      "控制台没有异常 (line 575)": [
+      "控制台没有异常 (line 498)": [
         0
       ],
       "脚本回答已渲染": [
         0
       ],
-      "控制台没有异常 (line 630)": [
+      "控制台没有异常 (line 553)": [
         0
       ]
     },
@@ -856,9 +842,6 @@
       "a message the reader just sent does not slide: the host's jump to it stands": [
         0
       ],
-      "the same message growing into its row does not slide either: both entrances stand the slide down": [
-        0
-      ],
       "a burst is slid from the stretch a slide carries instead of jumping whole": [
         0,
         1
@@ -1077,20 +1060,6 @@
       ],
       "状态行钉住时行下的画布铺到输入框顶，跟随关掉后这块画布随之退场": [
         17
-      ],
-      "the flight plays an animation": [
-        0
-      ],
-      "the stand-in is drawn in the destination bubble's own colour from the first frame": [
-        0,
-        5
-      ],
-      "the stand-in holds while no row is on the page to land on": [
-        1
-      ],
-      "the row that takes the echo's place grows about its own bottom-right corner, and can be seen from the first frame": [
-        2,
-        4
       ]
     },
     "packages/testing/smoke/cases/mascot.mjs": {

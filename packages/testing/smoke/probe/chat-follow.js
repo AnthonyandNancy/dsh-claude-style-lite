@@ -9,10 +9,8 @@
   var r = probe.report
 
   probe.step(async function () {
-    // The chat area's own message of this page load: a step of its own, so the
-    // chat-send probe's step — registered after this one and clearing the
-    // composer's text on its first press, which a submission with no words is
-    // no submission at all — has run by the time the slide below reads it.
+    // The chat area's own message of this page load: a step of its own, so a
+    // submission the host mounts has run by the time the slide below reads it.
     await probe.onlyFor(['chat-follow'], async function () {
       var chatFlow = document.querySelector('[data-chat-flow]')
       var chatScroller = document.querySelector('[data-conversation-scroll]')
@@ -26,13 +24,12 @@
       // A message the reader has just sent is not streaming content: the host's
       // jump to it stands, and the slide stands down around it. The streaming
       // mark is still on the page here, so without the stand-down this growth
-      // would slide like any other. The stand-down is the send feature's own
-      // state (ui.chatSend), and the sequence is the page's: Enter in the
-      // editor, the echo the host mounts in answer, the row that takes its place.
+      // would slide like any other. The stand-down is the engine's own
+      // submission hold, and the sequence is the page's: Enter in the editor, the
+      // echo the host mounts in answer, the row that takes its place.
       var editor = document.querySelector('[data-composer-input]')
       if (editor !== null) {
         editor.focus()
-        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
       }
       chatEchoOf().innerHTML = '<div data-submission-echo></div>'
       chatScroller.scrollTop = chatScroller.scrollHeight
@@ -43,34 +40,7 @@
       var row = await probe.watch(slidesOf)
       userRow.remove()
       await probe.settle()
-      // The other entrance (constants.ts MESSAGE_ENTER_MODES, send-grow.ts): the
-      // message grows where it lands, and its row is the one the host's jump is
-      // for. The stand-down covers that row's own growth too, so the slide is
-      // still nothing while it plays.
-      window.__pushForm({ messageEnter: 'grow' })
-      await probe.settle()
-      if (editor !== null) {
-        editor.focus()
-        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
-      }
-      var growEcho = document.createElement('div')
-      growEcho.setAttribute('data-submission-echo', '')
-      growEcho.style.height = '300px'
-      chatEchoOf().appendChild(growEcho)
-      chatScroller.scrollTop = chatScroller.scrollHeight
-      var growWaiting = await probe.watch(slidesOf)
-      var growRow = document.createElement('div')
-      growRow.setAttribute('data-chat-flow-key', 'grown')
-      growRow.setAttribute('data-chat-flow-kind', 'user')
-      growRow.style.height = '300px'
-      chatFlow.insertBefore(growRow, chatRunning)
-      growEcho.remove()
-      chatScroller.scrollTop = chatScroller.scrollHeight
-      var growPlaying = await probe.watch(slidesOf)
-      r.chatFollowSubmit = { echo: echo, row: row, growWaiting: growWaiting, growPlaying: growPlaying }
-      growRow.remove()
-      window.__pushForm({ messageEnter: 'flight' })
-      await probe.settle()
+      r.chatFollowSubmit = { echo: echo, row: row }
     })
     // The ported chat-follow feature (packages/client/src/features/chat-follow/): a structural
     // moment hands the host's follow back, and a reader who took the scroll
