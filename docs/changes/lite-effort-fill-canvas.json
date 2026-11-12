@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "improvements",
+  "order": 30,
+  "external": true,
+  "zh": "推理滑块的普通填充改由 Canvas 2D 绘制，拖动时不再触发布局",
+  "en": "Paint the effort slider's plain fill with Canvas 2D so dragging no longer forces layout"
+}

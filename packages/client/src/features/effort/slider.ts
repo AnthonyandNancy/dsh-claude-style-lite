@@ -3,6 +3,8 @@ import { MODEL_EFFORT_DEFAULT, MODEL_EFFORT_FASTER, MODEL_EFFORT_LABEL, MODEL_EF
 import { effortSteps } from './ladder'
 import type { EffortStep } from './ladder'
 import { createEffortMatrix } from './matrix'
+import { createFillCanvas, fillRight } from './fill-canvas'
+import { motionReduced } from '../../core/prefs'
 import { buildElement, setAttributeIfChanged } from '@dsh-claude-style/engine/dom'
 import { inPagePixels } from '../../shared/page-zoom'
 import { withoutTransition } from '../../shared/transition'
@@ -58,7 +60,6 @@ export function createEffortControl(opts: {
   const fasterEl = buildElement('span', 'dsh-claude-effort-end')
   const smarterEl = buildElement('span', 'dsh-claude-effort-end')
   const track = buildElement('div', 'dsh-claude-effort-track')
-  const fill = buildElement('div', 'dsh-claude-effort-fill')
   const ticks = buildElement('div', 'dsh-claude-effort-ticks')
   const matrix = buildElement('div', 'dsh-claude-effort-matrix')
   const knob = buildElement('div', 'dsh-claude-effort-knob')
@@ -69,8 +70,8 @@ export function createEffortControl(opts: {
   ends.appendChild(fasterEl)
   ends.appendChild(smarterEl)
   /* Paint order is DOM order: the fill under the ticks, the matrix over
-     both, and the opaque knob on top — it covers whatever it rides over. */
-  track.appendChild(fill)
+     both, and the opaque knob on top — it covers whatever it rides over. The
+     fill canvas prepends itself in mount(), so it stands first. */
   track.appendChild(ticks)
   track.appendChild(matrix)
   track.appendChild(knob)
@@ -81,6 +82,9 @@ export function createEffortControl(opts: {
   track.setAttribute('tabindex', '0')
   /** The top rung's dot matrix (effort/matrix.ts). */
   const dotMatrix = createEffortMatrix(matrix)
+  /** The plain fill, on its own canvas: no layout write follows the pointer (effort/fill-canvas.ts). */
+  const fillCanvas = createFillCanvas({ track, reduced: motionReduced })
+  fillCanvas.mount()
 
   /** The ladder in force, the level it is on, and the words around it. */
   let steps: EffortStep[] = []
@@ -173,11 +177,21 @@ export function createEffortControl(opts: {
     return passBox ?? measured ?? measureTrack()
   }
 
+  /** The size the fill's backing store was last built for: a width or a DPR move rebuilds it. */
+  let canvasSig = ''
+
   /** Read the knob's width, the track's width and the track's left edge off the layout. */
   function measureTrack(): EffortTrackBox {
     const box = { size: knob.offsetWidth || 16, width: track.clientWidth }
     measured = box
     trackLeft = track.getBoundingClientRect().left
+    const sig = `${box.width}@${window.devicePixelRatio > 0 ? window.devicePixelRatio : 1}`
+    if (sig !== canvasSig) {
+      canvasSig = sig
+      // A palette change arrives with the next measured width: the canvas reads
+      // the ink it inherits each time it is resized.
+      fillCanvas.resize()
+    }
     return box
   }
 
@@ -206,30 +220,30 @@ export function createEffortControl(opts: {
    * translate → scale, so a travel in `transform` would be scaled by the lift.
    */
   let lastTravel = ''
-  let lastWidth = ''
+  let lastRight = 0
 
   function place(x: number, animate: boolean) {
     const px = Math.round(x)
     const value = `${px}px`
-    /* The fill runs from the track's left end to the knob's centre (+8 is half
-       the 16px knob) and disappears under the opaque knob. An empty ladder
-       selects nothing, and nothing stays unfilled. */
-    const width = steps.length === 0 ? '0px' : `${px + 8}px`
+    /* The fill runs from the track's left end to the knob's centre and
+       disappears under the opaque knob. An empty ladder selects nothing, and
+       nothing stays unfilled. */
+    const right = steps.length === 0 ? 0 : fillRight(px, geometry().size)
     /* Same-value guard: update() runs on every scheduler pass, and re-writing
        an unchanged position would run the transition dance's forced reflow —
        worse, mid-glide it cancels the transition and snaps the knob. */
-    if (value === lastTravel && width === lastWidth) return
+    if (value === lastTravel && right === lastRight) return
     lastTravel = value
-    lastWidth = width
+    lastRight = right
     if (animate || dragging) {
       knob.style.translate = value
-      fill.style.width = width
+      fillCanvas.setTarget({ right, animate, dragging })
       return
     }
-    withoutTransition([knob, fill], () => {
+    withoutTransition([knob], () => {
       knob.style.translate = value
-      fill.style.width = width
     })
+    fillCanvas.setTarget({ right, animate: false, dragging: false })
   }
 
   /** Where the pointer sits along the track, in knob-travel units. */
@@ -295,12 +309,16 @@ export function createEffortControl(opts: {
     if (want && !dotMatrix.ensure(trackBox())) return
     apexOn = want
     if (want) {
+      // The matrix takes the groove over from the frame the mark lands on: a
+      // fill glide left running would paint under a strip nobody sees.
+      fillCanvas.pause()
       root.setAttribute('data-apex', '')
       // After the mark: the field asks the page whether the rung is lit, and a
       // frame queued before this line would find it dark and stop.
       dotMatrix.wake()
     } else {
       root.removeAttribute('data-apex')
+      fillCanvas.draw()
     }
   }
 
@@ -603,6 +621,7 @@ export function createEffortControl(opts: {
      */
     dispose() {
       dotMatrix.dispose()
+      fillCanvas.dispose()
       document.removeEventListener('pointerup', onRelease, true)
       document.removeEventListener('pointercancel', onRelease, true)
       if (cancelPendingFrame !== null) cancelPendingFrame()

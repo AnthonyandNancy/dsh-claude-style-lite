@@ -26,6 +26,7 @@ export { estimateScale, recordSettlement } from './features/context-stats/estima
 export { CACHE_HIT_STOPS, CONTEXT_STOPS, RAMP_SPAN_HIGH, RAMP_SPAN_LOW, rampPosition } from './features/context-stats/stats-ramp'
 export { textTokens } from './features/context-stats/text-tokens'
 export { effortSteps, effortTint, isRankedEffort, orderEffortIds } from './features/effort/ladder'
+export { fillEased, fillRight, fillWidthDev } from './features/effort/fill-canvas'
 export type { EffortLadder, EffortStep } from './features/effort/ladder'
 export {
   BAND_H, FLASH_S, FLOW_S, SURFACE_S, arrivalGlow, arrivalPhase, arrivalRise, cellFade, cellUnit, composeBlockColour, flashAt, flashEnvelope, flowAt, flowEnvelope, flowStrength, solveField,

@@ -5,7 +5,7 @@
       "reason": "首页用量面板：临时宿主里没有用量数据，面板画的是空状态",
       "selectors": [
         "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-matrix",
-        "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill",
+        "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill-canvas",
         "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks",
         "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-knob",
         "body[data-dsh-claude-style][data-ds-dark-theme] .dsh-claude-effort[data-apex] .dsh-claude-effort-knob",
@@ -341,7 +341,6 @@
       "reason": "推理强度选择器：走查没有拖动它，也没有停在顶档",
       "selectors": [
         "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-knob",
-        "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-fill",
         "body[data-dsh-claude-style] .dsh-claude-effort[data-empty] .dsh-claude-effort-track",
         "body[data-dsh-claude-style] .dsh-claude-effort[data-empty] .dsh-claude-effort-value"
       ]

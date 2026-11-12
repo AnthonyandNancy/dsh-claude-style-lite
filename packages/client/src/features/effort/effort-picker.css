@@ -142,28 +142,22 @@ body[data-dsh-claude-style] .dsh-claude-effort-track::before {
   corner-shape: round;
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, 0.08));
 }
-/* The filled portion: from the track's left end to the knob's centre, where
-   the opaque knob swallows it. Its colour IS the label ink at low alpha, so it
-   darkens the light groove and lightens the dark one with a single rule. */
-body[data-dsh-claude-style] .dsh-claude-effort-fill {
+/* The plain fill: from the track's left end to the knob's centre, drawn on a
+   canvas so the pointer's arrival costs no layout. Square on the right, where
+   the opaque knob meets it; the left cap matches the groove's corner. The ink
+   comes from the colour the canvas inherits, at 26%
+   (features/effort/fill-canvas.ts). */
+body[data-dsh-claude-style] .dsh-claude-effort-fill-canvas {
   position: absolute;
   left: 0;
   top: 50%;
   height: 26px;
   margin-top: -13px;
-  /* No width here: the override drives it with an inline style, and any
-     stylesheet width (even 0) would win through !important and pin the fill
-     shut forever. Unset shrinks the absolute box to 0 until the first paint. */
-  /* Square on the right: the fill ends at the knob's centre, and a rounded
-     right cap curves away from the knob at the groove's top and bottom rows,
-     which showed a sliver of bare track between them ("the fill let go of the
-     knob"). The left cap still matches the groove's corner. */
   border-radius: 8px 0 0 8px;
   corner-shape: round;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #161616) 26%, transparent);
-  transition: width var(--dsh-claude-duration-move) var(--dsh-claude-ease-glide), opacity var(--dsh-claude-duration-move) var(--dsh-claude-ease-standard);
   pointer-events: none;
 }
+
 /* One tick per stop, centred on the stop's resting position (the override
    computes the px). Same ink as the fill: the fill swallows passed ticks, the
    knob swallows the current one, so a tick only ever shows on bare track. */
@@ -182,7 +176,6 @@ body[data-dsh-claude-style] .dsh-claude-effort-tick {
   transform: translateX(-50%);
   border-radius: 50%;
   corner-shape: round;
-  background: color-mix(in srgb, var(--dsw-alias-label-primary, #161616) 26%, transparent);
 }
 /* The top rung's dot matrix: five rows of accent blocks over the bare track
    (the 1px gaps ARE the grid lines), drawn on one canvas by
@@ -221,8 +214,8 @@ body[data-dsh-claude-style] .dsh-claude-effort-matrix-canvas {
 /* Reaching the top rung: the plain fill and the ticks hand the groove over to
    the matrix, the knob takes the theme accent's tint and a soft glow, and the
    level's name keeps the same ramp colour the trigger and the card's text wear. */
-body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill {
-  opacity: 0 !important;
+body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill-canvas {
+  opacity: 0;
 }
 body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks {
   opacity: 0 !important;
@@ -276,9 +269,6 @@ body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort
   /* `translate` is dropped from the transition (the drag writes it every
      frame); the lift itself still eases in and back out. */
   transition: scale var(--dsh-claude-timing-feedback), background-color var(--dsh-claude-duration-fade) var(--dsh-claude-ease-standard), box-shadow var(--dsh-claude-duration-fade) var(--dsh-claude-ease-standard) !important;
-}
-body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-fill {
-  transition: none !important;
 }
 body[data-dsh-claude-style] .dsh-claude-effort-track:focus-visible {
   outline: 2px solid var(--dsw-alias-brand-primary, #d97757) !important;

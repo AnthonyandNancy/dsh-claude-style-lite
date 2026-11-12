@@ -1314,8 +1314,8 @@
       "prop": "font-family",
       "verdict": "unmatched"
     },
-    "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill,body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks{opacity:0!}|opacity": {
-      "selector": "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-fill,body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks",
+    "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks{opacity:0!}|opacity": {
+      "selector": "body[data-dsh-claude-style] .dsh-claude-effort[data-apex] .dsh-claude-effort-ticks",
       "prop": "opacity",
       "verdict": "unmatched"
     },
@@ -1341,11 +1341,6 @@
     },
     "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-knob{scale:1.1!;transition:scale var(--dsh-claude-timing-feedback),background-color var(--dsh-claude-duration-fade) var(--dsh-claude-ease-standard),box-shadow var(--dsh-claude-duration-fade) var(--dsh-claude-ease-standard)!}|transition": {
       "selector": "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-knob",
-      "prop": "transition",
-      "verdict": "unmatched"
-    },
-    "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-fill{transition:none!}|transition": {
-      "selector": "body[data-dsh-claude-style] .dsh-claude-effort[data-dragging] .dsh-claude-effort-fill",
       "prop": "transition",
       "verdict": "unmatched"
     },
