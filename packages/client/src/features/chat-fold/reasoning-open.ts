@@ -1,5 +1,5 @@
 import { requestFrame } from '@dsh-claude-style/engine/frame'
-import { subscribeMutations } from '@dsh-claude-style/engine/bus'
+import { observeMatches, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { ROW_PHASE_ATTRIBUTE, RUNNING_STATE, THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { captureComposerCaret, composerComposing, focusKeepingComposerCaret } from '../../shared/composer-caret'
 import { beginChatFoldToggle, endChatFoldToggle, isChatFoldToggle, subscribeFoldReaderEvents } from './fold-toggle'
@@ -84,7 +84,6 @@ export function createReasoningOpen() {
 
   const stopMutations = subscribeMutations(document.body, {
     subtree: true,
-    childList: true,
     attributeFilter: [ROW_PHASE_ATTRIBUTE, 'aria-expanded'],
     attributeOldValue: true,
   }, (records) => {
@@ -101,12 +100,14 @@ export function createReasoningOpen() {
         }
         queue(row)
       }
-      for (const node of record.addedNodes) {
-        if (!(node instanceof Element)) continue
-        if (node.matches(THINK_ROW_SELECTOR)) queue(node)
-        for (const found of node.querySelectorAll(THINK_ROW_SELECTOR)) queue(found)
-      }
     }
+  })
+
+  // The rows standing now and the ones a later batch mounts: the shared match
+  // registry walks a new transcript once for every reader on the page, and the
+  // frame pass presses only the rows that are still here.
+  const thinkRows = observeMatches<HTMLElement>(THINK_ROW_SELECTOR, () => {
+    for (const row of thinkRows.all()) queue(row)
   })
 
   const stopReaderEvents = subscribeFoldReaderEvents((event) => {
@@ -117,11 +118,10 @@ export function createReasoningOpen() {
     if (row === null) return
     touchedIn.set(row, row.getAttribute(ROW_PHASE_ATTRIBUTE) ?? '')
   }, () => {
-    for (const row of document.querySelectorAll<HTMLElement>(THINK_ROW_SELECTOR)) queue(row)
+    for (const row of thinkRows.all()) queue(row)
   })
 
-  // Rows already standing when the feature installed take their turn now.
-  for (const row of document.querySelectorAll<HTMLElement>(THINK_ROW_SELECTOR)) queue(row)
+  for (const row of thinkRows.all()) queue(row)
 
   return {
     stop() {
@@ -131,6 +131,7 @@ export function createReasoningOpen() {
       pending.clear()
       stopMutations()
       stopReaderEvents()
+      thinkRows.release()
     },
   }
 }

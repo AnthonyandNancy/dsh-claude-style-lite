@@ -9,8 +9,11 @@
  * @risk The column layout leaves a group as the host's flat list, hides the only words a row has, stacks rows over each other, grows the transcript with a long group instead of scrolling it inside the card, or leaves its card behind once the reader goes back to the flat layout.
  */
 import { CONVERSATION_PARTS, PAGE_PARTS } from '@dsh-claude-style/engine/parts-table'
-import { spec, host } from '../../fixtures/behaviour.mjs'
+import { spec, host, surface } from '../../fixtures/behaviour.mjs'
 import { partClass } from '../../fixtures/parts.mjs'
+
+const THINK_OPEN = surface.attribute('process.think-open')
+const DISCLOSURE_ROW = host('fold.disclosure')
 
 /**
  * One process group in the conversation's scroller: a thought with its
@@ -141,19 +144,19 @@ export default spec({ page: 'composer' }, ({ test }) => {
     await mountGroup(t)
     await t.prefs({ processRows: 'column' })
     const expandedMode = host('process.expanded-mode')
-    await t.page.evaluate(([contentSelector, thinkSelector, headerSelector]) => {
+    await t.page.evaluate(([contentSelector, thinkSelector, headerSelector, disclosureSelector]) => {
       const thought = [...document.querySelector(contentSelector).querySelectorAll(thinkSelector)].at(-1)
-      thought.querySelector(headerSelector).querySelector('[data-disclosure-row]').setAttribute('aria-expanded', 'true')
+      thought.querySelector(headerSelector).querySelector(disclosureSelector).setAttribute('aria-expanded', 'true')
       const detail = document.createElement('div')
       detail.style.height = '800px'
       thought.querySelector(headerSelector).after(detail)
-    }, [host('process.content'), host('chat.think-row'), host('fold.disclosure-header')])
+    }, [host('process.content'), host('chat.think-row'), host('fold.disclosure-header'), DISCLOSURE_ROW])
     // The row's open mark follows the host's attribute on the mutation bus, so
     // the height rule reads it from the next pass rather than the same task.
-    await t.page.waitForFunction(([contentSelector, thinkSelector]) => {
+    await t.page.waitForFunction(([contentSelector, thinkSelector, mark]) => {
       const thought = [...document.querySelector(contentSelector).querySelectorAll(thinkSelector)].at(-1)
-      return thought.hasAttribute('data-dsh-claude-think-open')
-    }, [host('process.content'), host('chat.think-row')])
+      return thought.hasAttribute(mark)
+    }, [host('process.content'), host('chat.think-row'), THINK_OPEN])
     const reading = await t.page.evaluate(([bodySelector, contentSelector, thinkSelector, headerSelector, groupSelector, mode]) => {
       const body = document.querySelector(bodySelector)
       const group = document.querySelector(groupSelector)
