@@ -141,14 +141,24 @@ export default spec({ page: 'composer' }, ({ test }) => {
     await mountGroup(t)
     await t.prefs({ processRows: 'column' })
     const expandedMode = host('process.expanded-mode')
-    const reading = await t.page.evaluate(([bodySelector, contentSelector, thinkSelector, headerSelector, groupSelector, expanded, mode]) => {
-      const body = document.querySelector(bodySelector)
-      const group = document.querySelector(groupSelector)
+    await t.page.evaluate(([contentSelector, thinkSelector, headerSelector]) => {
       const thought = [...document.querySelector(contentSelector).querySelectorAll(thinkSelector)].at(-1)
-      thought.setAttribute(expanded, '')
+      thought.querySelector(headerSelector).querySelector('[data-disclosure-row]').setAttribute('aria-expanded', 'true')
       const detail = document.createElement('div')
       detail.style.height = '800px'
       thought.querySelector(headerSelector).after(detail)
+    }, [host('process.content'), host('chat.think-row'), host('fold.disclosure-header')])
+    // The row's open mark follows the host's attribute on the mutation bus, so
+    // the height rule reads it from the next pass rather than the same task.
+    await t.page.waitForFunction(([contentSelector, thinkSelector]) => {
+      const thought = [...document.querySelector(contentSelector).querySelectorAll(thinkSelector)].at(-1)
+      return thought.hasAttribute('data-dsh-claude-think-open')
+    }, [host('process.content'), host('chat.think-row')])
+    const reading = await t.page.evaluate(([bodySelector, contentSelector, thinkSelector, headerSelector, groupSelector, mode]) => {
+      const body = document.querySelector(bodySelector)
+      const group = document.querySelector(groupSelector)
+      const thought = [...document.querySelector(contentSelector).querySelectorAll(thinkSelector)].at(-1)
+      const detail = thought.querySelector(headerSelector).nextElementSibling
       const capped = getComputedStyle(body)
       const cappedReading = {
         max: Math.round(Number.parseFloat(capped.maxHeight)),
@@ -156,7 +166,7 @@ export default spec({ page: 'composer' }, ({ test }) => {
         gutter: capped.scrollbarGutter,
         client: Math.round(body.clientHeight),
         scroll: Math.round(body.scrollHeight),
-        detailOverflow: getComputedStyle(detail).overflowY,
+        detailOverflow: detail === null ? null : getComputedStyle(detail).overflowY,
       }
       group.setAttribute(mode, 'detailed')
       const lifted = getComputedStyle(body)
@@ -165,7 +175,7 @@ export default spec({ page: 'composer' }, ({ test }) => {
         capped: cappedReading,
         lifted: { max: lifted.maxHeight, overflow: lifted.overflowY, client: Math.round(body.clientHeight) },
       }
-    }, [host('process.body'), host('process.content'), host('chat.think-row'), host('fold.disclosure-header'), host('process.group'), host('fold.expanded'), expandedMode])
+    }, [host('process.body'), host('process.content'), host('chat.think-row'), host('fold.disclosure-header'), host('process.group'), expandedMode])
     t.expectThat.equal(reading.capped.max, reading.cap, 'the card stands at the host’s cap on a process body')
     t.expectThat.equal(reading.capped.overflow, 'auto', 'the group scrolls inside the card the way the host scrolls it')
     t.expectThat.equal(reading.capped.gutter, 'auto', 'a short group keeps no empty gutter beside the card’s border')

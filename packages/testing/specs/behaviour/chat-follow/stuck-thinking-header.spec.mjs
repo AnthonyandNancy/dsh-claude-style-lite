@@ -10,7 +10,6 @@ import { spec } from '../../fixtures/behaviour.mjs'
 import {
   CHAT_RUNNING_SELECTOR,
   DISCLOSURE_HEADER_SELECTOR,
-  EXPANDED_ATTRIBUTE,
   FOLLOWING_TAIL_ATTRIBUTE,
   ROW_PHASE_ATTRIBUTE,
   RUNNING_STATE,
@@ -33,7 +32,6 @@ export default spec({ page: 'chat-follow' }, ({ test }) => {
       followAttr,
       phaseAttr,
       runningVal,
-      expandedAttr,
       streamAttr,
     ]) => {
       const flow = document.querySelector(flowSel)
@@ -48,7 +46,7 @@ export default spec({ page: 'chat-follow' }, ({ test }) => {
       const think = document.createElement('div')
       think.setAttribute(thinkAttr[0], thinkAttr[1].replaceAll('"', ''))
       think.setAttribute(phaseAttr, runningVal)
-      think.setAttribute(expandedAttr, '')
+      think.setAttribute('aria-expanded', 'true')
 
       const header = document.createElement('div')
       header.setAttribute(headerAttr, '')
@@ -91,7 +89,6 @@ export default spec({ page: 'chat-follow' }, ({ test }) => {
       FOLLOWING_TAIL_ATTRIBUTE,
       ROW_PHASE_ATTRIBUTE,
       RUNNING_STATE,
-      EXPANDED_ATTRIBUTE,
       STREAMING_ATTRIBUTE,
     ])
 
