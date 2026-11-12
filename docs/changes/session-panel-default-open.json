@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "improvements",
+  "order": 0,
+  "external": true,
+  "zh": "会话详情入口常驻在会话头部，设置改为「默认打开会话总览面板」，开启时每个会话默认展开，关闭时入口仍在、按需打开；栏不再按窗口宽度自动收起",
+  "en": "Keep the details control in the conversation header and make its setting Open the session overview panel by default, with each session opening the rail when on and the control staying to open it on demand when off; the rail no longer retreats by frame width"
+}

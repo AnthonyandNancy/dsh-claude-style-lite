@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "removals",
+  "order": 3,
+  "external": true,
+  "zh": "删除「思考内容显示」设置与两行步进窗口，思考正文按宿主流式到达直接显示",
+  "en": "Remove the Reasoning display setting and the two-line stepped window, so reasoning text shows as the host streams it"
+}

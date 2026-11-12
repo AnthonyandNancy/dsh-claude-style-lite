@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "new",
+  "order": 1,
+  "external": true,
+  "zh": "新增默认开启的「提示通知窗口」，在任务完成、等待审批、等待计划审阅与等待回答时用系统通知提醒，点击通知回到对应会话",
+  "en": "Add a Notification window switch, on by default, raising a system notification when a task finishes, waits for approval, waits for plan review or waits for an answer, with a click returning to that session"
+}
