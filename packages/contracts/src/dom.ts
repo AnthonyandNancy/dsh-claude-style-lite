@@ -37,11 +37,6 @@ export const CHAT_CALL_TOOL_ATTRIBUTE = 'data-tool'
 /** One thinking row; its phase is its data-state attribute. */
 export const THINK_ROW_SELECTOR = '[data-variant="think"]'
 /**
- * The rendered reasoning text inside a thinking row, whatever the host's body
- * wrapper is called: the module slides it inside the window it gives that body.
- */
-export const REASONING_TEXT_SELECTOR = '[data-markdown-variant]'
-/**
  * The phase of a thinking row or a tool call's own view (the page's phase is
  * `data-phase`, D3); `running` while that piece of work is under way.
  */

@@ -47,11 +47,6 @@
       "reason": "All long tasks together over the measured turn. The turn streams a long scripted answer, so some long tasks are the host rendering it; the budget is what the skin's own passes may add on top before the turn counts as blocked."
     },
     {
-      "name": "reasonStepMinGapMs",
-      "value": 600,
-      "reason": "The least wait between two steps of the reasoning window. The snippet holds each step for --dsh-claude-period-hold (840ms); a timer only ever fires late, and the change is read at the next frame, so a reading can come in short of the hold by about one frame on either side. The floor sits well under the hold and far above the few milliseconds a wait read in the wrong unit leaves."
-    },
-    {
       "name": "followAtEndPx",
       "value": 6,
       "reason": "A browser clamps a scroll position a few pixels inside `scrollHeight - clientHeight` when a child's own overflow or a scrollbar rounds it, so this is the distance from the end that counts as arrived (D92)."

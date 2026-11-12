@@ -309,8 +309,8 @@ export const PREFS = {
   messageActions: { type: 'boolean', default: true },
   viewTabs: { type: 'boolean', default: true },
   headerBand: { type: 'boolean', default: true },
-  /** Whether the conversation offers its own session details rail (D94). */
-  sessionPanel: { type: 'boolean', default: true },
+  /** Whether each conversation opens its own details rail; the header control stays either way (D96). */
+  sessionPanelOpenByDefault: { type: 'boolean', default: true },
   /** The legacy choices all mean on except `off`. */
   chatAnimations: { type: 'boolean', default: true, legacy: { [CHAT_ANIMATIONS_OFF]: false, enhanced: true, redraw: true } },
   chatWait: { type: 'boolean', default: true },
@@ -320,6 +320,8 @@ export const PREFS = {
   processRows: { type: 'choice', values: PROCESS_ROWS_LAYOUTS, default: PROCESS_ROWS_FLAT },
   /** Completion/blocked cue gain; default off to avoid unsolicited interruption (D89). */
   soundCues: { type: 'choice', values: SOUND_LEVELS, default: SOUND_LEVEL_OFF },
+  /** Whether task completion and blocked interactions raise a system notification. */
+  notifications: { type: 'boolean', default: true },
 } as const satisfies Record<string, PrefSpec>
 
 /** One preference's key. */
