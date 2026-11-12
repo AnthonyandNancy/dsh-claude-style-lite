@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "chores",
+  "order": 0,
+  "external": true,
+  "zh": "将 CodeBuddy 的兼容基线降到 0.2.2-rc.1",
+  "en": "Lower the CodeBuddy compatibility baseline to 0.2.2-rc.1"
+}

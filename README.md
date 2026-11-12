@@ -81,7 +81,7 @@ dsh plugin --profile web add guojianlin/dsh-claude-style-lite#dist      # GitHub
 
 也可从[插件市场](https://github.com/dsh-market/dsh-market)或 dsh-web-all 的皮肤中心安装。同一时刻只启用一个主题；
 
-需要 dsh ≥ 0.2.2-rc.2，装好后重启 DeepSeek Harness。
+需要 dsh ≥ 0.2.2-rc.1，装好后重启 DeepSeek Harness。
 
 ## 字体
 
