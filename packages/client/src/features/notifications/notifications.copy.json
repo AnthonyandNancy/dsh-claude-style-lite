@@ -1,0 +1,12 @@
+{
+  "notificationsTitle": { "zh": "提示通知窗口", "en": "Notification window" },
+  "notificationsDesc": { "zh": "任务完成或等待你处理时，用系统通知提醒", "en": "Show a system notification when a task finishes or waits on you" },
+  "notificationFinished": { "zh": "任务完成", "en": "Task finished" },
+  "notificationApproval": { "zh": "等待审批", "en": "Waiting for approval" },
+  "notificationPlanReview": { "zh": "等待计划审阅", "en": "Waiting for plan review" },
+  "notificationQuestion": { "zh": "等待回答", "en": "Waiting for an answer" },
+  "notificationPermissionRequest": { "zh": "允许通知", "en": "Allow notifications" },
+  "notificationPermissionDefault": { "zh": "浏览器尚未允许通知。", "en": "The browser has not allowed notifications yet." },
+  "notificationPermissionDenied": { "zh": "浏览器已拒绝通知，请在站点设置里开启。", "en": "Notifications are blocked. Turn them on in the site settings." },
+  "notificationUnsupported": { "zh": "当前页面不能显示系统通知。", "en": "This page cannot show system notifications." }
+}

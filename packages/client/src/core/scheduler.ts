@@ -56,6 +56,7 @@ export interface Handles {
   sessionTitle: FeatureHandle
   settingsNav: FeatureHandle
   soundCues: FeatureHandle
+  notifications: FeatureHandle
   sodium: FeatureHandle
   surface: FeatureHandle
   activeFirst: FeatureHandle

@@ -1,76 +1,59 @@
 /**
+ * The cue reader turns the host's live snapshots into the two cue moments. The
+ * notification reader shares it, so this spec keeps the sound cue's own reading
+ * of a pending interaction and a stop.
+ *
  * @capability sound-cues
  * @features sound-cues
  * @risk A prompt already pending at load cues again, a subagent's finish reads as the task's finish, or a repeated status publication plays the same cue twice.
  */
 import { expect, test } from 'vitest'
 import { attentionEvents, attentionReading } from '@dsh-claude-style/client/pure'
-import type { AttentionReading } from '@dsh-claude-style/client/pure'
-import type { HostSessionListSnapshot, HostSessionStatusSnapshot } from '@dsh-claude-style/contracts/services'
+import { list, readings, status } from '../notifications/attention-fixtures'
 
-interface Reading { pending?: boolean, running?: boolean, topLevel?: boolean }
-
-function readings(entries: Record<string, Reading>): Map<string, AttentionReading> {
-  return new Map(Object.entries(entries).map(([id, entry]) => [id, {
-    pending: entry.pending === true,
-    running: entry.running === true,
-    topLevel: entry.topLevel !== false,
-  }]))
-}
-
-function status(entries: Record<string, { running?: boolean, pendingInteraction?: unknown }>): HostSessionStatusSnapshot {
-  return new Map(Object.entries(entries)) as unknown as HostSessionStatusSnapshot
-}
-
-function list(ids: string[], rows: Record<string, { running?: boolean, origin?: string }>): HostSessionListSnapshot {
-  return {
-    phase: 'ready',
-    ids,
-    byId: Object.fromEntries(ids.map(id => [id, { id, displayTitle: id, updatedAt: 1, ...rows[id] }])),
-    projectionsBySession: {},
-  }
-}
-
-test('the first reading is the baseline', () => {
-  expect(attentionEvents(readings({}), readings({ a: { pending: true, running: true } }))).toEqual([])
-  expect(attentionEvents(readings({ a: { running: true } }), readings({ a: { pending: true, running: true } }))).toEqual(['permission'])
+test('a pending interaction and a stopped run are the two cue moments', () => {
+  const running = readings({ chat: { running: true } })
+  const waiting = readings({ chat: { running: true, pending: true, pendingKind: 'plan-review' } })
+  expect(attentionEvents(running, waiting)).toEqual([{ kind: 'blocked', sessionId: 'chat', pending: 'plan-review' }])
+  expect(attentionEvents(running, readings({ chat: { running: false } }))).toEqual([{ kind: 'finished', sessionId: 'chat' }])
 })
 
-test('a pending prompt cues once and stays quiet while it stays pending', () => {
-  const before = readings({ a: { running: true } })
-  const waiting = readings({ a: { pending: true, running: true } })
-  expect(attentionEvents(before, waiting)).toEqual(['permission'])
-  expect(attentionEvents(waiting, waiting)).toEqual([])
-  expect(attentionEvents(waiting, readings({ a: { running: true } }))).toEqual([])
-  expect(attentionEvents(readings({ a: { running: true } }), waiting)).toEqual(['permission'])
+test('a repeated reading is quiet, while another pending kind is a new cue', () => {
+  const approval = readings({ chat: { running: true, pending: true, pendingKind: 'approval' } })
+  expect(attentionEvents(approval, readings({ chat: { running: true, pending: true, pendingKind: 'approval' } }))).toEqual([])
+  expect(attentionEvents(approval, readings({ chat: { running: true, pending: true, pendingKind: 'question' } }))).toEqual([
+    { kind: 'blocked', sessionId: 'chat', pending: 'question' },
+  ])
 })
 
-test('a top-level session stopping cues; a subagent stopping does not', () => {
-  expect(attentionEvents(readings({ a: { running: true, topLevel: true } }), readings({ a: { running: false, topLevel: true } }))).toEqual(['finished'])
-  expect(attentionEvents(readings({ s: { running: true, topLevel: false } }), readings({ s: { running: false, topLevel: false } }))).toEqual([])
+test('a child stop is quiet, and a child prompt still cues', () => {
+  const childRunning = readings({ child: { running: true, topLevel: false } })
+  const childWaiting = readings({ child: { running: false, topLevel: false, pending: true, pendingKind: 'approval' } })
+  expect(attentionEvents(childRunning, readings({ child: { running: false, topLevel: false } }))).toEqual([])
+  expect(attentionEvents(childRunning, childWaiting)).toEqual([{ kind: 'blocked', sessionId: 'child', pending: 'approval' }])
 })
 
-test('a session that starts waiting as it stops answers both events; the cue window keeps one', () => {
-  const events = attentionEvents(readings({ a: { running: true } }), readings({ a: { pending: true, running: false } }))
-  expect(events).toEqual(['permission', 'finished'])
+test('one reading can answer a prompt and the stop together', () => {
+  expect(attentionEvents(readings({ chat: { running: true } }), readings({ chat: { running: false, pending: true, pendingKind: 'question' } }))).toEqual([
+    { kind: 'blocked', sessionId: 'chat', pending: 'question' },
+    { kind: 'finished', sessionId: 'chat' },
+  ])
 })
 
-test('a session appearing for the first time is a baseline too', () => {
-  expect(attentionEvents(readings({ a: { running: true } }), readings({ a: { running: true }, b: { running: false } }))).toEqual([])
-})
-
-test('the reading lays the live status over the list and leaves unknown sessions below top level', () => {
+test('the live status lays over the list, and the sessions it alone carries are children', () => {
   const snapshot = attentionReading(
-    status({ a: { running: false }, s: { running: true, pendingInteraction: { kind: 'permission' } } }),
-    list(['a', 'b'], { a: { running: true }, b: { running: true, origin: 'subagent' } }),
+    status({ chat: { running: false }, worker: { running: true, pendingInteraction: 'approval' } }),
+    list(['chat', 'child'], { chat: { running: true }, child: { running: true, origin: 'subagent' } }),
   )
-  expect(snapshot.get('a')).toEqual({ pending: false, running: false, topLevel: true })
-  expect(snapshot.get('b')).toEqual({ pending: false, running: true, topLevel: false })
-  expect(snapshot.get('s')).toEqual({ pending: true, running: true, topLevel: false })
+  expect([...snapshot]).toEqual([
+    ['chat', { pending: false, pendingKind: null, running: false, topLevel: true }],
+    ['child', { pending: false, pendingKind: null, running: true, topLevel: false }],
+    ['worker', { pending: true, pendingKind: 'approval', running: true, topLevel: false }],
+  ])
 })
 
-test('a missing list keeps the live status, and a missing status reads the list', () => {
-  expect(attentionReading(status({ a: { running: true, pendingInteraction: {} } }), null).get('a')).toEqual({ pending: true, running: true, topLevel: false })
-  expect(attentionReading(null, list(['a'], { a: { running: true } })).get('a')).toEqual({ pending: false, running: true, topLevel: true })
+test('a missing snapshot leaves the other one to answer alone', () => {
+  expect(attentionReading(status({ chat: { running: true, pendingInteraction: {} } }), null).get('chat')?.pendingKind).toBe('approval')
+  expect(attentionReading(null, list(['chat'], { chat: { running: true } })).get('chat')?.running).toBe(true)
   expect(attentionReading(null, null).size).toBe(0)
 })

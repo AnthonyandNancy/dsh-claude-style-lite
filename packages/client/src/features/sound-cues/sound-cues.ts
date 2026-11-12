@@ -1,13 +1,13 @@
 import { SOUND_CUE_COMPLETION, SOUND_CUE_PERMISSION, SOUND_GAIN } from '@dsh-claude-style/contracts/sound'
 import { readPrefs } from '../../core/prefs'
-import { createAttentionFeed } from './attention-feed'
+import { createAttentionFeed } from '../../shared/attention-feed'
 import { createSoundPlayer } from './player'
-import type { AttentionEvent } from './attention'
+import type { AttentionEvent } from '../../shared/attention'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureUi } from '../../core/feature'
 import type manifest from './sound-cues.manifest'
 
-/** Two cues inside this window are one moment, and the permission cue takes it. */
+/** Two cues inside this window are one moment, and a blocked task takes it. */
 const CUE_WINDOW_MS = 200
 
 /**
@@ -20,16 +20,16 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   const player = createSoundPlayer()
   let disposed = false
   let timer: number | null = null
-  let pending = new Set<AttentionEvent>()
+  let pending = new Set<'blocked' | 'finished'>()
 
   function flush() {
     timer = null
     if (disposed) return
     const events = pending
     pending = new Set()
-    const kind = events.has('permission') ? 'permission' : events.has('finished') ? 'finished' : null
+    const kind = events.has('blocked') ? 'blocked' : events.has('finished') ? 'finished' : null
     if (kind === null) return
-    const name = kind === 'permission' ? SOUND_CUE_PERMISSION : SOUND_CUE_COMPLETION
+    const name = kind === 'blocked' ? SOUND_CUE_PERMISSION : SOUND_CUE_COMPLETION
     // The player reports its own downgrade to the browser voices; a cue never
     // throws into the status subscription that asked for it (D12).
     void player.play(name, SOUND_GAIN[readPrefs().soundCues])
@@ -37,7 +37,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
 
   function queue(event: AttentionEvent) {
     if (disposed) return
-    pending.add(event)
+    pending.add(event.kind)
     if (timer === null) timer = window.setTimeout(flush, CUE_WINDOW_MS)
   }
 

@@ -12,7 +12,7 @@ import type { HostSessionListSnapshot, HostSessionStatusSnapshot, HostSnapshotSo
  * shell finishes), so `ctx.inject` waits for both where the host offers it; a
  * host without the wait reads what stands now.
  */
-export function createAttentionFeed(ctx: HostContext, onEvent: (event: AttentionEvent) => void) {
+export function createAttentionFeed(ctx: HostContext, onEvent: (event: AttentionEvent, title: string) => void) {
   let previous: Map<string, AttentionReading> | null = null
   let statusSource: HostSnapshotSource<HostSessionStatusSnapshot> | undefined
   let listSource: HostSnapshotSource<HostSessionListSnapshot> | undefined
@@ -27,7 +27,11 @@ export function createAttentionFeed(ctx: HostContext, onEvent: (event: Attention
     const next = attentionReading(status, list)
     if (previous !== null) {
       const events = attentionEvents(previous, next)
-      for (let i = 0; i < events.length; i++) onEvent(events[i])
+      for (let i = 0; i < events.length; i++) {
+        const event = events[i]
+        const title = list?.byId[event.sessionId]?.displayTitle || event.sessionId
+        onEvent(event, title)
+      }
     }
     previous = next
   }

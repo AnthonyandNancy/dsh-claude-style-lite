@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Claude Code 风格 Lite",
-    "description": "dsh-claude-style 的轻量派生版：保留 Claude / DeepSeek 主题、模型选择、会话与统计能力，移除思考自动开合、峰谷费率、消息入场动画与自绘光标，推理滑块改用 Canvas 填充。"
+    "description": "dsh-claude-style 的轻量派生版：保留 Claude / DeepSeek 主题、模型选择、会话与统计能力；思考正文随内容到达直接显示并在运行阶段展开一次；任务完成或等待处理时可用提示音与系统通知提醒；不保留逐段步进窗口、峰谷费率、消息入场动画与自绘光标。"
   }
 }

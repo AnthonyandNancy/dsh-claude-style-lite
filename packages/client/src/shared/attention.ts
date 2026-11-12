@@ -1,9 +1,14 @@
 import type { HostSessionListSnapshot, HostSessionStatusSnapshot } from '@dsh-claude-style/contracts/services'
 
-/** The two readings a session's state has for the cues. */
+/** The host's blocking interaction kinds: approval, plan review and question. */
+export type PendingKind = 'approval' | 'plan-review' | 'question'
+
+/** The two readings a session's state has for the cues and notifications. */
 export interface AttentionReading {
   /** The session waits on the reader right now. */
   pending: boolean
+  /** What it waits on, or null while it does not wait. */
+  pendingKind: PendingKind | null
   /** The session runs, as the live status or the list's summary says. */
   running: boolean
   /** The session is a top-level conversation, not a subagent. */
@@ -11,7 +16,17 @@ export interface AttentionReading {
 }
 
 /** What a reading changed: a prompt the reader has not answered, or a finished run. */
-export type AttentionEvent = 'permission' | 'finished'
+export type AttentionEvent =
+  | { kind: 'blocked', sessionId: string, pending: PendingKind }
+  | { kind: 'finished', sessionId: string }
+
+/** The host's pending value, read as one of its three kinds. */
+function pendingKindOf(raw: unknown): PendingKind | null {
+  if (raw === 'approval' || raw === 'plan-review' || raw === 'question') return raw
+  if (raw === undefined) return null
+  // Earlier hosts carried a bare object here; its only blocking meaning is approval.
+  return 'approval'
+}
 
 /**
  * One reading of every session the cues watch: the list's top-level rows first,
@@ -26,8 +41,10 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
       const id = list.ids[i]
       const row = list.byId[id]
       const live = status?.get(id)
+      const pendingKind = pendingKindOf(live?.pendingInteraction)
       readings.set(id, {
-        pending: live?.pendingInteraction !== undefined,
+        pending: pendingKind !== null,
+        pendingKind,
         running: live?.running ?? row?.running === true,
         topLevel: row?.origin !== 'subagent',
       })
@@ -36,8 +53,10 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
   if (status !== null) {
     for (const [id, live] of status) {
       if (readings.has(id)) continue
+      const pendingKind = pendingKindOf(live.pendingInteraction)
       readings.set(id, {
-        pending: live.pendingInteraction !== undefined,
+        pending: pendingKind !== null,
+        pendingKind,
         running: live.running === true,
         topLevel: false,
       })
@@ -47,18 +66,20 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
 }
 
 /**
- * The cues two consecutive readings ask for. A session's first reading is its
- * baseline: a prompt already pending or a run already going makes no sound
+ * The events two consecutive readings ask for. A session's first reading is its
+ * baseline: a prompt already pending or a run already going makes no event
  * until it changes. A session that stops running while a new prompt waits
- * answers both events here, and the caller's window keeps the permission cue.
+ * answers both events here.
  */
 export function attentionEvents(previous: ReadonlyMap<string, AttentionReading>, next: ReadonlyMap<string, AttentionReading>): AttentionEvent[] {
   const events: AttentionEvent[] = []
   for (const [id, now] of next) {
     const before = previous.get(id)
     if (before === undefined) continue
-    if (now.pending && !before.pending) events.push('permission')
-    if (now.topLevel && before.running && !now.running) events.push('finished')
+    if (now.pendingKind !== null && now.pendingKind !== before.pendingKind) {
+      events.push({ kind: 'blocked', sessionId: id, pending: now.pendingKind })
+    }
+    if (now.topLevel && before.running && !now.running) events.push({ kind: 'finished', sessionId: id })
   }
   return events
 }

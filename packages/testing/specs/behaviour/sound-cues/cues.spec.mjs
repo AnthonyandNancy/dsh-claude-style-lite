@@ -17,10 +17,10 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
     const host = await setup(t, { status: initial, list: sessionList(initial) })
     t.expectThat.equal(host.posts, [], 'a run already going at load is the baseline')
 
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts, [{ name: 'pop', volume: 0.2 }], 'the prompt plays Pop at the soft level')
 
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts.length, 1, 'the same pending prompt does not play again')
 
     await host.status({ a: { running: true } })
@@ -35,7 +35,7 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
     await host.status({ s: { running: false } })
     t.expectThat.equal(host.posts, [], 'a subagent stopping is not the task finishing')
 
-    await host.status({ s: { running: false, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ s: { running: false, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts, [{ name: 'pop', volume: 0.2 }], 'a subagent waiting for the reader still plays Pop')
   })
 
@@ -43,7 +43,7 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
     await t.prefs({ soundCues: 'soft' })
     const initial = { a: { running: true } }
     const host = await setup(t, { status: initial, list: sessionList(initial) })
-    await host.status({ a: { running: false, pendingInteraction: { kind: 'permission' } } }, 0)
+    await host.status({ a: { running: false, pendingInteraction: 'approval' } }, 0)
     await host.wait(500)
     t.expectThat.equal(host.posts, [{ name: 'pop', volume: 0.2 }], 'one window, and the prompt outranks the stop')
   })
@@ -51,12 +51,12 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
   test('the level is read at the moment of the cue', async (t) => {
     const initial = { a: { running: true } }
     const host = await setup(t, { status: initial, list: sessionList(initial) })
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts, [], 'the default level is off, so nothing plays')
 
     await t.prefs({ soundCues: 'clear' })
     await host.status({ a: { running: true } })
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts, [{ name: 'pop', volume: 0.55 }], 'the clear level reaches the route')
 
     await t.prefs({ soundCues: 'soft' })
@@ -66,18 +66,18 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
 
     await t.prefs({ soundCues: 'off' })
     await host.status({ a: { running: true } })
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts.length, 2, 'off stands the feature down')
   })
 
   test('a prompt already pending at load is the baseline', async (t) => {
     await t.prefs({ soundCues: 'soft' })
-    const initial = { a: { running: true, pendingInteraction: { kind: 'permission' } } }
+    const initial = { a: { running: true, pendingInteraction: 'approval' } }
     const host = await setup(t, { status: initial, list: sessionList(initial) })
     t.expectThat.equal(host.posts, [], 'the prompt was there before the page')
 
     await host.status({ a: { running: true } })
-    await host.status({ a: { running: true, pendingInteraction: { kind: 'permission' } } })
+    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
     t.expectThat.equal(host.posts, [{ name: 'pop', volume: 0.2 }], 'the next prompt is a change')
   })
 })
