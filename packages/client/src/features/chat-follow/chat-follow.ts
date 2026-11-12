@@ -9,7 +9,7 @@ import { createStamp } from '@dsh-claude-style/engine/dom'
 import { motionEase, motionEaseAt, motionMs } from '../../shared/motion'
 import { inPageBox, pageViewport } from '../../shared/page-zoom'
 import { observeComposerCards } from '@dsh-claude-style/engine/host'
-import { SCROLL_EASE_LEAD_PX, handBackFollow, joinScrollOwner, readerHolds, readerScrollPosition, submissionHolds, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
+import { SCROLL_EASE_LEAD_PX, handBackFollow, handBackPending, joinScrollOwner, readerHolds, readerScrollPosition, submissionHolds, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureUi } from '../../core/feature'
 import type manifest from './chat-follow.manifest'
@@ -450,8 +450,9 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) return
     if (foldBusy()) return
     // The host has already written the new tail. Restore the position the
-    // reader chose, which is the old tail only for a touch held there (#230).
-    writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')
+    // reader chose, which is the old tail only for a touch held there (#230),
+    // unless a one-request hand-back owns that position for its settle window.
+    if (!handBackPending(scroller)) writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')
   }
 
   /**
@@ -543,7 +544,7 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     lastEnsureAt = now
     // A hand-back in flight outlives the frame it began in, so it is told the
     // feature is gone rather than only that the reader is still up there.
-    handBackFollow('follow', { stillWanted: () => !stopped && !readerAway() })
+    handBackFollow({ source: 'follow', reason: 'structure', stillWanted: () => !stopped && !readerAway() })
   }
 
   /** A batch of mutations is settled: decide whether to act. */

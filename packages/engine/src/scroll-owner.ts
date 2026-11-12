@@ -31,10 +31,12 @@ const PROCESS_RELEASE_THRESHOLD_PX = 4
  * How long the stream slide stands down after a submission arrives: the host's jump to a message just sent is deliberate, and its echo row (SUBMISSION_ROW_SELECTOR, chat-dom.ts) is swapped for the real one about a second later, which moves the position again.
  */
 const SUBMISSION_HOLD_MS = 1200
-/** How many times a hand-back looks again; the host may turn its follow off a beat later. */
-const FOLLOW_LOOK_ROUNDS = 5
-/** The gap between two looks; five of them cover the host's 500 ms sampling window. */
-const FOLLOW_LOOK_INTERVAL_MS = 100
+/** How long a hand-back blocks the reader-position write-back, matching the host's scroll sampling window. */
+const HAND_BACK_SETTLE_MS = 500
+/** The gap between two confirmation looks after the one button press. */
+const HAND_BACK_LOOK_MS = 100
+/** The most confirmation looks after the press; five cover the host's 500 ms sampling window. */
+const HAND_BACK_LOOKS = 5
 
 /** The reader's intent events: a process body reads all but beforematch, and "moved since" reads only the four that move a position. */
 const INTENT_TYPES = ['wheel', 'touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'keydown', 'beforematch']
@@ -58,6 +60,9 @@ function isReaderScrollIntent(event: Event) {
 const easeSources = new WeakMap<Element, ScrollSource>()
 /** The containers the reader holds: an intent was seen there and he has not come back to the end. A Set, so leaving the owner can take every mark off again. */
 const held = new Set<Element>()
+/** The token and the settle window of the hand-back in flight on each container; a newer request supersedes the older token. */
+const handBackTokens = new WeakMap<Element, number>()
+const handBackUntil = new WeakMap<Element, number>()
 /** The position the reader chose on each held container; host writes to the tail never replace it. */
 const readerPositions = new WeakMap<Element, number>()
 /** The scroll range (scrollHeight - clientHeight) when readerPositions was last recorded, to tell a host growth pin from reader travel. */
@@ -150,6 +155,11 @@ function setHeld(container: Element, holding: boolean) {
   syncHoldMark(container)
 }
 
+/** Release a hold for a hand-back: the held set is module-private, and the request has already been the reader's answer. */
+function releaseReaderHold(container: Element) {
+  setHeld(container, false)
+}
+
 /** The ease running on a container now, and the source it serves. */
 function runningSource(container: Element) {
   if (!isScrollEasing(container)) {
@@ -224,7 +234,11 @@ function releaseAtTail(container: Element) {
   // The walk in flight gives up where the reader takes the container again, and
   // where the owner has been left: a hand-back outlives the frame it began in.
   const generation = ownerGeneration
-  handBackFollow('follow', { stillWanted: () => generation === ownerGeneration && !held.has(container) })
+  handBackFollow({
+    source: 'reader',
+    reason: 'reader',
+    stillWanted: () => generation === ownerGeneration && !held.has(container),
+  })
 }
 
 /**
@@ -508,44 +522,60 @@ export function scrollPositionFor(container: Element) {
   return scrollEasePosition(container)
 }
 
+/** A hand-back: which source asks, why, and whether the request still stands. */
+export interface HandBackRequest {
+  source: ScrollSource
+  reason: 'structure' | 'reader'
+  stillWanted?: () => boolean
+  onSettled?: () => void
+}
+
+/** Whether a hand-back still owns the conversation's scroll position on this container. */
+export function handBackPending(container: Element) {
+  const until = handBackUntil.get(container)
+  return until !== undefined && performance.now() < until
+}
+
 /**
- * Hand the conversation back to the host's own follow, lighting it up again when it is off. The host turns its follow off on any write inside its 500 ms sampling window and leaves one way back: the back-to-end button it renders only while off. The position is walked to the end first, so the host's onScroll sees the reader reach it; the button click covers the start of an execution, when there is no scrollbar and no scroll event. The looks in between cover the host turning its follow off a beat late.
- * @param source - follow for the follow's own hand-back, fold after a door.
- * @param options - stillWanted is asked before every look; onSettled runs once the round is over.
+ * Hand the conversation back to the host's own follow with one request and one
+ * press. The host renders its back-to-end button only while its follow is off,
+ * and turns that follow back on when the button is pressed; its 500 ms scroll
+ * sampling window may leave the button on the page after the press. The looks
+ * after that press therefore only read whether the button has gone.
+ * @param request - stillWanted is asked before the press and every look; onSettled runs once the request is done, cancelled or reaches its last look.
  */
-export function handBackFollow(source: ScrollSource, options?: { stillWanted?: () => boolean, onSettled?: () => void }) {
-  const stillWanted = options?.stillWanted ?? (() => true)
-  const onSettled = options?.onSettled ?? null
+export function handBackFollow(request: HandBackRequest) {
+  const stillWanted = request.stillWanted ?? (() => true)
+  const onSettled = request.onSettled ?? null
   const scroller = conversationScroller()
   if (scroller === null) {
     if (onSettled !== null) onSettled()
     return
   }
-  if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) easeScrollToEndFor(scroller, source, stillWanted)
-  let rounds = 0
-  const look = () => {
-    if (!stillWanted() || rounds >= FOLLOW_LOOK_ROUNDS) {
-      if (onSettled !== null) onSettled()
-      return
-    }
-    rounds += 1
-    // The walk first, the button after it: clicking mid-walk would drop the
-    // eased position for the host's own instant jump.
-    if (isScrollEasing(scroller)) {
-      window.setTimeout(look, FOLLOW_LOOK_INTERVAL_MS)
-      return
-    }
-    // A pinned position does not mean the follow is back: the settlement may
-    // switch it off a beat later, and after that only the button brings it
-    // back. The button stands on the page only while the follow is off, so
-    // finding one is the reading.
-    const button = findFollowTailButton()
-    if (button !== null) {
-      button.click()
-      if (onSettled !== null) onSettled()
-      return
-    }
-    window.setTimeout(look, FOLLOW_LOOK_INTERVAL_MS)
+  // A newer request supersedes the older token; the older look sees the change
+  // and settles once, without a second press.
+  const token = (handBackTokens.get(scroller) ?? 0) + 1
+  handBackTokens.set(scroller, token)
+  handBackUntil.set(scroller, performance.now() + HAND_BACK_SETTLE_MS)
+  releaseReaderHold(scroller)
+  if (!stillWanted()) {
+    if (onSettled !== null) onSettled()
+    return
   }
-  window.setTimeout(look, FOLLOW_LOOK_INTERVAL_MS)
+  const button = findFollowTailButton()
+  if (button !== null) button.click()
+  let looks = 0
+  const look = () => {
+    if (handBackTokens.get(scroller) !== token || !stillWanted() || looks >= HAND_BACK_LOOKS) {
+      if (onSettled !== null) onSettled()
+      return
+    }
+    looks += 1
+    if (findFollowTailButton() === null) {
+      if (onSettled !== null) onSettled()
+      return
+    }
+    window.setTimeout(look, HAND_BACK_LOOK_MS)
+  }
+  window.setTimeout(look, HAND_BACK_LOOK_MS)
 }
