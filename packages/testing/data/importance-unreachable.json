@@ -441,11 +441,7 @@
     {
       "reason": "高峰费率表：宿主拿到费率档时才画这颗标，画的是哪个时段随时机而变",
       "either": true,
-      "selectors": [
-        "body[data-dsh-claude-style] .dsh-claude-peakrate[data-period=peak]",
-        "body[data-dsh-claude-style] .dsh-claude-peakrate[data-period=campaign]",
-        "body[data-dsh-claude-style] .dsh-claude-peakrate[data-period=offPeak]"
-      ]
+      "selectors": []
     },
     {
       "reason": "宿主会话行的标签：脚本回答里没有这一类行",

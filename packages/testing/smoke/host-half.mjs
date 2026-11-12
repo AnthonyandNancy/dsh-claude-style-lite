@@ -480,24 +480,13 @@ async function hostHalf() {
     same(liveLists, [3]), JSON.stringify(liveLists))
   fs.rmSync(liveHome, { recursive: true, force: true })
 
-  // The peak rate catalog: the route answers the copy the package ships with
-  // its profiles already parsed, and the fence keeps every other page off the
-  // host's own reach for the source. The harness home is a scratch one, so the
-  // answer is the shipped copy rather than whatever this machine has cached.
-  console.log('\nhost half — the peak rate catalog')
-  const rate = fakeHost(mod, { fenced: true, home: scratchHome })
-  const refusedRate = await request(rate, '/dsh-claude-style-lite/peakrate', 'GET', '', crossSite)
-  check('cross-site page: the rate catalog is refused',
-    refusedRate.status === 401 || refusedRate.status === 403, `HTTP ${refusedRate.status}`)
-  const rateAnswer = await request(rate, '/dsh-claude-style-lite/peakrate', 'GET', '', browser)
-  const rateBody = rateAnswer.status === 200 ? JSON.parse(rateAnswer.body) : null
-  check('the rate catalog answers the copy the package ships, with its profiles already parsed',
-    rateBody !== null && rateBody.ok === true && rateBody.origin === 'bundled' &&
-      Array.isArray(rateBody.profiles) && rateBody.profiles.some((profile) => profile.id === 'deepseek-v4') &&
-      rateBody.profiles.every((profile) => typeof profile.schedule?.timeZone === 'string'),
-    JSON.stringify({ status: rateAnswer.status, origin: rateBody?.origin ?? null, profiles: rateBody?.profiles?.length ?? null }))
-  const wrongMethod = await request(rate, '/dsh-claude-style-lite/peakrate', 'DELETE', '', browser)
-  check('a method the rate route does not take is turned away', wrongMethod.status === 405, `HTTP ${wrongMethod.status}`)
+  // The removed peak-rate route: the host registers nothing there, so the
+  // server has no path to answer a catalog on.
+  console.log('\nhost half — the peak rate route is gone')
+  const absentHost = fakeHost(mod, { fenced: true, home: scratchHome })
+  check('the removed peak-rate route is not registered',
+    Object.hasOwn(absentHost.routes, '/dsh-claude-style-lite/peakrate') === false,
+    JSON.stringify(Object.keys(absentHost.routes)))
 
   // The price snapshot and the session cost, on the same terms: the snapshot is
   // the copy the package ships, the cost is priced from the session's own log,

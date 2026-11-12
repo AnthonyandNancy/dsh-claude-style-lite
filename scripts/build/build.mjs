@@ -22,7 +22,6 @@ import { FEATURE_SHEET_CONSTANTS } from './feature-sheets.mjs'
 import { motionValues } from '../shared/motion-tokens.mjs'
 import { readSourceTree } from './source-tree.mjs'
 import { MODEL_COPY, validateModelCopy } from './model-copy.mjs'
-import { PEAKRATE_CATALOG, validatePeakCatalog } from './peakrate-catalog.mjs'
 import { PRICES_FILE, validatePrices } from './prices.mjs'
 import { readManifests } from '../shared/read-manifests.mjs'
 import { loadModule } from '../shared/ts-module.mjs'
@@ -33,7 +32,7 @@ const ROOT = path.resolve(import.meta.dirname, '..', '..')
 const SRC = path.join(ROOT, 'packages', 'client', 'src')
 /** The model copy: data beside the browser half's code, never bundled. */
 const DATA = path.join(ROOT, 'packages', 'client', 'data')
-/** The peak rate catalog the host half serves: data beside the host half's code, never bundled */
+/** The price snapshot the host half serves: data beside the host half's code, never bundled */
 const HOST_DATA = path.join(ROOT, 'packages', 'host', 'data')
 /** Brand marks, mascot sheets and vendor lockups; packages/assets/assets.mjs plans their delivery */
 const ASSETS = path.join(ROOT, 'packages', 'assets', 'src')
@@ -436,11 +435,6 @@ async function main() {
   const copy = JSON.parse(fs.readFileSync(path.join(DATA, MODEL_COPY), 'utf8'))
   const familyRules = validateModelCopy(copy, combines)
   const copyText = JSON.stringify(copy, null, 2) + '\n'
-  // The peak rate catalog is the data source's own document, shipped as the copy a machine
-  // with no reach judges by; the host half's parser is the one the build checks it with.
-  const catalogPath = path.join(HOST_DATA, PEAKRATE_CATALOG)
-  const catalogText = fs.readFileSync(catalogPath, 'utf8')
-  const catalogProfiles = validatePeakCatalog(JSON.parse(catalogText), catalogPath)
   // The price snapshot is the repository's validated scrape, shipped as the copy a machine with no reach prices by.
   const pricesPath = path.join(HOST_DATA, PRICES_FILE)
   const pricesText = fs.readFileSync(pricesPath, 'utf8')
@@ -453,9 +447,6 @@ async function main() {
 
   fs.writeFileSync(path.join(LIB, MODEL_COPY), copyText)
   console.log(`built lib/${MODEL_COPY} (${familyRules} family rules, ${copy.tiers.length} tier rules)`)
-
-  fs.writeFileSync(path.join(LIB, PEAKRATE_CATALOG), catalogText)
-  console.log(`built lib/${PEAKRATE_CATALOG} (${catalogProfiles} profiles) from packages/host/data/${PEAKRATE_CATALOG}`)
 
   fs.writeFileSync(path.join(LIB, PRICES_FILE), pricesText)
   console.log(`built lib/${PRICES_FILE} (${pricedModels} models) from packages/host/data/${PRICES_FILE}`)

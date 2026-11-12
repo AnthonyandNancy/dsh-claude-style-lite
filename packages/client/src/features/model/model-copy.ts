@@ -35,8 +35,8 @@ export interface ModelCopyIndex {
  * (packages/client/src/features/settings/settings.ts) consume this copy, so the state lives in the shared context.
  * where both zones can reach it.
  *
- * The build loads this module in a Node sandbox (peakrate/match.ts folds ids
- * through normalizeModelId), so it must not value-import the page's runtime:
+ * The build loads this module in a Node sandbox, so it must not value-import
+ * the page's runtime:
  * core/i18n reaches, through host-context and identity, core/prefs and with it
  * engine/host's document, which is why the row-facing description line lives
  * in rows.ts.

@@ -4,7 +4,7 @@ import type { FeatureManifest } from '../../core/feature'
 export default {
   id: 'model',
   order: 80,
-  reads: ['composer', 'peakrate'],
+  reads: ['composer'],
   // The seat stands in the page's main composer card; a sub-agent's docked
   // conversation draws one of its own (engine/host.ts::findPrimaryModelSlot).
   contracts: ['composer.model-slot', 'sidebar.chat'],
@@ -27,5 +27,5 @@ export default {
     title: 'modelDescriptionsTitle',
     desc: 'modelDescriptionsDesc',
   }],
-  cases: ['brand', 'composer', 'settings', 'sync-fault', 'model-meter', 'model-account']
+  cases: ['brand', 'composer', 'settings', 'sync-fault', 'model-rows', 'model-account']
 } satisfies FeatureManifest

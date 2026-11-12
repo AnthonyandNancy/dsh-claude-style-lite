@@ -1,7 +1,7 @@
 /**
- * The model menu and the peak rate meter on its rows: the host's model seat is
- * put on the page, the picker's trigger is pressed, and both levels are read
- * back — what each row carries and where the meter stands in it.
+ * The model menu's rows: the host's model seat is put on the page, the picker's
+ * trigger is pressed, and both levels are read back — the name, release tag,
+ * description, selected check and row box each carries.
  *
  * The page's model directory puts the model in force in a provider level 1 does
  * not list, so the picker appends the seat's own row at the bottom of that
@@ -12,31 +12,16 @@
   var r = probe.report
 
   probe.step(async function () {
-    await probe.onlyFor(['model-meter'], async function () {
-      /** Every row one card holds, with the meter's own place in it. */
+    await probe.onlyFor(['model-rows'], async function () {
+      /** Every row one card holds, with what it carries. */
       var readRows = function (card) {
         var rows = []
         if (card === null) return rows
         var options = card.querySelectorAll('.dsh-claude-model-option')
         for (var i = 0; i < options.length; i++) {
           var option = options[i]
-          var meter = option.querySelector('.dsh-claude-peakrate')
-          var check = option.querySelector('.dsh-claude-popover-check')
           var name = option.querySelector('.dsh-claude-model-name')
           var desc = option.querySelector('.dsh-claude-model-desc')
-          var value = meter === null ? null : meter.querySelector('.dsh-claude-peakrate-value')
-          var countdown = meter === null ? null : meter.querySelector('.dsh-claude-peakrate-countdown')
-          // The badge rides in the tooltip anchor the skin wraps it in
-          // (shared/host-tooltip.ts): the anchor is the row's own child that
-          // holds the badge, and it stands where the badge stood, immediately
-          // in front of the check.
-          var anchor = null
-          if (meter !== null) {
-            for (var child = option.firstElementChild; child !== null; child = child.nextElementSibling) {
-              if (child.contains(meter)) { anchor = child; break }
-            }
-          }
-          var standing = anchor === null ? meter : anchor
           var box = option.getBoundingClientRect()
           var style = getComputedStyle(option)
           rows.push({
@@ -51,16 +36,6 @@
               padding: style.paddingLeft + ' ' + style.paddingRight,
               radius: style.borderRadius,
               display: style.display,
-            },
-            meter: meter === null ? null : {
-              period: meter.getAttribute('data-period'),
-              value: value === null ? '' : value.textContent,
-              countdown: countdown === null ? '' : countdown.textContent,
-              beforeCheck: standing !== null && standing.nextElementSibling === check,
-              // The judgement the badge announces: the host's own bubble shows
-              // the same words, the way the page's other controls do.
-              name: meter.getAttribute('aria-label'),
-              icon: meter.querySelector('svg') !== null,
             },
           })
         }
@@ -111,7 +86,7 @@
         return card === null ? 0 : readRows(card).length
       }, function (read) { return read[read.length - 1] > 0 }, 'the model picker to open its second level')
 
-      r.modelMeter = {
+      r.modelRows = {
         trigger: trigger !== null,
         levelOne: levelOne,
         // The last row of level 1 is the seat's own: a provider level 1 does
@@ -144,7 +119,7 @@
         lines: lineCount(levelOne),
         bareListed: bareLevelOne.length,
         bareLines: lineCount(bareLevelOne),
-        secondLevelLines: lineCount(r.modelMeter.levelTwo),
+        secondLevelLines: lineCount(r.modelRows.levelTwo),
         bareSecondLevelLines: lineCount(bareLevelTwo),
       }
       // The picker's own switch is live: off hands the host's seat back, on

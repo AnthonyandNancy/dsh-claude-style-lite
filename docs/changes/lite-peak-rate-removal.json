@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-12",
+  "group": "removals",
+  "order": 10,
+  "external": true,
+  "zh": "移除峰谷费率模块，保留价格快照、会话费用与用量统计",
+  "en": "Remove the peak-rate module while keeping the price snapshot, session cost and usage statistics"
+}

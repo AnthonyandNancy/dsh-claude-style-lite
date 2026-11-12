@@ -203,8 +203,6 @@ card leaves unset.
 | `--dsw-specific-menu` | `overlay` | `#ffffff` | — | `#ffffff` | — | host's own |  |
 | `--dsw-specific-bubble` | card `bubble` | `#f4f2f3` | `rgba(255, 255, 255, 0.06)` | `#ecf0ff` | `#262b36` | host's own | user message bubble |
 | `--dsh-claude-chip` | `chip` | `#f9f9f9` | — | `#f5f6f9` | — | `var(--dsw-specific-selector)` | segmented control and switch at rest |
-| `--dsh-claude-meter-peak` | literal | `#a4621d` | `#e2a45f` | `#a4621d` | `#e2a45f` | `var(--dsw-alias-state-warn-label)` | the peak rate badge: the expensive end of a provider's own billing clock |
-| `--dsh-claude-meter-valley` | literal | `#3d7550` | `#8cbf96` | `#3d7550` | `#8cbf96` | `var(--dsw-alias-state-success-primary)` | the off-peak rate badge, and the dated promotions priced below it |
 <!-- /generated:tokens -->
 
 ## Two palettes · 两套配色归属

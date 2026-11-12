@@ -142,10 +142,9 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
         }
       }
       // The body's own signature decides whether the rows repaint: with the
-      // catalog unchanged the open shows the painted rows and the rate badges
-      // refresh in place. Rebuilding every row on every open was the
-      // four-digit-catalog open lag (issue #151's own experiment C: the cost
-      // tracks the catalog's size).
+      // catalog unchanged the open shows the rows already painted. Rebuilding
+      // every row on every open was the four-digit-catalog open lag (issue
+      // #151's own experiment C: the cost tracks the catalog's size).
       renderModelBody()
     },
     createSub() {
@@ -172,16 +171,6 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
       isSubOpen: cards.subOpen,
       closeSub: cards.closeAll,
       openSub: cards.openSub,
-      /**
-       * The peak rate meter is its own feature (packages/client/src/features/peakrate/):
-       * it answers with a badge for the row, and with nothing at all for a
-       * model whose provider bills on no clock.
-       */
-      rate(provider: string, modelId: string) {
-        const peakrate = ui.peakrate
-        if (peakrate === undefined) return null
-        return peakrate.badge(provider, modelId)
-      },
       /** Both cards hang above the seat: a fold's new height moves their top. */
       reposition: () => cards.position(),
   })
@@ -205,18 +194,6 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
     divider.setAttribute('role', 'separator')
     modelFooter.appendChild(divider)
     modelFooter.appendChild(modelRows.buildModelCell(copy('moreLabel')))
-  }
-
-  /**
-   * Swap both cards' rate meters for the current ones (rows.ts owns the rows
-   * and their identity). The badge is the one minute-sensitive part of a row
-   * (the countdown to the rate switch), and the card open, the minute
-   * rollover and an arriving catalog call this instead of the full paint: a
-   * page that reloads paints its rows before the catalog lands, and rebuilding
-   * them for the badges would flash the whole list.
-   */
-  function refreshRateBadges() {
-    modelRows.refreshRates()
   }
 
   /**
@@ -245,10 +222,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
 
   /**
    * Level 1: the provider sections, the divider, More models. Answers whether
-   * it painted: an unchanged signature keeps the painted rows standing, and
-   * the pass refreshes their rate badges in place instead — the one
-   * minute-sensitive part of a row (rows.ts's refreshRates). A badge whose
-   * words stand is written by no one, so a settled page stays settled.
+   * it painted: an unchanged signature keeps the painted rows standing.
    */
   function renderModelBody(): boolean {
     const modelBody = cards.body()
@@ -259,10 +233,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
     const current = modelCatalog.current(snap)
     let sig = [status, activeLocale(), current ? `${current.group.id}/${current.model.id}` : '', readPrefs().quickProviders.join(','), readPrefs().modelDescriptions !== false].join('|')
     sig += rowsSignature(groups)
-    if (sig === modelBodySig) {
-      modelRows.refreshRates()
-      return false
-    }
+    if (sig === modelBodySig) return false
     modelBodySig = sig
     while (modelBody.firstChild) modelBody.removeChild(modelBody.firstChild)
 
@@ -313,7 +284,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
         const currentRuleName = current.group.id === MODEL_OFFICIAL_GROUP ? '' : modelGroupName(current.group.id, current.group.name)
         if (currentRuleName !== '') modelBody.appendChild(modelRows.buildProviderRule(currentRuleName))
         // Through the same row builder as every other row, so this one carries
-        // the same brand hook, description and peak rate meter.
+        // the same brand hook and description.
         modelBody.appendChild(modelRows.buildCurrentOption(current.group, current.model))
       }
       // The divider closes the model list and the More-models row follows it;
@@ -339,8 +310,8 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>, mount:
 
   /**
    * What level 2's rows read as, in one string the card's own paint compares:
-   * the providers level 1 lists (this card carries the rest), the rows' rates
-   * and the model in force.
+   * the providers level 1 lists (this card carries the rest) and the model in
+   * force.
    */
   function subSignature() {
     const snap = modelCatalog.snapshot()

@@ -5,11 +5,9 @@ import { localized } from '../../core/i18n'
 import { buildModelLabel, modelBrand } from './brand'
 import { modelCopy, resolveModelCopy } from './model-copy'
 import { releaseTag } from './release-tag'
-import { buildElement, setAttributeIfChanged } from '@dsh-claude-style/engine/dom'
+import { buildElement } from '@dsh-claude-style/engine/dom'
 import { POPOVER_CHECK_SVG, buildPopoverItem } from '../../shared/popover'
-import { hostTooltip } from '../../shared/host-tooltip'
 import { travelCardHeight } from '../../shared/card-resize'
-import type { HostTooltip } from '../../shared/host-tooltip'
 import type { createHoverIntent } from '../../shared/popover'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { HostModelEntry, HostModelGroup } from '@dsh-claude-style/contracts/services'
@@ -63,8 +61,6 @@ export function createModelRows(options: {
   closeSub: () => void
   /** @param focusField - whether the press is the reader asking to look a model up. */
   openSub: (focusField?: boolean) => void
-  /** The peak rate meter's badge for one row, or null (features/peakrate). */
-  rate: (provider: string, modelId: string) => HTMLElement | null
   /**
    * Place the open cards again from their own size. A card anchored above its
    * trigger is laid out from its height, so the travel a fold starts has to be
@@ -78,68 +74,6 @@ export function createModelRows(options: {
   const isSubOpen = options.isSubOpen
   const closeSub = options.closeSub
   const openSub = options.openSub
-  const rate = options.rate
-  /**
-   * One painted row and the meter this half placed on it. The row keeps both the
-   * badge and its shell: the host tooltip draws the badge through React, and a
-   * re-render (its label changes every minute) leaves the shell without that
-   * child for a frame. Reading the meter back out of the row in that frame
-   * answered "no meter" and placed a second one.
-   */
-  interface PaintedRate {
-    item: HTMLElement
-    provider: string
-    modelId: string
-    /** The shell carrying the badge, or null while the row has no meter. */
-    anchor: HTMLElement | null
-    /** The badge that shell carries. */
-    badge: HTMLElement | null
-  }
-
-  /** Every row still standing, with the provider and model it names. */
-  const painted: PaintedRate[] = []
-  /** The wall-clock minute the standing rows' meters were drawn at, or -1 before a paint. */
-  let paintedMinute = -1
-  /** The rate badge's tooltip anchor in a row: the badge rides inside the host's bubble anchor. */
-  const RATE_ANCHOR_ATTRIBUTE = 'data-dsh-claude-rate-badge'
-  /** The standing badges' tooltips, by the anchor that carries them. */
-  const rateTips = new Map<HTMLElement, HostTooltip>()
-
-  /**
-   * Put one row's rate badge in, wearing the host's own tooltip: the row's words
-   * are the whole judgement, which a browser tooltip would draw in its own style.
-   */
-  function placeRateBadge(item: HTMLElement, badge: HTMLElement, before: Element | null) {
-    const tip = hostTooltip(badge, badge.getAttribute('aria-label') ?? '', { side: 'bottom' })
-    tip.node.setAttribute(RATE_ANCHOR_ATTRIBUTE, '')
-    rateTips.set(tip.node, tip)
-    item.insertBefore(tip.node, before)
-    return { anchor: tip.node, badge }
-  }
-
-  /** Take one row's meter off: shell, tooltip and badge together. */
-  function dropRateBadge(row: PaintedRate) {
-    const anchor = row.anchor
-    if (anchor !== null) {
-      rateTips.get(anchor)?.release()
-      rateTips.delete(anchor)
-      anchor.remove()
-      // The release hands the badge back into the row, which is what it exists
-      // for; a dropped meter takes that badge with it.
-      row.badge?.remove()
-    }
-    row.anchor = null
-    row.badge = null
-  }
-
-  /** Release the tooltips of badges whose card has left the page (a rebuild elsewhere). */
-  function pruneRateBadges() {
-    for (const [anchor, tip] of rateTips) {
-      if (anchor.isConnected) continue
-      tip.release()
-      rateTips.delete(anchor)
-    }
-  }
 
   /**
    * The rule that separates one provider's models from the next. The provider
@@ -207,8 +141,7 @@ export function createModelRows(options: {
 
   /**
    * One model row, the skeleton every level builds from: brand mark, name, an
-   * optional description line, the peak rate meter and a check when the model is
-   * in force. `onPick` is the whole difference between the rows — a list row
+   * optional description line and a check when the model is in force. `onPick` is the whole difference between the rows — a list row
    * puts its model in force, the current seat's own row only folds the picker.
    *
    * Every row goes through here, the current seat's included: a row built
@@ -227,12 +160,6 @@ export function createModelRows(options: {
     // label's lockup. The scheduler's attributeFilter
     // does not watch data-*, so this write cannot re-trigger a pass.
     if (brand) item.setAttribute('data-brand', brand)
-    // The row joins the meter-refresh registry with its own identity: the rate
-    // badge is the one minute-sensitive part of a row, and the open and the
-    // minute rollover swap the meters in place rather than rebuilding every
-    // row (model-picker.ts).
-    const row: PaintedRate = { item, provider: group.id, modelId: model.id, anchor: null, badge: null }
-    painted.push(row)
     const copy = built.text
     // A model the host names with an empty string still reads as itself: the
     // row is picked by that id, so the label falls back to it.
@@ -252,15 +179,6 @@ export function createModelRows(options: {
     if (desc) {
       item.classList.add('dsh-claude-model-described')
       copy.appendChild(buildElement('span', 'dsh-claude-model-desc', desc))
-    }
-    // The peak rate meter rides in front of the check: the row is compared by
-    // its rate before it is picked, and a model whose provider bills on no
-    // clock carries no badge at all (packages/client/src/features/peakrate/).
-    const meter = rate(group.id, model.id)
-    if (meter !== null) {
-      const placed = placeRateBadge(item, meter, built.check)
-      row.anchor = placed.anchor
-      row.badge = placed.badge
     }
     built.check!.innerHTML = selected ? POPOVER_CHECK_SVG : ''
     item.addEventListener('click', (e: MouseEvent) => {
@@ -333,73 +251,6 @@ export function createModelRows(options: {
     return out
   }
 
-  /**
-   * Refresh every standing row's rate meter in place, dropping the meters of
-   * rows whose build has left the document (a repaint elsewhere in the feature
-   * rebuilt their card). Level 1 and level 2 build their rows through the same
-   * builders, so one sweep covers both cards. A meter whose period and words
-   * stand already is written by no one: the refresh runs on the scheduler's
-   * own passes, and a settled page stays settled. The countdown and the period
-   * switch read on the wall clock's minute, so the sweep asks for nothing
-   * while the minute a paint drew at stands.
-   *
-   * What a row carries is the row's own record (placeRateBadge's answer), not
-   * what its document happens to hold: the badge is drawn through React and
-   * leaves its shell for a frame on every label change, which the document reads
-   * as a row without a meter.
-   */
-  function refreshRates() {
-    pruneRateBadges()
-    const minute = Math.floor(Date.now() / 60000)
-    // A meter that is still missing is placed whatever the minute: a catalog
-    // arriving after the rows were painted is what fills an empty seat, and
-    // waiting for the clock would leave it empty until the next minute.
-    const missing = painted.some((row) => row.item.isConnected &&
-      (row.badge === null || !row.badge.isConnected))
-    if (painted.length === 0 || (minute === paintedMinute && !missing)) return
-    let standing = 0
-    for (let i = 0; i < painted.length; i++) {
-      const row = painted[i]!
-      if (!row.item.isConnected) continue
-      painted[standing++] = row
-      const next = rate(row.provider, row.modelId)
-      if (next === null) {
-        dropRateBadge(row)
-        continue
-      }
-      if (row.badge === null || row.anchor === null || !row.badge.isConnected || !row.anchor.isConnected) {
-        dropRateBadge(row)
-        const placed = placeRateBadge(row.item, next, row.item.lastElementChild)
-        row.anchor = placed.anchor
-        row.badge = placed.badge
-        continue
-      }
-      const meter = row.badge
-      const anchor = row.anchor
-      const detail = next.getAttribute('aria-label') ?? ''
-      if (meter.getAttribute('aria-label') !== detail) {
-        meter.setAttribute('aria-label', detail)
-        rateTips.get(anchor)?.setLabel(detail)
-      }
-      if (meter.getAttribute('data-period') !== next.getAttribute('data-period')) {
-        meter.setAttribute('data-period', next.getAttribute('data-period') ?? '')
-        const icon = meter.querySelector('.dsh-claude-peakrate-icon')
-        const iconNext = next.querySelector('.dsh-claude-peakrate-icon')
-        if (icon !== null && iconNext !== null && icon.innerHTML !== iconNext.innerHTML) icon.innerHTML = iconNext.innerHTML
-      }
-      const value = next.querySelector('.dsh-claude-peakrate-value')
-      const valueNow = meter.querySelector('.dsh-claude-peakrate-value')
-      if (value !== null && valueNow !== null && valueNow.textContent !== value.textContent) valueNow.textContent = value.textContent
-      const countdown = next.querySelector('.dsh-claude-peakrate-countdown')
-      const countdownNow = meter.querySelector('.dsh-claude-peakrate-countdown')
-      if (countdown === null) countdownNow?.remove()
-      else if (countdownNow === null) meter.appendChild(countdown)
-      else if (countdownNow.textContent !== countdown.textContent) countdownNow.textContent = countdown.textContent
-    }
-    painted.length = standing
-    paintedMinute = minute
-  }
-
   return {
     buildProviderRule,
     buildProviderGroup,
@@ -407,7 +258,6 @@ export function createModelRows(options: {
     buildCurrentOption,
     buildModelCell,
     levelOneSections,
-    remainingGroups,
-    refreshRates
+    remainingGroups
   }
 }

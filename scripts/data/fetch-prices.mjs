@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 /**
  * fetch-prices.mjs — refresh independent CNY and USD snapshots from official
- * tables. Require the peak catalog so holidays are not priced as off-peak.
+ * tables. The DeepSeek clock and Chinese public holidays come from
+ * packages/host/data/pricing-calendar.json, which is independent of the
+ * removed peak-rate feature.
  */
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PRICES_FILE, validatePrices } from '../build/prices.mjs'
+import { readPricingCalendar } from './pricing-calendar.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const TARGET = path.join(ROOT, 'packages', 'host', 'data', PRICES_FILE)
-const CATALOG = path.join(ROOT, 'packages', 'host', 'data', 'peakrate-catalog.json')
+const CALENDAR = path.join(ROOT, 'packages', 'host', 'data', 'pricing-calendar.json')
 const SOURCE = {
   zh: 'https://api-docs.deepseek.com/zh-cn/quick_start/pricing/',
   en: 'https://api-docs.deepseek.com/quick_start/pricing/',
@@ -155,39 +158,16 @@ function parsePage(html, url) {
   return { currency, models: found }
 }
 
-/** The Chinese public holidays the peak rate catalog carries for DeepSeek. */
-/**
- * Copy the shared DeepSeek billing clock so pricing and badges cannot drift.
- */
-function scheduleFromCatalog() {
-  if (!fs.existsSync(CATALOG)) throw new Error(`fetch-prices: ${CATALOG} is missing; run scripts/data/fetch-peakrate-catalog.mjs first`)
-  const catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'))
-  const profile = (catalog.profiles ?? []).find(entry => entry?.id === 'deepseek-v4')
-  const schedule = profile?.schedule
-  if (schedule === null || schedule === undefined) {
-    throw new Error('fetch-prices: the peak rate catalog carries no DeepSeek clock')
+/** The DeepSeek clock and holidays the price snapshot carries, independent of the removed peak-rate module. */
+function scheduleFromCalendar() {
+  const calendar = readPricingCalendar(CALENDAR)
+  return {
+    timeZone: calendar.timeZone,
+    holidayZone: calendar.holidayZone,
+    peakDays: calendar.peakDays,
+    peakWindows: calendar.peakWindows,
+    holidays: calendar.holidays,
   }
-  const timeZone = typeof schedule.timeZone === 'string' && schedule.timeZone !== '' ? schedule.timeZone : null
-  const holidayZone = typeof schedule.publicHolidayTimeZone === 'string' && schedule.publicHolidayTimeZone !== ''
-    ? schedule.publicHolidayTimeZone
-    : timeZone
-  const peakDays = Array.isArray(schedule.peakDays)
-    ? [...new Set(schedule.peakDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6))].sort()
-    : []
-  const peakWindows = Array.isArray(schedule.peakWindows)
-    ? schedule.peakWindows
-      .filter(win => win !== null && typeof win === 'object' && /^([01]?\d|2[0-3]):[0-5]\d$/.test(win.start) && /^([01]?\d|2[0-3]):[0-5]\d$/.test(win.end))
-      .map(win => ({ start: win.start, end: win.end }))
-    : []
-  const dates = schedule.publicHolidayDates
-  if (timeZone === null || holidayZone === null) throw new Error('fetch-prices: the DeepSeek clock names no time zone')
-  if (peakDays.length === 0) throw new Error('fetch-prices: the DeepSeek clock lists no peak day')
-  if (peakWindows.length === 0) throw new Error('fetch-prices: the DeepSeek clock lists no peak window')
-  if (!Array.isArray(dates) || dates.length === 0) {
-    throw new Error('fetch-prices: the peak rate catalog carries no Chinese public holidays for DeepSeek')
-  }
-  const holidays = [...new Set(dates.filter(day => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)))].sort()
-  return { timeZone, holidayZone, peakDays, peakWindows, holidays }
 }
 
 /** Use per-model medians to ignore provider order and reseller outliers; omit zero-priced plans. */
@@ -266,7 +246,7 @@ const document = {
   updatedAt: now.toISOString().slice(0, 10),
   capturedAt: now.toISOString(),
   source: SOURCE,
-  schedule: scheduleFromCatalog(),
+  schedule: scheduleFromCalendar(),
   models,
   aliases: ALIASES,
   catalog,

@@ -17,7 +17,7 @@ export default {
     const expected = {
       general: ['brand', 'username', 'pageZoom', 'interfaceFontSize', 'autoPopover', 'sodium', 'soundCues'],
       appearance: ['sidebarBrand', 'brandLockup', 'brandInk', 'palette', 'paletteCards', 'inlineCodeColor', 'backgroundOpacity', 'typeface', 'homeLayout', 'homeSessionScope', 'homeRipple', 'mascot', 'mascotScope'],
-      'main-window': ['turnNav', 'messageActions', 'conversationWidth', 'viewTabs', 'headerBand', 'processRows', 'answerAnchor', 'sessionPanel', 'composerScope', 'composerBottomGap', 'questionCard', 'permissionsControl', 'modelPicker', 'effortSlider', 'modelDescriptions', 'quickProviders', 'peakrate', 'effortAccent', 'contextDisplay', 'contextNumbers', 'statsPosition', 'statsFooterAlign', 'billingCurrency', 'billingTable'],
+      'main-window': ['turnNav', 'messageActions', 'conversationWidth', 'viewTabs', 'headerBand', 'processRows', 'answerAnchor', 'sessionPanel', 'composerScope', 'composerBottomGap', 'questionCard', 'permissionsControl', 'modelPicker', 'effortSlider', 'modelDescriptions', 'quickProviders', 'effortAccent', 'contextDisplay', 'contextNumbers', 'statsPosition', 'statsFooterAlign', 'billingCurrency', 'billingTable'],
       sidebar: ['collapseFooter', 'banLocale', 'sidebarSearch', 'searchStyle', 'sidebarEntries', 'workspaceView', 'sidebarPeek', 'sidebarLayout'],
       motion: ['motion', 'chatAnimations', 'chatWait', 'statusDetail', 'statusMotion', 'chatReveal', 'chatSend', 'messageEnter', 'caretMotion', 'ongoingIndicator', 'ongoingIndicatorSide', 'reasoningDisplay'],
     }
@@ -26,7 +26,7 @@ export default {
     // picker's rows, and the context meter with the statistics and the billing.
     const mainWindowGroups = [
       { label: 'Conversation', rows: ['turnNav', 'messageActions', 'conversationWidth', 'viewTabs', 'headerBand', 'processRows', 'answerAnchor', 'sessionPanel'] },
-      { label: 'Composer', rows: ['composerScope', 'composerBottomGap', 'questionCard', 'permissionsControl', 'modelPicker', 'effortSlider', 'modelDescriptions', 'quickProviders', 'peakrate', 'effortAccent'] },
+      { label: 'Composer', rows: ['composerScope', 'composerBottomGap', 'questionCard', 'permissionsControl', 'modelPicker', 'effortSlider', 'modelDescriptions', 'quickProviders', 'effortAccent'] },
       { label: 'Context and cost', rows: ['contextDisplay', 'contextNumbers', 'statsPosition', 'statsFooterAlign', 'billingCurrency', 'billingTable'] },
     ]
     // Greyed by the page itself rather than by a preference: the title-bar
@@ -82,9 +82,9 @@ export default {
         typeof paletteCard(customCards, 'custom').reset === 'string' && paletteCard(customCards, 'custom').reset.length > 0,
       JSON.stringify(customCards))
     const off = settings.parentsOff || {}
-    check('a sub-row greys out while its parent is off: the accent colour with the colours following the host, the mascot\'s place with the mascot off, the model descriptions, the effort accent colour, the quick providers and the peak rate meter with the model picker off, the custom price table with the billing off, the search button\'s style with the sidebar search off, and the title-bar band for the window on every page',
+    check('a sub-row greys out while its parent is off: the accent colour with the colours following the host, the mascot\'s place with the mascot off, the model descriptions, the effort accent colour, the quick providers with the model picker off, the custom price table with the billing off, the search button\'s style with the sidebar search off, and the title-bar band for the window on every page',
       !!off.appearance && JSON.stringify(off.appearance.disabled) === '["inlineCodeColor","homeSessionScope","mascotScope"]' &&
-        !!off.mainWindow && JSON.stringify(off.mainWindow.disabled) === '["headerBand","effortSlider","modelDescriptions","quickProviders","peakrate","effortAccent","statsFooterAlign","billingTable"]' &&
+        !!off.mainWindow && JSON.stringify(off.mainWindow.disabled) === '["headerBand","effortSlider","modelDescriptions","quickProviders","effortAccent","statsFooterAlign","billingTable"]' &&
         !!off.sidebar && JSON.stringify(off.sidebar.disabled) === '["searchStyle"]',
       JSON.stringify(off))
     const offAppearance = (off.appearance || {}).rows || []
@@ -93,7 +93,7 @@ export default {
       JSON.stringify(offAppearance))
     const unmet = settings.requirementsOff || {}
     check('with the composer restyle off, the model picker with its sub-rows, the permission control and the statistics\' figures grey out, the two switches and the statistics rows saying what they wait for; with the footer takeover off, so does the easter egg under it',
-      !!unmet.mainWindow && JSON.stringify(unmet.mainWindow.disabled) === '["headerBand","composerBottomGap","permissionsControl","modelPicker","effortSlider","modelDescriptions","quickProviders","peakrate","effortAccent","contextDisplay","contextNumbers","statsPosition","statsFooterAlign","billingCurrency","billingTable"]' &&
+      !!unmet.mainWindow && JSON.stringify(unmet.mainWindow.disabled) === '["headerBand","composerBottomGap","permissionsControl","modelPicker","effortSlider","modelDescriptions","quickProviders","effortAccent","contextDisplay","contextNumbers","statsPosition","statsFooterAlign","billingCurrency","billingTable"]' &&
         JSON.stringify(unmet.mainWindow.notes) === '["headerBand","composerBottomGap","permissionsControl","modelPicker","contextDisplay","contextNumbers","statsPosition","statsFooterAlign","billingCurrency","billingTable"]' &&
         !!unmet.sidebar && JSON.stringify(unmet.sidebar.disabled) === '["banLocale"]' && JSON.stringify(unmet.sidebar.notes) === '[]',
       JSON.stringify(unmet))

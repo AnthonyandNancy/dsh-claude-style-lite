@@ -12,7 +12,6 @@ import type { ChatSendHandle } from '../features/chat-send/send-flight'
 import type { ContextStatsHandle } from '../features/context-stats/context-stats'
 import type { MeterRingHandle } from '../features/context-stats/meter-ring'
 import type { ModelHandle } from '../features/model/model-picker'
-import type { PeakRateHandle } from '../features/peakrate/peakrate'
 import type { QuickProvidersHandle } from '../features/settings/quick-providers'
 
 /** Public feature handles; a feature sees only its own and its manifest's `reads`. */
@@ -27,7 +26,6 @@ export interface Handles {
   contextStats: ContextStatsHandle
   meterRing: MeterRingHandle
   model: ModelHandle
-  peakrate: PeakRateHandle
   effort: FeatureHandle
   heroMenu: FeatureHandle
   quickProviders: QuickProvidersHandle

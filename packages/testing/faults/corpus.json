@@ -163,13 +163,6 @@
       "defect": "undoes: 窄窗口下模型外显名先压缩，对话区不再冒出横向滚动条"
     },
     {
-      "id": "chat-follow-962c32df",
-      "from": "history 962c32df",
-      "apply": "reverse",
-      "patch": "patches/chat-follow-962c32df.patch",
-      "defect": "undoes: 流式输出很快时跟随滑动跟上内容"
-    },
-    {
       "id": "intent-pill-ignores-zoom",
       "from": "intent",
       "apply": "forward",

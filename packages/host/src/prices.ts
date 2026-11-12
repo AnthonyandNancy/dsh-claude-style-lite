@@ -5,11 +5,11 @@
  * The repository owns the scraping (`scripts/data/fetch-prices.mjs`, run by
  * `.github/workflows/data.yml`); a host only downloads the validated result, once
  * a day, and keeps it on disk. The packaged copy is what a machine with no reach
- * judges by, so the meter works on a first run with no network at all.
+ * judges by, so a session's cost works on a first run with no network at all.
  *
- * The refresh follows `peakrate.ts`: a timer that starts with the first reader,
- * stands down when nobody has asked for two days, and keeps the current document
- * whenever the fetch or the parse fails.
+ * The refresh timer starts with the first reader, stands down when nobody has
+ * asked for two days, and keeps the current document whenever the fetch or the
+ * parse fails.
  */
 import { PACKAGE_NAME } from '@dsh-claude-style/contracts/package'
 import { statSync } from 'node:fs'

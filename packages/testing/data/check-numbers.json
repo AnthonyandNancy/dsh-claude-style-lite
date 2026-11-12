@@ -1108,7 +1108,7 @@
       "the picker draws level 1 with the seat's own row under the list": [
         3
       ],
-      "every row of the first level carries a line saying what the model is while Model descriptions is on, and turning it off takes the line off that level alone": [
+      "every row of the first level carries a description line while Model descriptions is on, and turning it off takes the line off that level alone": [
         0,
         3
       ],

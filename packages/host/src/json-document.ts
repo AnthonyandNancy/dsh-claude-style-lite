@@ -1,6 +1,6 @@
 /**
- * The reading the two document validators share: the peak rate catalog and the
- * price snapshot are different documents with the same job, a third party's
+ * The reading the host's document validators share: the price snapshot and the
+ * price calendar are different documents with the same job, a third party's
  * JSON held to a shape before anything judges by it.
  */
 

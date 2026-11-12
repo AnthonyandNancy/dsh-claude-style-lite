@@ -1,11 +1,10 @@
 /**
- * The model directory the model pages read. The model-meter page's groups put
+ * The model directory the model pages read. The model-rows page's groups put
  * the model in force in the group level 1 does not list — the case that makes
  * the picker append the seat's own row at the bottom of that level.
  *
- * The ids are the ones the rate catalog's alias table knows, so one row of each
- * kind is on the page: a model a profile claims, a model no profile claims, and
- * the seat's own row.
+ * One row of each kind is on the page: a model the official group lists, one
+ * the second provider lists, and the seat's own row.
  *
  * The effort page (packages/testing/specs/behaviour/effort-picker/) reads the
  * same directory with a model that carries a reasoning ladder, its strongest
@@ -26,7 +25,7 @@
  */
 (function () {
   var host = window.__dshSmokeHost
-  if (host.CASE !== 'model-meter' && host.CASE !== 'model-account' && host.CASE !== 'effort') return
+  if (host.CASE !== 'model-rows' && host.CASE !== 'model-account' && host.CASE !== 'effort') return
 
   var reasoning = {
     defaultEffort: 'high',
@@ -63,13 +62,12 @@
         // document is not served to this page), and it is what makes the
         // switch's effect readable on these rows.
         { id: 'deepseek-flash', name: 'V4.1 Flash', description: 'The small, quick one.' },
-        // No profile claims this one, so its row carries no meter.
         { id: 'kimi-k3', name: 'Kimi K3', description: 'The long-context one.' },
       ],
     },
     { id: 'zai', name: 'Z.ai', models: [{ id: 'glm-5.3', name: 'GLM-5.3', description: 'The flagship one.' }] },
   ]
-  if (host.CASE === 'model-meter') {
+  if (host.CASE === 'model-rows') {
     groups.push({ id: 'ocg', name: 'Gateway', models: [{ id: 'deepseek-flash', name: 'Gateway Flash' }] })
   }
   var current = host.CASE === 'effort'

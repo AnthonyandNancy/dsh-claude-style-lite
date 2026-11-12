@@ -3,7 +3,7 @@
  *
  * These are the surfaces D75 describes — the model copy document, the webfonts,
  * the OS user, the HDSL account, the routed assets, session deletion, the usage
- * and search roll-ups, the peak rate catalog and the reader's brand images — each
+ * and search roll-ups, the price snapshot and the reader's brand images — each
  * registered on the host's web server under this plugin's route prefix. Every
  * route is registered on its own: one path the web server refuses is reported,
  * and the other routes still register.
@@ -12,7 +12,7 @@
  * the browser half addresses the same names.
  */
 import { PACKAGE_NAME } from '@dsh-claude-style/contracts/package'
-import { HDSL_PATH, HDSL_SKIN_PATH, PEAKRATE_PATH, PRICES_PATH, ROUTE_PREFIX, SESSION_COST_PATH, SESSION_DELETE_PATH, SESSION_PANEL_PATH, SESSION_SEARCH_PATH, SOUND_PATH, USAGE_PATH, USERNAME_PATH, WEBFONTS_PATH } from '@dsh-claude-style/contracts/routes'
+import { HDSL_PATH, HDSL_SKIN_PATH, PRICES_PATH, ROUTE_PREFIX, SESSION_COST_PATH, SESSION_DELETE_PATH, SESSION_PANEL_PATH, SESSION_SEARCH_PATH, SOUND_PATH, USAGE_PATH, USERNAME_PATH, WEBFONTS_PATH } from '@dsh-claude-style/contracts/routes'
 import { OPTIONAL_WEBFONTS } from '@dsh-claude-style/contracts/webfonts'
 import { existsSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs'
 import { userInfo } from 'node:os'
@@ -27,7 +27,6 @@ import { createStaticFiles } from '@dsh-claude-style/engine/node/static-files'
 import { createHdslAccount } from './hdsl.js'
 import type { HdslReading } from './hdsl.js'
 import { packageRoot } from './package-root.js'
-import { createPeakRate } from './peakrate.js'
 import { createPrices } from './prices.js'
 import { QUERY_MAX, createSessionSearch } from './search.js'
 import { billingRowsOf, createSessionCost } from './session-cost.js'
@@ -290,7 +289,6 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
     const usage = createUsage(ctx)
     const hdsl = createHdslAccount(ctx)
     const sessionSearch = createSessionSearch(ctx)
-    const peakrate = createPeakRate(ctx)
     const prices = createPrices(ctx)
     const sessionCost = createSessionCost(ctx, prices)
     const sessionPanel = createSessionPanel(ctx, sessionCost)
@@ -540,22 +538,6 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
       },
     })
 
-    register('peak rate', {
-      kind: 'exact',
-      path: PEAKRATE_PATH,
-      handler: (req: DshRequest, res: DshResponse) => {
-        // The catalog is public data and the browser half is the only client, so
-        // the fence keeps every other page from making the host reach the source.
-        // `POST` is the browser half asking for a fresh copy, because it cannot
-        // name the source itself.
-        if (methodRefused(req, res, ['GET', 'POST'])) return
-        if (fenceRefused(ctx, req, res)) return
-        peakrate.ensure()
-        const answer = req.method === 'POST' ? peakrate.refresh().then(() => peakrate.payload()) : Promise.resolve(peakrate.payload())
-        sendPayload(res, answer)
-      },
-    })
-
     register('prices', {
       kind: 'exact',
       path: PRICES_PATH,
@@ -617,7 +599,6 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
 
     return () => {
       usage.dispose()
-      peakrate.dispose()
       prices.dispose()
       sessionCost.dispose()
       sessionSearch.dispose()

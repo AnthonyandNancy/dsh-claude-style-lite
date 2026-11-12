@@ -268,7 +268,6 @@ export const PREFS = {
   modelDescriptions: { type: 'boolean', default: true },
   /** Whether the reasoning-effort trigger takes its colour from the rung in force (features/effort/effort-picker.css). */
   effortAccent: { type: 'boolean', default: true },
-  peakrate: { type: 'boolean', default: true },
   /** Store provider ids across catalog renames; the official default is excluded from this list. */
   quickProviders: { type: 'list', default: [], max: QUICK_PROVIDERS_MAX, entryMax: PROVIDER_ID_MAX, drop: [OFFICIAL_MODEL_GROUP] },
   username: { type: 'text', default: '', max: USERNAME_MAX },

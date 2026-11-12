@@ -30,8 +30,6 @@ export const BRAND_MARK_PATH = `${ROUTE_PREFIX}/brand/mark`
 /** The custom wordmark's bytes, answered the same three ways as the mark. */
 export const BRAND_WORDMARK_PATH = `${ROUTE_PREFIX}/brand/wordmark`
 
-/** `GET` returns the cached peak-rate catalog; `POST` refreshes it from the host-known source. */
-export const PEAKRATE_PATH = `${ROUTE_PREFIX}/peakrate`
 
 /** `GET` returns the price snapshot; `POST` refreshes it from the repository. */
 export const PRICES_PATH = `${ROUTE_PREFIX}/prices`
