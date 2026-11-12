@@ -13,7 +13,6 @@
     "packages/testing/probe.mjs": 6,
     "packages/testing/scenarios/process-summary.mjs": 3,
     "packages/testing/scenarios/reader-scroll.mjs": 1,
-    "packages/testing/scenarios/reasoning-stream.mjs": 1,
     "packages/testing/scenarios/remote-settings.mjs": 1,
     "packages/testing/scenarios.mjs": 3,
     "packages/testing/shoot.mjs": 4,

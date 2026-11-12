@@ -128,13 +128,6 @@
       "defect": "undoes: 分类页签的滑块随按下立刻移动"
     },
     {
-      "id": "chat-fold-4d2aab06",
-      "from": "history 4d2aab06",
-      "apply": "reverse",
-      "patch": "patches/chat-fold-4d2aab06.patch",
-      "defect": "undoes: 推理窗口的高度随文字当帧长高，不再等下一个节拍"
-    },
-    {
       "id": "settings-d773a629",
       "from": "history d773a629",
       "apply": "reverse",

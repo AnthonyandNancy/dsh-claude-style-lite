@@ -147,8 +147,10 @@ export default {
   'chat-fold'(r) {
     basicChecks(r)
     const fold = r.fold || {}
-    check('a running thinking row and a running process group are opened',
-      fold.thinkOpen === true && fold.groupOpen === true, JSON.stringify(fold))
+    check('a thinking row stays as the host drew it until the reader presses it',
+      fold.thinkOpen === false && (fold.clicks || {}).think === 0, JSON.stringify({ open: fold.thinkOpen, clicks: fold.clicks }))
+    check('a running process group is opened at install',
+      fold.groupOpen === true, JSON.stringify(fold))
     const summary = fold.summary || {}
     check('the group\'s header says what it holds in place of the host\'s words, and names itself with the sentence',
       summary.marked === true && summary.text === '1 thought, 1 tool call' && summary.form === 'full' &&
@@ -172,7 +174,8 @@ export default {
     check('a tier that does not cap its body is never pressed',
       fold.expandedUntouched === true && (fold.clicks || {}).expanded === 0, JSON.stringify(fold.clicks))
     const after = fold.after || {}
-    check('the thinking row folds back when the reasoning stops', after.thinkOpen === false, JSON.stringify(after))
+    check('the thinking row stays as the host drew it once the reasoning stops',
+      after.thinkOpen === false && (after.clicks || {}).think === 0, JSON.stringify(after))
     check('the process group folds back when the section ends, and its summary stops sweeping',
       after.groupOpen === false && (after.summary || {}).running === false && (after.summary || {}).band === null, JSON.stringify(after))
     check('a group the host folds when its turn is stopped opens again, so a stopped turn keeps its work on the page',

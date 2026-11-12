@@ -159,8 +159,8 @@ export function createChatRevealEngine() {
    * containers it can reach are taken out of the reveal.
    */
   const rememberReaderFold = (event: Event) => {
-    // This feature's own automatic folding is not the reader's intent: it
-    // lands exactly where the reasoning stops and the answer begins.
+    // A press the folding made on its own is not the reader's intent: it lands
+    // where the host moved the work, and the text it reveals is the host's own.
     if (isChatFoldToggle()) return
     const target = event.target
     if (!(target instanceof Element)) return

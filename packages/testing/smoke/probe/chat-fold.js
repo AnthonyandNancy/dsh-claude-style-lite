@@ -1,17 +1,19 @@
 /**
- * The automatic folding (packages/client/src/features/chat-fold/): a running thinking
- * row and a running process group are opened at install, both fold back when their
- * section ends, and the reader’s own presses roll a door instead of snapping a body.
+ * The folding (packages/client/src/features/chat-fold/): a running process group is
+ * opened at install and folds back when its section ends; a thinking row is the
+ * host's own disclosure, opened and folded by the reader, and the reader’s own
+ * presses roll a door instead of snapping a body.
  */
 (function () {
   var probe = window.__dshSmokeProbe
   var r = probe.report
 
   probe.step(async function () {
-    // The ported automatic folding (packages/client/src/features/chat-fold/): a running thinking
-    // row and a running process group are opened at install, both fold back when
-    // their section ends, a tier that does not cap its body is never pressed, and
-    // a group the reader opened himself in that phase stays open.
+    // The folding (packages/client/src/features/chat-fold/): a running process group is
+    // opened at install and folds back when its section ends, a tier that does not
+    // cap its body is never pressed, and a group the reader opened himself in that
+    // phase stays open. A thinking row is the host's own disclosure and stays as
+    // the host wrote it until the reader presses it.
     await probe.onlyFor(['chat-fold'], async function () {
       var foldThink = document.getElementById('debugThink')
       var foldGroup = document.getElementById('debugGroup')
@@ -91,7 +93,6 @@
         expandedUntouched: !foldExpandedBody.hasAttribute('hidden'),
         clicks: Object.assign({}, window.__foldClicks),
       }
-      // Another call arrives in the group: its figure rolls to the new count.
       var moreCall = document.createElement('div')
       moreCall.setAttribute('data-chat-flow-kind', 'tool-call')
       moreCall.textContent = 'another call'
@@ -103,16 +104,17 @@
       r.fold.narrow = await settledSummary()
       foldGroup.style.width = ''
       r.fold.wide = await settledSummary()
-      // The reasoning stops and the process section ends: both fold back, and
-      // the host's words stop sweeping. The group carries no answer row, so it
-      // is a stopped turn's group: the host folds it itself at the end, and the
-      // skin opens it again, because a stopped turn's work is all the page has.
+      // The reasoning stops and the process section ends: the group folds back,
+      // and the host's words stop sweeping. The thinking row is the host's own
+      // disclosure, so it stays exactly as the fixture drew it. The group carries
+      // no answer row, so it is a stopped turn's group: the host folds it itself
+      // at the end, and the skin opens it again, because a stopped turn's work is
+      // all the page has.
       const answeredGroup = document.getElementById('debugAnsweredGroup')
       const answeredBody = document.getElementById('debugAnsweredBody')
       const stoppedGroup = document.getElementById('debugStoppedGroup')
       const stoppedBody = document.getElementById('debugStoppedBody')
       const foldedBy = (body) => body.hasAttribute('hidden')
-      foldThink.setAttribute('data-state', 'ok')
       foldWords.removeAttribute('data-shimmer')
       foldWords.textContent = 'Worked'
       stoppedBody.setAttribute('hidden', 'until-found')
@@ -170,12 +172,13 @@
         }
       }
       // This case holds the optional two-line window; the continuous choice has
-      // its own end-to-end scenario (reasoning-stream.mjs).
+      // its own end-to-end scenario (reasoning-stream.mjs). The thinking row is
+      // the host's own disclosure, so the reader opens it before the window is
+      // read; the second row stands open from the fixture.
       window.__pushForm({ reasoningDisplay: 'stepped' })
       await probe.settle()
-      foldThink.setAttribute('data-state', 'running')
-      // The row reopens for the reasoning: the fold closes it when the phase
-      // turns ok, and the window's own reading is of a running, open row.
+      document.getElementById('debugThinkRow').click()
+      await probe.settle()
       r.fold.reasonGrow = await probe.watch(function () { return windowOf(reasonBody, reasonText) })
       r.fold.reasonWindow = [windowOf(growBody, growText)]
       var growLine = 3
@@ -185,27 +188,25 @@
           growText.appendChild(document.createElement('br'))
           growText.appendChild(document.createTextNode('接着想第 ' + growLine + ' 行。'))
         }
-        // The fold's observer queues a row for an attribute change, which is how
-        // a live stream reaches the window between steps.
-        document.getElementById('debugThink').setAttribute('data-state', 'ok')
-        document.getElementById('debugThink').setAttribute('data-state', 'running')
+        // The shared mutation bus hears the text a live stream appends, which is
+        // how the window follows the reasoning between steps.
         await probe.settle()
       }
       for (var growRound = 0; growRound < 3; growRound += 1) {
         await growMore()
         r.fold.reasonWindow.push(windowOf(growBody, growText))
       }
-      // The reasoning stops and the reader opens the row: the window is off and
-      // the whole text stands in the host's own body again. The capped row's own
-      // phase end goes with it, so the window's exit is read as well.
+      // The reasoning stops: the window is off and the whole text stands in the
+      // host's own body again. The capped row's own phase end goes with it, so
+      // the window's exit is read as well.
       r.fold.reasonStopped = windowOf(reasonBody, reasonText)
       document.getElementById('debugGrow').setAttribute('data-state', 'ok')
       document.getElementById('debugThink').setAttribute('data-state', 'ok')
       await probe.settle()
       r.fold.reasonClosed = windowOf(reasonBody, reasonText)
       r.fold.reasonGrewClosed = windowOf(growBody, growText)
-      document.getElementById('debugThinkRow').click()
-      await probe.settle()
+      // The reader opened the row and never closed it, so it stays open: the
+      // window leaves the whole text in the host's own body.
       r.fold.reasonOpen = windowOf(growBody, growText)
       // The fold glide on the reader's own press: the click is intercepted, the
       // real element is pressed with the door marked, and the click is handed back

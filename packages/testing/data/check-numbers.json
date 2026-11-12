@@ -385,11 +385,6 @@
       ]
     },
     "packages/testing/scenarios/reasoning-stream.mjs": {
-      "思考行自动收起时门真的滚动": [
-        0,
-        1,
-        20
-      ],
       "窗口跟着推理文本长高，长到推理能到的最大高度就停住": [
         0,
         1
@@ -424,7 +419,7 @@
       "思考溢出后的每次增长都有连续位移，正文不整段跳变": [
         0
       ],
-      "控制台没有异常 (line 357)": [
+      "控制台没有异常 (line 312)": [
         0
       ]
     },
@@ -881,7 +876,13 @@
       "the drawn caret is placed with a transform": [
         0
       ],
+      "a thinking row stays as the host drew it until the reader presses it": [
+        0
+      ],
       "a tier that does not cap its body is never pressed": [
+        0
+      ],
+      "the thinking row stays as the host drew it once the reasoning stops": [
         0
       ],
       "a reasoning shorter than the cap stands in a window exactly as tall as the text, with nothing faded": [

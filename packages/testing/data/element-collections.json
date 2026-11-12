@@ -9,7 +9,6 @@
     "packages/client/src/features/chat-fold/message-fold.ts": 2,
     "packages/client/src/features/chat-fold/process-fold.ts": 3,
     "packages/client/src/features/chat-fold/process-summary.ts": 5,
-    "packages/client/src/features/chat-fold/reasoning-fold.ts": 2,
     "packages/client/src/features/chat-fold/reasoning-stream.ts": 2,
     "packages/client/src/features/chat-follow/process-follow.ts": 1,
     "packages/client/src/features/chat-reveal/reveal-diff.ts": 2,

@@ -10,7 +10,7 @@
  * open row keeps once the turn settles — and once it stands at that cap the text
  * inside it has to step up on the snippet's clock behind the mask without ever
  * passing the newest line. Once the reasoning stops the window has to come off,
- * leaving the whole text for the reader who opens the row. The `think` script is
+ * leaving the whole text for the reader who opened the row. The `think` script is
  * written to run past that cap on the lane's own column width.
  */
 import path from 'node:path'
@@ -41,45 +41,6 @@ const HOST = {
   windowed: `[data-variant="think"] ${selector('chat.reason-window')}`,
   capped: attribute('chat.reason-capped'),
   text: '[data-markdown-variant]',
-}
-
-/** The mark the fold glide hangs on the body a door is rolling (packages/client/src/constants.ts). */
-const ROLLING = '[data-dsh-claude-rolling]'
-
-/**
- * Watch for the door the skin's own fold of a thinking row rolls.
- *
- * The row this feature opens and folds dispatches a real click down the fold
- * glide's capture path (reasoning-fold.ts), so the door has to roll for it
- * exactly as it does for a reader's press: the body the glide presses carries
- * the rolling mark for the door's duration. The door lasts 200 ms and the
- * step's frame samples every frame, so a fold that takes the row's state in
- * one frame — no door at all — leaves the tally empty.
- *
- * @param page - the lane's page.
- * @returns the tally object the page fills in, as a global.
- */
-function watchDoor(page) {
-  return page.evaluate((selector) => {
-    const tally = { frames: 0, rolling: 0, unfoldedRolling: 0, tallest: 0 }
-    window.__reasoningDoor = tally
-    const sample = () => {
-      const row = document.querySelector('[data-variant="think"]')
-      tally.frames += 1
-      if (row !== null) {
-        const rolling = row.querySelector(selector)
-        if (rolling !== null) {
-          tally.rolling += 1
-          // The fold of an open row: the body is still in the DOM, so the door
-          // is measured where the reader sees it rather than after the unmount.
-          if (row.hasAttribute('data-expanded')) tally.unfoldedRolling += 1
-          tally.tallest = Math.max(tally.tallest, Math.round(rolling.getBoundingClientRect().height))
-        }
-      }
-      if (tally.frames < 60000) requestAnimationFrame(sample)
-    }
-    requestAnimationFrame(sample)
-  }, ROLLING)
 }
 
 /**
@@ -166,8 +127,15 @@ function reasoningStreamScenario({ check }) {
     /** Read the window on every frame while the model reasons, until the window comes off. */
     async duringTurn(context) {
       const { page } = context
+      // The thinking row is the host's own disclosure: Lite never presses it, so
+      // the reader opens it here, the way the lane's reader would.
+      await page.waitForFunction((host) => {
+        const row = document.querySelector(host.row)
+        return row !== null && row.getAttribute('data-state') === 'running'
+      }, HOST, { timeout: 40000 })
+      await openWhenFolded(page, `${HOST.row} [role="button"][aria-expanded]`)
+      await settlePage(page)
       await page.waitForFunction((host) => document.querySelector(host.windowed) !== null, HOST, { timeout: 40000 })
-      await watchDoor(page)
       const recording = recordUntil(page, readInPage, (seen) => seen[seen.length - 1].windowed === false, HOST, 60000, 'the window coming off the reasoning')
       await page.waitForFunction((host) => document.querySelector(`${host.windowed}[${host.capped}]`) !== null, HOST, { timeout: 40000 })
       await page.screenshot({ path: path.join(context.out, 'reasoning-stepped.png') })
@@ -180,8 +148,6 @@ function reasoningStreamScenario({ check }) {
       // The window leaves with the running phase; the row's own phase follows the
       // host's state, so the reading below waits for both before it opens the row.
       await page.waitForFunction((host) => document.querySelector(host.windowed) === null, HOST, { timeout: 60000 })
-      // The door the feature's own fold of this row rolled, read once the window
-      // is off — the fold is what ends the window, so this is the fold's own door.
       await page.waitForFunction((host) => {
         const row = document.querySelector(host.row)
         return row === null || row.getAttribute('data-state') !== 'running'
@@ -200,10 +166,6 @@ function reasoningStreamScenario({ check }) {
       }
       await openWhenFolded(page, 'button[data-process-activity]')
       await settlePage(page)
-      // The door the feature's own fold of this row rolled. The fold is what ends
-      // the window, so the tally holds it by now; the reader's own press below
-      // rolls a door too, and that one is not this one.
-      context.notes.door = await page.evaluate(() => window.__reasoningDoor ?? null)
       await openWhenFolded(page, `${HOST.row} [role="button"][aria-expanded]`)
       await settlePage(page)
       context.notes.standing = await read(page)
@@ -232,7 +194,6 @@ function reasoningStreamScenario({ check }) {
       const lags = uncapped.filter(lagging)
       const final = samples[samples.length - 1]
       const unclosed = final !== undefined && final.capped === false && lagging(final) ? [final] : []
-      const door = notes.door ?? {}
       // When the written step changed, frame by frame: the wait between two of
       // them is the snippet's hold, and a wait read in the wrong unit steps the
       // text on every timer turn.
@@ -247,12 +208,6 @@ function reasoningStreamScenario({ check }) {
       })
       const short = landings.filter((landing) => landing.to > landing.end + 0.5 || landing.to < landing.end - step)
       return [
-        // The feature's own fold of this row is a press down the fold glide's
-        // capture path, so the body it folds has to roll like any other door; a
-        // fold that takes the row's state in one frame rolled none.
-        check('思考行自动收起时门真的滚动',
-          (door.rolling ?? 0) > 1 && (door.unfoldedRolling ?? 0) > 0 && (door.tallest ?? 0) > 20,
-          JSON.stringify(door)),
         check('窗口跟着推理文本长高，长到推理能到的最大高度就停住',
           samples.length > 0 && Number.isFinite(cap) && capped.length > 0 &&
             samples.every((sample) => sample.windowed === true) &&

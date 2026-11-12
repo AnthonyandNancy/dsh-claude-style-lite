@@ -4,7 +4,6 @@ import { installChatFoldGlide } from './fold-glide'
 import { createMessageFold } from './message-fold'
 import { createProcessFold } from './process-fold'
 import { createProcessSummary } from './process-summary'
-import { createReasoningFold } from './reasoning-fold'
 import { createReasoningStream } from './reasoning-stream'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureHandle } from '@dsh-claude-style/engine/scheduler'
@@ -21,9 +20,6 @@ export interface ChatFoldHandle extends FeatureHandle {
 export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   document.body.setAttribute(CHAT_FOLD_ATTR, '')
   const stream = createReasoningStream()
-  const stopReasoning = createReasoningFold(rows => {
-    for (const row of rows) stream.queueRow(row)
-  })
   const stopProcess = createProcessFold()
   const summary = createProcessSummary()
   const messageFold = createMessageFold(() => ui.schedule?.())
@@ -53,7 +49,6 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   return () => {
     delete ui.chatFold
     stream.stop()
-    stopReasoning()
     stopProcess()
     summary.stop()
     messageFold.stop()

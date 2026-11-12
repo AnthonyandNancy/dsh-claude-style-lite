@@ -1,13 +1,15 @@
 import { requestFrame } from '@dsh-claude-style/engine/frame'
-import { observeMatches } from '@dsh-claude-style/engine/bus'
+import { observeMatches, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { motionReduced, readPrefs, subscribePrefs } from '../../core/prefs'
 import { REASONING_DISPLAY_STEPPED } from '../../constants'
 import { motionMs } from '../../shared/motion'
 import { EXPANDED_ATTRIBUTE, REASONING_TEXT_SELECTOR, ROW_PHASE_ATTRIBUTE, RUNNING_STATE, THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
 
 /* Adapted from transitions.dev's "Reasoning stream" (MIT) for live text. The nearest boxed ancestor
-   clips because host slots may use display:contents. Reuse the fold observer and frame read/write
-   phases (D40); step only at the cap and never beyond the newest line. */
+   clips because host slots may use display:contents. Watch thinking rows through the shared match
+   registry and mutation bus, and keep the read/write phases on the shared frame pipeline (D40).
+   The window only affects how expanded reasoning is laid out; it never changes the host's
+   expanded state. */
 
 /** On the reasoning's window while it stands: the stylesheet clips it and hangs the step on the text. */
 export const REASON_WINDOW_ATTR = 'data-dsh-claude-reason-window'
@@ -94,8 +96,8 @@ function lineHeightOf(text: HTMLElement) {
  */
 export function createReasoningStream() {
   const windows = new Map<Element, WindowState>()
-  /** Every thinking row on the page, kept current by the bus (D40): a scroll reads this instead of querying. */
-  const thinkRows = observeMatches<HTMLElement>(THINK_ROW_SELECTOR)
+  /** Every thinking row on the page, kept current by the bus (D40): a stream read this instead of querying. */
+  const thinkRows = observeMatches<HTMLElement>(THINK_ROW_SELECTOR, queueKnownRows)
   let queued = false
   const pending = new Set<Element>()
   /** What this frame's read phase found, for its write phase. */
@@ -104,6 +106,11 @@ export function createReasoningStream() {
   let stopped = false
   /** Cancels the frame the queued rows wait on. */
   let cancelFrame: (() => void) | null = null
+
+  /** Queue every thinking row the registry holds, so a newly arrived row takes its window. */
+  function queueKnownRows() {
+    for (const row of thinkRows.all()) queue(row)
+  }
 
   /** Take one row's window off and drop its wait: the text stands as the host drew it. */
   function clearWindow(row: Element) {
@@ -158,8 +165,8 @@ export function createReasoningStream() {
 
   /** Write a window's own height and the mark of its capped state; only what changes is written. */
   function writeHeight(window: HTMLElement, height: Height) {
-    // The fold watches the row's attributes, and a redundant write each frame
-    // would keep the frame scheduler awake.
+    // The mutation bus hears every write the page makes; a redundant write each
+    // frame would keep the frame scheduler awake.
     if (window.style.getPropertyValue(REASON_WINDOW_HEIGHT_PROPERTY) !== height.heightPx) window.style.setProperty(REASON_WINDOW_HEIGHT_PROPERTY, height.heightPx)
     if (height.capped !== window.hasAttribute(REASON_CAPPED_ATTR)) window.toggleAttribute(REASON_CAPPED_ATTR, height.capped)
   }
@@ -207,9 +214,9 @@ export function createReasoningStream() {
         if (held !== undefined) plans.push({ row, state: null, step: null, grow: null })
         continue
       }
-      // The fold queues a row on every change the host streams into it: that
-      // queue is the window's watch, so a text grown since the last step stands
-      // in a window as tall as itself within the frame.
+      // The mutation bus queues a row on every change the host streams into
+      // it: that queue is the window's watch, so a text grown since the last
+      // step stands in a window as tall as itself within the frame.
       if (held !== undefined && held.text === text && held.window === viewport) {
         plans.push({ row, state: held, step: null, grow: measureOf(held) })
         continue
@@ -232,7 +239,7 @@ export function createReasoningStream() {
       }
       if (windows.has(row)) clearWindow(row)
       windows.set(row, state)
-      // The mark is what the stylesheet clips and what the fold's own readers
+      // The mark is what the stylesheet clips and what the stream's own readers
       // look for; the capped mark joins it from the first wait that reaches the cap.
       state.window.setAttribute(REASON_WINDOW_ATTR, '')
       state.text.setAttribute(REASON_TEXT_ATTR, '')
@@ -253,15 +260,39 @@ export function createReasoningStream() {
     cancelFrame = requestFrame({ read: readRows, write: writeRows })
   }
 
+  /**
+   * Re-read a row whose text or layout phase changed, and every row that just
+   * arrived. The match registry hears new rows alone; the text a running row
+   * streams in, and its phase and expanded marks, come through this watch.
+   */
+  const stopTextWatch = subscribeMutations(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true,
+    attributeFilter: [ROW_PHASE_ATTRIBUTE, EXPANDED_ATTRIBUTE],
+  }, (records) => {
+    for (const record of records) {
+      const target = record.target instanceof Element ? record.target : record.target.parentElement
+      const row = target?.closest(THINK_ROW_SELECTOR) ?? null
+      if (row !== null) queue(row)
+      for (const node of record.addedNodes) {
+        if (!(node instanceof Element)) continue
+        if (node.matches(THINK_ROW_SELECTOR)) queue(node)
+        for (const found of node.querySelectorAll(THINK_ROW_SELECTOR)) queue(found)
+      }
+    }
+  })
+
   /** Re-read every thinking row after a preference or environment change. */
   function sync() {
-    for (const row of thinkRows.all()) queue(row)
+    queueKnownRows()
   }
   const offPrefs = subscribePrefs(sync)
+  // A row already standing when the feature installed takes its window now.
+  queueKnownRows()
 
   return {
     sync,
-    queueRow: queue,
     stop() {
       // A row the frame was about to window would otherwise be given a window
       // and a repeating wait after the teardown, with nothing left to clear it.
@@ -273,6 +304,7 @@ export function createReasoningStream() {
       pending.clear()
       plans.length = 0
       offPrefs()
+      stopTextWatch()
       thinkRows.release()
     },
   }

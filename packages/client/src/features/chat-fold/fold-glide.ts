@@ -174,14 +174,10 @@ export function installChatFoldGlide() {
     if (glideReplaying) return
     const target = event.target
     if (!(target instanceof Element)) return
-    // This feature's own automatic folding dispatches real clicks down this
-    // very capture path. A thinking row should roll just like the reader's own
-    // click: opened and closed instantly by it, its content would appear and
-    // vanish with a snap, while a tool row — only ever opened by a click —
-    // always had a door. A process group is not in that list: one scan can
-    // toggle several groups, and the collapse is exclusive (glideShutting), so
-    // a second click arriving together would be swallowed and that group would
-    // never get its turn.
+    // The folding's own programmatic presses (process groups and stopped-turn
+    // work) go through this capture path marked, and are handed on: their door
+    // is not the reader's. Only a thinking row has its door rolled for such a
+    // press, because a row opening or closing without it would snap.
     if (isChatFoldToggle() && target.closest(THINK_ROW_SELECTOR) === null) return
     // Only the chat area is taken over. aria-expanded is used page-wide — the
     // model picker, the settings dropdowns, the sidebar's rows, the task panel

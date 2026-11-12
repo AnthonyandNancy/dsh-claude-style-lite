@@ -61,10 +61,6 @@
       "count": 1,
       "reason": "The process groups already on the page, settled once right after install."
     },
-    "packages/client/src/features/chat-fold/reasoning-fold.ts": {
-      "count": 1,
-      "reason": "The thinking rows already on the page, settled once right after install."
-    },
     "packages/client/src/features/chat-reveal/reveal-diff.ts": {
       "count": 1,
       "reason": "The streaming containers, scanned when an attribute or structural batch arrives. `data-streaming` is set and removed on a node that stays mounted, which a registry of added nodes cannot follow."

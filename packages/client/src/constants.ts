@@ -175,7 +175,7 @@ export const CARET_HOST_ATTR = 'data-dsh-claude-caret-host'
 /** On a text field the skin builds for its own interface, which the caret motion takes over like a seat textarea (features/caret/).
  * The host's own fields are reached through their contracts; this one belongs to the skin, so it carries the skin's mark. */
 export const CARET_FIELD_ATTR = 'data-dsh-claude-field'
-/** Present while the ported automatic folding is installed (features/chat-fold/): the stylesheet's header-summary rules hang off it, and switching the feature off hands the chat area back whole. */
+/** Present while the ported folding is installed (features/chat-fold/): the stylesheet's header-summary rules hang off it, and switching the feature off hands the chat area back whole. */
 export const CHAT_FOLD_ATTR = 'data-dsh-claude-chat-fold'
 /** Present while the skin takes over the sidebar footer (settings area + account row). */
 export const FOOTER_ATTR = 'data-dsh-claude-footer-takeover'
