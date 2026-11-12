@@ -8,6 +8,11 @@
 import fs from 'node:fs'
 import { availableParallelism } from 'node:os'
 import path from 'node:path'
+
+// The workspace packages publish `.ts`; this entry registers the resolver itself so
+// `npm run verify` and a direct run read the same sources.
+import { register } from 'node:module'
+register(new URL('./ts-resolve-hooks.mjs', import.meta.url))
 import { launchBrowser } from './browser.mjs'
 import { argOf } from '../../scripts/shared/args.mjs'
 import { start, openPage, waitForSkin, dismissOverlays, firstRunOverlayText, DEFAULT_HOME } from './dsh-web.mjs'

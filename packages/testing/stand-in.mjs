@@ -17,6 +17,11 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+
+// The workspace packages publish `.ts`; this entry registers the resolver itself so
+// `npm run verify` and a direct run read the same sources.
+import { register } from 'node:module'
+register(new URL('./ts-resolve-hooks.mjs', import.meta.url))
 import { launchBrowser } from './browser.mjs'
 import { FEATURE_CASES, failures, skips } from './smoke/shared.mjs'
 import { pagesFor } from './smoke/shared.mjs'

@@ -16,6 +16,11 @@ import fs from 'node:fs'
 import http from 'node:http'
 import { availableParallelism } from 'node:os'
 import path from 'node:path'
+
+// The workspace packages publish `.ts`; this entry registers the resolver itself so
+// `npm run verify` and a direct run read the same sources.
+import { register } from 'node:module'
+register(new URL('./ts-resolve-hooks.mjs', import.meta.url))
 import { pathToFileURL } from 'node:url'
 import { launchBrowser, newContextOn } from './browser.mjs'
 import { behaviourPage } from './smoke/page.mjs'
