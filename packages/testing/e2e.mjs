@@ -11,6 +11,7 @@ import path from 'node:path'
 import { launchBrowser } from './browser.mjs'
 import { argOf } from '../../scripts/shared/args.mjs'
 import { start, openPage, waitForSkin, dismissOverlays, firstRunOverlayText, DEFAULT_HOME } from './dsh-web.mjs'
+import { fingerprint, differences } from './local-home-guard.mjs'
 import { MARKS, measureFrameMs } from './lane.mjs'
 import { requireNewestHost } from './host-version.mjs'
 import { SCENARIOS } from './scenarios.mjs'
@@ -293,6 +294,10 @@ async function runScenario(name, options) {
     ? sharedHome
     : path.join(path.dirname(sharedHome), `home-${name}${options.worker === undefined ? '' : `-${options.worker}`}`)
   if (scenario.plugins !== undefined) fs.rmSync(home, { recursive: true, force: true })
+  // The run root is made by dsh-web.mjs; a scripted call writes inside the
+  // workspace the host registers there, so the mock needs the path only after
+  // the host has started. The model service fills `{{workspace}}` and its
+  // doubled form `{{workspaceCode}}` in every tool call.
   const workspace = path.join(home, 'workspace')
   const mock = await startMockLlm({
     script: scenario.script,
@@ -317,6 +322,7 @@ async function runScenario(name, options) {
   }
   const patch = ['- id: llm-deepseek', '  config:', `    baseURL: ${mock.url}`, '    apiKeyEnv: DSH_E2E_MOCK_KEY', ...accountPatch, ...scenario.patch ?? []].join('\n')
   const host = await start({ patch, args: scenario.hostArgs, env: { DSH_E2E_MOCK_KEY: 'mock' }, home, plugins: scenario.plugins, resetState: true })
+  const runWorkspace = path.join(host.home, 'workspace')
   say(`\n== ${name} ==  mock ${mock.url}  host ${host.url}\n`)
   /** Where the scenario is, so a hang in the log says which step it never left. */
   const step = (label) => say(`  · ${label}\n`)
@@ -469,6 +475,10 @@ async function main() {
   /** The first scenario that threw, kept until every instance has stopped. */
   let broke = null
   const say = (block) => process.stdout.write(block)
+  // The reader's homes are the one thing this lane may never write. A
+  // fingerprint is taken before the first host and compared after the last one
+  // stops, on the success and failure paths alike.
+  const localHomes = fingerprint()
   try {
     await Promise.all(homes.map(async (home, worker) => {
       // A scenario that throws ends the walk the way a serial one does — the
@@ -487,6 +497,10 @@ async function main() {
     }))
   } finally {
     await browser.close()
+    const moved = differences(localHomes, fingerprint())
+    if (moved.length > 0) {
+      throw new Error(`the run touched a reader home:${String.fromCharCode(10)}${moved.join(String.fromCharCode(10))}`)
+    }
   }
   if (broke !== null) throw broke
   const results = walked.map((name) => finished.get(name))

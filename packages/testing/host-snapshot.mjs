@@ -29,6 +29,7 @@ import path from 'node:path'
 import { argOf } from './cli-args.mjs'
 import { start, openPage, waitForSkin, dismissOverlays } from './dsh-web.mjs'
 import { installedHostVersion } from './host-version.mjs'
+import { fingerprint, differences } from './local-home-guard.mjs'
 import { startMockLlm } from './mock-llm.mjs'
 import { sendPrompt, waitForTurn } from './prompt.mjs'
 import { sanitizePage, assertClean } from '../../scripts/shared/privacy.mjs'
@@ -170,6 +171,7 @@ async function capture(options) {
   const viewport = options.viewport ?? VIEWPORT
   // Before the model service or the host starts: the home is reset by the boot.
   const home = scratchHome(options.home)
+  const before = fingerprint()
   const mock = await startMockLlm({ script: 'greeting' })
   let hostInstance
   let session
@@ -225,6 +227,8 @@ async function capture(options) {
     if (session !== undefined) await session.close()
     if (hostInstance !== undefined) hostInstance.stop()
     await mock.stop()
+    const moved = differences(before, fingerprint())
+    if (moved.length > 0) throw new Error(`the capture touched a reader home:${String.fromCharCode(10)}${moved.join(String.fromCharCode(10))}`)
   }
 }
 

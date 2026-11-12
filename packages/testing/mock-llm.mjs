@@ -440,6 +440,8 @@ async function startMockLlm(options = {}) {
     : SCRIPTS[options.script ?? 'greeting']
   if (script === undefined) throw new Error(`mock-llm: no script named "${options.script}"`)
   const delayMs = options.delayMs ?? 50
+  // A lane learns its scratch workspace only after the host has made the run
+  // root, so the table is read when a reply is streamed rather than here.
   const vars = options.vars ?? {}
   fs.mkdirSync(log, { recursive: true })
   /** Every request the host made, in order. */

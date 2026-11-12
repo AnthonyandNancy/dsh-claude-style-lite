@@ -7,8 +7,9 @@
  * the structure its author knows, while the timing and ordering the skin leans
  * on only exist in the assembled client. This tool owns that host:
  *
- *   start()   a scratch `$DSH_HOME` under .debug/runs/e2e/, the plugin linked into its
- *             web profile once, `dsh --profile web --port 0 --no-open` booted,
+ *   start()   a scratch `$DSH_HOME` under .debug/runs/e2e/, the checkout
+ *             materialised in the profile, and
+ *             `dsh --profile web --host 127.0.0.1 --port 0 --no-open` booted,
  *             and the URL it prints — which carries the launch token — handed
  *             back. The token must be exchanged by a browser: a bare fetch of
  *             the URL without a cookie is answered 401. The host ends with
@@ -18,6 +19,9 @@
  *
  * Run it directly to keep an instance up for manual work: it prints the URL and
  * stays until interrupted.
+ *
+ * The test lane's TypeScript workspace packages need their source resolver:
+ * `node --import ./packages/testing/register.mjs packages/testing/e2e.mjs`.
  *
  * Usage: node packages/testing/dsh-web.mjs [--home <dir>] [--profile <name>] [--port <n>]
  */
@@ -36,6 +40,32 @@ const DEFAULT_HOME = runsPath(ROOT, 'e2e', 'home')
 const LIFELINE = path.join(import.meta.dirname, 'lifeline.mjs')
 /** A console line the GPU process writes into the page on a runner without one. */
 const DRIVER_MESSAGE = /^\[\.WebGL-[^\]]*\]GL Driver Message/
+
+/** The run's own directory: every scratch home, npm config and log lives under it. */
+function runRoot(home) {
+  const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${process.pid}`
+  return path.join(home, id)
+}
+
+/** The environment every `dsh` child starts from: reader credentials and homes never cross. */
+function isolatedEnv(root, extra = {}) {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) =>
+    !/(?:KEY|SECRET|TOKEN|PASSWORD)/iu.test(name)
+    && !name.toUpperCase().startsWith('DSH_')
+    && !['BROWSER', 'SSH_CONNECTION', 'SSH_TTY', 'NODE_OPTIONS', 'NODE_PATH'].includes(name)))
+  const npmrc = path.join(root, 'npmrc')
+  if (!fs.existsSync(npmrc)) fs.writeFileSync(npmrc, '')
+  return {
+    ...env,
+    DSH_HOME: path.join(root, 'home'),
+    DSH_AGENTS_HOME: path.join(root, 'agents'),
+    DSH_TELEMETRY_DISABLED: '1',
+    npm_config_userconfig: npmrc,
+    npm_config_store_dir: path.join(root, 'pnpm-store'),
+    NODE_NO_WARNINGS: '1',
+    ...extra,
+  }
+}
 
 /** The one file the workspace holds: with none, the `@` menu has no candidate to open on. */
 function writeLaneNote(directory) {
@@ -140,16 +170,27 @@ function provisionHome(home) {
  *     registry, without which the shell asks for a workspace instead of starting
  *     a turn.
  * @param options.timeoutMs - how long to wait for the printed URL.
- * @returns `{ url, home, stop() }`; `stop` ends the host and everything it spawned.
+ * @returns `{ url, root, home, agents, stop() }`; `stop` ends the host and
+ *     everything it spawned.
+ *
+ * The host listens on 127.0.0.1 and an OS-assigned port. It never opens the
+ * reader's browser. DSH_HOME, DSH_AGENTS_HOME, the pnpm store and npm userconfig
+ * all live under the run's own root; the reader's home is never read or written.
  */
 async function start(options = {}) {
   // Resolved: the home goes into the host's own state (the workspace registry)
   // as a path it has to be able to read, and `--home` may be relative.
-  const home = path.resolve(options.home ?? DEFAULT_HOME)
+  const parent = path.resolve(options.home ?? DEFAULT_HOME)
+  const root = runRoot(parent)
+  const home = path.join(root, 'home')
+  const agents = path.join(root, 'agents')
   const profile = options.profile ?? 'web'
   const port = options.port ?? 0
   const timeoutMs = options.timeoutMs ?? 120000
+  if (port !== 0) throw new Error("dsh-web tests use port 0; a fixed port could take the reader's 3080")
   fs.mkdirSync(home, { recursive: true })
+  fs.mkdirSync(agents, { recursive: true })
+  const env = isolatedEnv(root)
   provisionHome(home)
   // The Anthropic faces are the reader's own download and never ship in the
   // package (D75): the lane plants this checkout's copies in the scratch home's
@@ -179,27 +220,30 @@ async function start(options = {}) {
     }
   }
   ensureWorkspace(home)
-  // Idempotent: the profile is initialized and the checkout linked into it on
-  // the first run, and pnpm reports "already up to date" afterwards.
-  run(`dsh plugin --profile ${profile} add "${ROOT}"`, { env: { ...process.env, DSH_HOME: home } })
-  for (const spec of options.plugins ?? []) run(`dsh plugin --profile ${profile} add ${spec}`, { env: { ...process.env, DSH_HOME: home } })
+  // A directory spec materialises the checkout inside the profile. A `link:`
+  // spec would leave a junction pointing back at the reader's checkout, which
+  // the sandbox refuses to traverse and which would let a run write the tree it
+  // is testing.
+  const checkout = ROOT.replaceAll('\\', '/')
+  run(`dsh plugin --profile ${profile} add "file:${checkout}"`, { env })
+  for (const spec of options.plugins ?? []) run(`dsh plugin --profile ${profile} add ${spec}`, { env })
   // The lane's own entries go into a separate overlay (`--patch`), never into
   // the profile's `cordis.patch.yml`: that file is the host's user layer, where
   // the shell persists settings such as the answered onboarding steps, and
   // overwriting it brings those steps back on every boot.
-  const overlay = path.join(home, `${profile}.lane.patch.yml`)
+  const overlay = path.join(root, `${profile}.lane.patch.yml`)
   fs.writeFileSync(overlay, `# Written by packages/testing/dsh-web.mjs for this run.\n${options.patch ?? '[]'}\n`)
 
-  const env = { ...process.env, DSH_HOME: home, ...options.env }
+  const launchEnv = isolatedEnv(root, options.env)
   // The host's stdin is its lifeline (packages/testing/lifeline.mjs): this
   // process never writes to it, and its end closes with this process. The path
   // goes in with forward slashes: NODE_OPTIONS reads a backslash inside quotes
   // as an escape.
-  env.DSH_WEB_LIFELINE = '1'
-  env.NODE_OPTIONS = [env.NODE_OPTIONS, `--require "${LIFELINE.replaceAll('\\', '/')}"`].filter(Boolean).join(' ')
-  const command = [`dsh --profile ${profile} --patch "${overlay}" --port ${port} --no-open`, ...options.args ?? []].join(' ')
+  launchEnv.DSH_WEB_LIFELINE = '1'
+  launchEnv.NODE_OPTIONS = `--require "${LIFELINE.replaceAll('\\', '/')}"`
+  const command = [`dsh --profile ${profile} --patch "${overlay}" --host 127.0.0.1 --port ${port} --no-open`, ...options.args ?? []].join(' ')
   const child = spawn(command, {
-    env,
+    env: launchEnv,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
   })
@@ -234,7 +278,7 @@ async function start(options = {}) {
     child.on('exit', (code) => reject(new Error(`the scratch host exited with ${code}`)))
   })
   ended.catch(() => {})
-  return { url, home, stop, exited: ended }
+  return { url, root, home, agents, stop, exited: ended }
 }
 
 /**
@@ -416,7 +460,7 @@ async function firstRunOverlayText(page) {
   return text.replace(/\s+/g, ' ').trim().slice(0, 200)
 }
 
-export { start, openPage, waitForSkin, dismissOverlays, firstRunOverlayText, consoleProblem, DEFAULT_HOME }
+export { start, openPage, waitForSkin, dismissOverlays, firstRunOverlayText, consoleProblem, runRoot, isolatedEnv, DEFAULT_HOME }
 
 if (import.meta.main) {
   const home = argOf('home')

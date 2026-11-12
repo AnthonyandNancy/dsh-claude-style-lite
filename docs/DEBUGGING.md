@@ -6,7 +6,10 @@
 
 真实宿主上的读数与替身页不同：宿主自己的 React 重渲染、会话日志与窗口化都在替身页之外。
 
-- `node packages/testing/dsh-web.mjs` 在 `.debug/runs/e2e/` 下起一个独立的 `$DSH_HOME` 并把本检出链进去，打印地址；它不占验证锁，可以与其他车道并存。
+- `node packages/testing/dsh-web.mjs` 每次在 `.debug/runs/e2e/` 下创建独立 run root，并在其中分别放置 `DSH_HOME`、`DSH_AGENTS_HOME`、pnpm store 与 npmrc；它把本检出以 `file:` 装入隔离 profile，打印地址，不占验证锁。
+- 真实宿主测试只使用 `node packages/testing/dsh-web.mjs` 或 `node packages/testing/e2e.mjs`；不要用 `dsh web` 直接连到自己的 `~/.dsh`。
+- 两条入口在运行前用 `local-home-guard.mjs` 记录真实 home，结束后逐文件比对，出现任何差异立即失败；运行期间桌面端和其他 DSH 会话必须停止写入真实 `~/.dsh`。
+- 测试宿主固定绑定 `127.0.0.1`、端口 `0` 并传 `--no-open`；3080 保留给读者自己的服务。
 - 桌面窗口用桥读：`node D:\DSH\dsh-gui-bridge\bin\bridge.cjs "<表达式>"`。窗口在后台时动画帧暂停，等帧的探针会挂住。
 - 页面在跑哪一份构建，只看 `document.body.getAttribute('data-dsh-claude-style')`，`npm run build` 打印它写下的编号。热重载会换包而不会刷页面，经过多次热重载的页面先刷新再当证据。
 
