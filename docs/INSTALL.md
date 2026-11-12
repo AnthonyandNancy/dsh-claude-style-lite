@@ -23,6 +23,13 @@ dsh plugin --profile web remove dsh-claude-style-lite
 dsh plugin --profile web add dsh-claude-style
 ```
 
+## 桌面通知
+
+- Windows 桌面端由宿主半发送系统通知，需要 PowerShell 5.1；AUMID 从 DSH 自己的开始菜单快捷方式读取，点击协议处理器由首次发送注册。
+- 通知身份属于已安装的 DSH。本机安装的快捷方式是 `DeepSeek Harness.lnk`，目标是 `D:\Program Files\DeepSeekHarness\DeepSeek Harness.exe`，Shell 扩展属性 `System.AppUserModel.ID` 的值是 `electron.app.DeepSeek Harness`。宿主按目标路径定位该快捷方式并读取这个属性；`WScript.Shell.CreateShortcut().AppUserModelID` 对该快捷方式返回空，不能用来读取通知身份。这个值不能从安装目录名或打包 appId `com.deepseek.dsh` 推断。
+- 点击通知回到对应会话；协议处理器注册失败时，通知仍会显示，但点击只打开窗口。
+- `dsh web` 使用站点通知权限；首次使用需在设置页按「允许通知」。
+
 ## 字体
 
 Lite 从 `$DSH_HOME/dsh-claude-style-lite/fonts/` 读取用户字体。

@@ -468,6 +468,18 @@ async function main() {
   const host = await buildHostHalf({ outDir: LIB })
   console.log(`built lib/host/ (${host.files} modules) from packages/host/src/`)
 
+  // The notification scripts are data the host half starts, not modules it
+  // imports; they ship beside the bundle and are copied as they stand.
+  const notifySource = path.join(ROOT, 'packages', 'host', 'src', 'notify')
+  const notifyTarget = path.join(LIB, 'notify')
+  fs.mkdirSync(notifyTarget, { recursive: true })
+  let notifyFiles = 0
+  for (const name of ['toast.ps1', 'handler.vbs']) {
+    fs.copyFileSync(path.join(notifySource, name), path.join(notifyTarget, name))
+    notifyFiles += 1
+  }
+  console.log(`built lib/notify/ (${notifyFiles} files) from packages/host/src/notify/`)
+
   // Last, always: this is the file a running page's client hot reload watches, and the
   // generation it swaps to reads its chunks from this build, so every asset is on disk first (D72).
   fs.writeFileSync(OUT, bundle)

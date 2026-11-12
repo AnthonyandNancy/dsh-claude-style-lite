@@ -20,6 +20,8 @@
 >
 > Local development and verification use only the isolated `DSH_HOME` and `DSH_AGENTS_HOME` under `.debug/runs/e2e/<run-id>/`; they never read or write the reader's `~/.dsh` or `~/.agents`. The test web host binds a random `127.0.0.1` port and passes `--no-open`.
 
+- On the Windows desktop the host half sends the system notification, and a click returns to that session.
+
 ## Preview
 
 The settings page switches between the two palettes; light and dark follow the system.

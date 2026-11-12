@@ -39,7 +39,8 @@ export default {
     // from.
     const expectedGrey = { appearance: ['homeSessionScope'], 'main-window': ['headerBand', 'statsFooterAlign'] }
     // A row can carry a line while it still takes input: the notification row
-    // names the browser's own permission state and offers the request beside it.
+    // names the channel the feature settled on, and the page's fetch stub
+    // reports the browser channel, whose permission line is what it shows.
     const expectedNotes = { general: ['notifications'], appearance: ['homeSessionScope'], 'main-window': ['headerBand', 'statsFooterAlign'] }
     const pages = settings.pages || {}
     for (const tab of Object.keys(expected)) {

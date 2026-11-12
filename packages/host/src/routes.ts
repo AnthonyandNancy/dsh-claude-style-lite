@@ -23,6 +23,8 @@ import { harnessPath } from '@dsh-claude-style/engine/node/harness-home'
 import { pluginPath } from './harness-home.js'
 import { fenceRefused, methodRefused, readRequestBody, refusalOf, sendJson } from '@dsh-claude-style/engine/node/http'
 import { clampSoundVolume, isSoundName, playSystemSound, soundCapability } from './sound.js'
+import { createNotifyActivationRoute, createNotifyRoute, desktopAumidFromShortcuts, readStartMenuShortcuts } from './notify.js'
+import type { NotifySubprocess } from './notify.js'
 import { createStaticFiles } from '@dsh-claude-style/engine/node/static-files'
 import { createHdslAccount } from './hdsl.js'
 import type { HdslReading } from './hdsl.js'
@@ -433,6 +435,24 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
         void playSoundRequest(req, res).catch((error: unknown) => fail(res, error))
       },
     })
+
+    // The notification routes share the same host fence and subprocess seam.
+    // The Windows AUMID belongs to the installed Start Menu shortcut, so it is
+    // scanned only when a subprocess service exists; the scan is memoized for
+    // every later registration in this host process.
+    const subprocess = (ctx.get('subprocess') as NotifySubprocess | null | undefined) ?? null
+    const notifyHost = {
+      platform: process.platform,
+      subprocess,
+      home: harnessPath(ctx),
+      scriptPath: join(root, 'lib', 'notify', 'toast.ps1'),
+      notifyAumid: process.platform === 'win32' && subprocess !== null
+        ? desktopAumidFromShortcuts(readStartMenuShortcuts(process.execPath), process.execPath)
+        : null,
+      protocolRegistered: false,
+    }
+    register('notify', createNotifyRoute(ctx, notifyHost))
+    register('notify activation', createNotifyActivationRoute(ctx, notifyHost))
 
     register('HDSL account', {
       kind: 'exact',

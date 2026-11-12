@@ -13,6 +13,7 @@ import { brotliDecompressSync } from 'zlib'
 import { ROOT, HOST, SKIN_FIXTURE, same, check } from './shared.mjs'
 import { hostUsage } from './host-half-usage.mjs'
 import { hostSound } from './host-half-sound.mjs'
+import { hostNotify } from './host-half-notify.mjs'
 import { hostPanel } from './host-half-panel.mjs'
 
 // ---------------------------------------------------------------------------
@@ -34,10 +35,12 @@ import { hostPanel } from './host-half-panel.mjs'
  *   and `onRead` runs for each read as it happens; `stored` is the snapshot list
  *   the fake `sessionPersistence` answers (each listing is pushed onto `lists`);
  *   `registry` is the fake `workspaceRegistry` service object itself, whose
- *   `unarchived` list records every call.
+ *   `unarchived` list records every call; `subprocess` is the optional host
+ *   process service whose real `spawn({ argv, cwd, stdio, graceMs })` handle is
+ *   implemented by the notification smoke.
  */
 function fakeHost(mod, options = {}) {
-  const { fenced, home, live = [], events, launch, stored, reads, releases, lists, listCalls, registry, tails, queryShapes, broken, onRead, projections, jobs } = options
+  const { fenced, home, live = [], events, launch, stored, reads, releases, lists, listCalls, registry, tails, queryShapes, broken, onRead, projections, jobs, subprocess } = options
   const shapes = queryShapes ?? ['readSession', 'observeSession', 'readTitleSnapshots']
   const routes = {}
   const settings = { configure: () => () => {} }
@@ -71,6 +74,7 @@ function fakeHost(mod, options = {}) {
     get: (name) => {
       if (name === 'connection' && fenced) return connection
       if (name === 'dshHomePath' && home !== undefined) return (...segments) => path.join(home, ...segments)
+      if (name === 'subprocess') return subprocess
       if (name === 'sessions') return {
         get: (id) => (live.includes(id) ? {} : undefined),
         list: () => live.map((id) => ({
@@ -166,7 +170,7 @@ function fakeHost(mod, options = {}) {
     }),
   }
   mod.apply(ctx)
-  return { routes }
+  return { routes, ctx }
 }
 
 /**
@@ -246,6 +250,7 @@ async function hostHalf() {
     const r = await request(host, USER, 'GET', '', browser)
     check('browser username read answered', r.status === 200 && JSON.parse(r.body).ok === true, `HTTP ${r.status}`)
     await hostSound({ host, request, browser, crossSite })
+    await hostNotify({ mod, fakeHost, request, browser, crossSite })
 
     // The launcher's account contract. Its two layers are the only ones allowed
     // to say who the player is, and the picture's absolute path stays here.

@@ -46,5 +46,11 @@ export const WEBFONTS_PATH = `${ROUTE_PREFIX}/webfonts`
 /** `GET` reports system-cue capability and `POST` plays one using OS files (D89). */
 export const SOUND_PATH = `${ROUTE_PREFIX}/sound`
 
+/** `GET` reports the channel; `POST` raises one system notification. */
+export const NOTIFY_PATH = `${ROUTE_PREFIX}/notify`
+
+/** `GET` takes the session a clicked notification asked to open, once. */
+export const NOTIFY_ACTIVATION_PATH = `${ROUTE_PREFIX}/notify-activation`
+
 /** `?id=` selects the session; the answer is the session overview panel's folded data (D96). */
 export const SESSION_PANEL_PATH = `${ROUTE_PREFIX}/session-panel`

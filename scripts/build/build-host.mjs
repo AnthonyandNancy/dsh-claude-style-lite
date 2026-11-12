@@ -54,7 +54,9 @@ export async function buildHostHalf({ outDir = path.join(ROOT, 'lib') } = {}) {
       const rel = dir === '' ? entry.name : `${dir}/${entry.name}`
       if (entry.isDirectory()) walk(rel)
       else if (rel.endsWith('.ts')) modules.push(rel)
-      else throw new Error(`build: packages/host/src/${rel} is not TypeScript`)
+      // The notification scripts are data beside the host half; build.mjs
+      // copies them into lib/notify after this pass.
+      else if (!rel.endsWith('.ps1') && !rel.endsWith('.vbs')) throw new Error(`build: packages/host/src/${rel} is not TypeScript`)
     }
   }
   walk('')

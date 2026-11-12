@@ -85,3 +85,9 @@ export function readRequestBody(req: DshRequest, limit: number): Promise<Buffer 
     req.on('error', () => { if (!over) settle(null) })
   })
 }
+
+/** Answer a route's rejected promise: a 500 carrying its message, or a closed socket when the headers already went out. */
+export function failAnswer(res: DshResponse, error: unknown) {
+  if (res.headersSent) res.destroy()
+  else sendJson(res, 500, { ok: false, error: String((error as { message?: string } | null)?.message ?? String(error)) })
+}

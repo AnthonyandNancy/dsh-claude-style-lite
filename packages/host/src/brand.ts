@@ -15,7 +15,7 @@ import { mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } 
 import { join } from 'node:path'
 import type { DshContext, DshRequest, DshResponse, DshRoute } from '@dsh-claude-style/engine/node/dsh'
 import { pluginPath } from './harness-home.js'
-import { fenceRefused, methodRefused, readRequestBody, sendJson } from '@dsh-claude-style/engine/node/http'
+import { failAnswer, fenceRefused, methodRefused, readRequestBody, sendJson } from '@dsh-claude-style/engine/node/http'
 
 /** Each image's route. */
 const IMAGE_PATHS: Record<BrandImageKind, string> = { mark: BRAND_MARK_PATH, wordmark: BRAND_WORDMARK_PATH }
@@ -155,10 +155,7 @@ export function brandRoutes(ctx: DshContext): { label: string, route: DshRoute }
               store.remove(kind)
               sendJson(res, 200, store.answer())
             })
-          void done.catch((error: unknown) => {
-            if (res.headersSent) res.destroy()
-            else sendJson(res, 500, { ok: false, error: String((error as { message?: string } | null)?.message ?? String(error)) })
-          })
+          void done.catch((error: unknown) => failAnswer(res, error))
           return
         }
         const found = store.find(kind)

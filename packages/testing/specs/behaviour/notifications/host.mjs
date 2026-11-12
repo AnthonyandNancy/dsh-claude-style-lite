@@ -7,7 +7,12 @@ import { applySnapshotHost, installSnapshotHost, restartSnapshotHost, sessionLis
 
 export { sessionList }
 
-export async function setup(t, { status, list }) {
+export async function setup(t, { status, list, capability }) {
+  if (capability !== undefined) {
+    await t.page.evaluate((input) => {
+      window.__hostNotify = { capability: input, sent: [], activation: null }
+    }, capability)
+  }
   await t.page.evaluate(() => {
     const notifications = []
     const requests = []
@@ -50,14 +55,22 @@ export async function setup(t, { status, list }) {
     requests: () => t.page.evaluate(() => window.__notificationStandIn.requests.slice()),
     click: (index) => t.page.evaluate((at) => window.__notificationStandIn.notifications[at].onclick(), index),
     opened: () => t.page.evaluate(() => window.__snapshotHost.channels.opened),
-    async denyPermission() {
+    async denyPermission(capability) {
       await t.page.evaluate(() => window.Notification.allowOnRequest('denied'))
-      await restartSnapshotHost(t)
+      await restartSnapshotHost(t, capability)
     },
-    async grantOnRequest() {
+    async grantOnRequest(capability) {
       await t.page.evaluate(() => window.Notification.allowOnRequest('granted'))
-      await restartSnapshotHost(t)
+      await restartSnapshotHost(t, capability)
     },
     status: (next, waitMs) => setSnapshotStatus(t, next, waitMs),
+    /** Give the page its own host capability before the feature's one read. */
+    capability: (value) => t.page.evaluate((input) => {
+      window.__hostNotify = { capability: input, sent: [], activation: null }
+    }, value),
+    sent: () => t.page.evaluate(() => window.__hostNotify.sent.slice()),
+    activation: (value) => t.page.evaluate((input) => {
+      window.__hostNotify.activation = input
+    }, value),
   }
 }

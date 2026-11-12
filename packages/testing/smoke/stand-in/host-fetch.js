@@ -22,6 +22,26 @@
   }
   window.fetch = function (input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || ''
+    // The notification fixture holds its own host: the capability, every POST
+    // body, and the activation the next poll takes. A page without the fixture
+    // answers the browser channel, which keeps every other case on the page
+    // constructor.
+    var hostNotify = window.__hostNotify
+    if (url === '/dsh-claude-style-lite/notify') {
+      var capability = hostNotify && hostNotify.capability
+        ? hostNotify.capability
+        : { ok: true, channel: 'browser', clickReturnsSession: false }
+      if (init === undefined || init.method === undefined || init.method === 'GET') {
+        return Promise.resolve(jsonResponse(capability))
+      }
+      if (hostNotify) hostNotify.sent.push(JSON.parse(init.body))
+      return Promise.resolve(jsonResponse({ ok: true }))
+    }
+    if (url === '/dsh-claude-style-lite/notify-activation') {
+      var activation = hostNotify ? hostNotify.activation : null
+      if (hostNotify) hostNotify.activation = null
+      return Promise.resolve(jsonResponse({ ok: true, activation: activation }))
+    }
     if (url === '/dsh-claude-style-lite/username') return Promise.resolve(jsonResponse({ ok: true, username: 'Tester' }))
     if (url === '/dsh-claude-style-lite/brand') {
       // The custom-brand case holds both images; the bytes are the runner's to

@@ -59,4 +59,16 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
     t.expectThat.equal(await host.requests(), ['request'], 'two events share the one permission request')
     t.expectThat.equal((await host.notifications()).length, 2, 'both events still notify')
   })
+
+  test('a host channel raises no page Notification and opens the clicked session', async (t) => {
+    const initial = { a: { running: true } }
+    const host = await setup(t, { status: initial, list: sessionList(initial), capability: { ok: true, channel: 'toast', clickReturnsSession: true } })
+    await host.status({ a: { running: false } })
+    await t.settle()
+    t.expectThat.equal((await host.notifications()).length, 0, 'the host channel does not use window.Notification')
+    t.expectThat.equal((await host.sent()).length, 1, 'one host notification is posted')
+    await host.activation({ sessionId: 'a', at: Date.now() })
+    await t.page.waitForTimeout(1800)
+    t.expectThat.equal((await host.opened()).at(-1), 'a', 'the clicked session opens once')
+  })
 })

@@ -62,8 +62,11 @@ export async function applySnapshotHost(t) {
 }
 
 /** Tear this generation down and apply the skin again on the same fixture. */
-export async function restartSnapshotHost(t) {
-  await t.page.evaluate(() => window.__dispose())
+export async function restartSnapshotHost(t, capability) {
+  await t.page.evaluate((input) => {
+    if (input !== undefined) window.__hostNotify = { capability: input, sent: [], activation: null }
+    window.__dispose()
+  }, capability)
   await applySnapshotHost(t)
 }
 
