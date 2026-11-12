@@ -1,5 +1,9 @@
 # Notice
 
+dsh-claude-style-lite is a fork of dsh-claude-style by Nwflower, based on
+commit 8cafcacd5aa574faa75b1912b8934bede7936b73 (0.20.3). The upstream MIT
+license and all third-party notices travel with this fork.
+
 This package ships the Sodium rendering engine of dsh-claude-style: every file
 under `packages/client/src/features/sodium/` (compiled into `lib/client.js`) and
 `packages/engine/src/sheet-rewrite.ts`. Those files are licensed under the

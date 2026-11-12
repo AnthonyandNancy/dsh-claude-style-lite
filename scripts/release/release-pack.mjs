@@ -31,6 +31,13 @@ if (args.includes('--dev') && (dev === undefined || dev.trim() === '' || dev.sta
 }
 const out = path.resolve(argOf('out') ?? DEFAULT_OUT)
 
+// The packer carries one package: a checkout whose manifest names anything else
+// would publish another plugin's name under this release's tarballs.
+const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+if (manifest.name !== 'dsh-claude-style-lite') fail(`package.json names ${manifest.name}; the release packer only carries dsh-claude-style-lite`)
+const liteVersion = fs.readFileSync(path.join(ROOT, 'LITE_VERSION'), 'utf8').trim()
+if (manifest.version !== liteVersion) fail(`package.json version ${manifest.version} differs from LITE_VERSION ${liteVersion}`)
+
 // A tarball left by an earlier run would otherwise sit beside this one and make
 // the printed paths ambiguous.
 fs.rmSync(out, { recursive: true, force: true })
@@ -47,7 +54,9 @@ const paths = [release]
 if (dev !== undefined) {
   const staged = path.join(out, 'dev')
   fs.mkdirSync(staged, { recursive: true })
-  run('tar', ['-xzf', release, '-C', staged, '--strip-components=1'])
+  // Both names are relative to the repository: this shell hands tar a
+  // drive-letter path as `host:path`, which it reads as a remote host.
+  run('tar', ['-xzf', path.relative(ROOT, release).split(path.sep).join('/'), '--strip-components=1', '-C', path.relative(ROOT, staged).split(path.sep).join('/')])
   const manifest = path.join(staged, 'package.json')
   const copy = JSON.parse(fs.readFileSync(manifest, 'utf8'))
   copy.version = dev

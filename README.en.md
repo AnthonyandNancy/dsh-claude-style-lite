@@ -86,7 +86,7 @@ dsh plugin --profile web add dsh-claude-style-lite                    # npm pack
 dsh plugin --profile web add guojianlin/dsh-claude-style-lite#dist      # GitHub release branch
 ```
 
-Also from the [plugin market](https://github.com/dsh-market/dsh-market) or the Skin Center of the dsh-web-all plugin. Keep one theme enabled at a time; dsh ≥ 0.2.2-rc.1 is required, and a restart of DeepSeek Harness brings the full feature set.
+Also from the [plugin market](https://github.com/dsh-market/dsh-market) or the Skin Center of the dsh-web-all plugin. Keep one theme enabled at a time; dsh ≥ 0.2.2-rc.2 is required, and a restart of DeepSeek Harness brings the full feature set.
 
 ## Manual unread marks
 

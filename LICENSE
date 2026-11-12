@@ -20,6 +20,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+
+---
+
+Fork notice: dsh-claude-style-lite is a fork of dsh-claude-style by Nwflower,
+based on commit 8cafcacd5aa574faa75b1912b8934bede7936b73 (version 0.20.3).
+The original MIT license and copyright notice above are retained.
+
 ---
 
 Sodium engine notice: the files under `packages/client/src/features/sodium/` and
