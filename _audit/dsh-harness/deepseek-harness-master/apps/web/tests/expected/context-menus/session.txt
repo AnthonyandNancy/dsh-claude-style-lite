@@ -1,5 +1,0 @@
-Pin session
-Rename
-Fork session
-Copy Session ID
-Archive session
