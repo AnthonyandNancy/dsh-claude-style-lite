@@ -153,9 +153,14 @@ for (const name of fs.readdirSync(DECISIONS)) {
 }
 
 // 5. A backticked repository path in prose has to exist. Directory mentions and placeholder
-// segments are out of reach; the CHANGELOG is a historical record, and a path that starts at
-// a feature layer names a file under packages/client/src.
-const prose = citing.filter((file) => !relative(file).endsWith('CHANGELOG.md'))
+// segments are out of reach; a historical record (the CHANGELOG, the frozen design, the
+// implementation plan and the originating requirement) names what stood when it was written,
+// and a path that starts at a feature layer names a file under packages/client/src.
+const HISTORICAL = ['docs/CHANGELOG.md', 'docs/superpowers/specs/', 'docs/superpowers/plans/', 'DSH-Claude-Style-Lite-']
+const prose = citing.filter((file) => {
+  const path_ = relative(file)
+  return !HISTORICAL.some((prefix) => path_ === prefix || path_.startsWith(prefix))
+})
 const PROSE_PATHS = [
   { pattern: /`((?:packages|scripts|docs|tests|changes|locale)\/[^`\s]+?\.[a-z0-9]+)`/g, base: ROOT },
   { pattern: /`((?:features|core|shared|theme)\/[^`\s]+?\.[a-z0-9]+)`/g, base: path.join(ROOT, 'packages', 'client', 'src') },
