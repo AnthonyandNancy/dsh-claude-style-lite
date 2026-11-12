@@ -117,13 +117,12 @@ const SCRIPTS = {
     auxiliary: { text: ['Scripted process'] },
   },
   /**
-   * A long reasoning, delivered a couple of steps at a time: the thinking row's
-   * window grows with it and steps it up once it fills the height reasoning may
-   * reach (packages/client/src/features/chat-fold/reasoning-stream.ts), and the
-   * reader never loses its last line. Each step is long enough to fill more than
-   * a couple of lines even where the host's body renders the whole reasoning as
-   * one wrapped paragraph, and the whole script runs well past the host's cap on
-   * that body — the lane's own scenario reads the window on both sides of it.
+   * A long reasoning, delivered a couple of steps at a time: the thinking row
+   * keeps receiving text as the host streams it, and the reader never loses its
+   * last line. Each step is long enough to fill more than a couple of lines even
+   * where the host's body renders the whole reasoning as one wrapped paragraph,
+   * and the whole script runs well past the host's cap on that body — the lane's
+   * own scenario reads the text on both sides of it.
    */
   think: {
     conversation: [

@@ -81,6 +81,7 @@ Lite 默认不自动读取原版的设置命名空间。原版与 Lite 的设置
 - `statsMode`
 - `searchStyle`
 - `manualUnread`
+- `notifications`
 
 删除的设置键不迁移：
 
@@ -89,6 +90,7 @@ Lite 默认不自动读取原版的设置命名空间。原版与 Lite 的设置
 - `messageEnter`
 - `caretMotion`
 - `reasoningDisplay`
+- `sessionPanel`（改由「默认打开会话总览面板」的 `sessionPanelOpenByDefault` 决定）
 
 ## 测试与验证
 
