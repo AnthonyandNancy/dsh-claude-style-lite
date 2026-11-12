@@ -7,6 +7,18 @@
  */
 type Listener = () => void
 
+/** The reader's standing choice for one session: the setting's default, open, or closed. */
+export type RailChoiceMode = 'default' | 'open' | 'closed'
+
+/**
+ * Whether the rail stands open. The setting decides only the `default` mode; a
+ * press stands until the session changes, and the host's own right column takes
+ * the side first.
+ */
+export function railOpensByChoice(mode: RailChoiceMode, preferred: boolean, hasSession: boolean, hostColumn: boolean) {
+  return !hostColumn && (mode === 'open' || (mode === 'default' && hasSession && preferred))
+}
+
 let open = false
 let toggle: (() => void) | null = null
 let available = false

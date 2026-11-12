@@ -7,7 +7,7 @@ import { readPrefs, subscribePrefs } from '../../core/prefs'
 import { PART_ATTR } from '../../constants'
 import { SESSION_PANEL_ATTR } from '../../constants'
 import { copy } from './copy'
-import { setRailOpen, setRailToggle, setSessionAvailable } from './session-panel-state'
+import { railOpensByChoice, setRailOpen, setRailToggle, setSessionAvailable } from './session-panel-state'
 import { PanelBody } from './session-panel-body'
 
 const h = React.createElement
@@ -114,10 +114,7 @@ function useRailReading(session: string | null) {
       // host's to give, so it is read from its box.
       hostColumn.current = host !== null && host.isConnected && host.getBoundingClientRect().width > 0
       const preferred = readPrefs().sessionPanelOpenByDefault
-      const mode = choice.current.mode
-      setOpen(!hostColumn.current && (
-        mode === 'open' || (mode === 'default' && session !== null && preferred)
-      ))
+      setOpen(railOpensByChoice(choice.current.mode, preferred, session !== null, hostColumn.current))
     }
     const columns = observeMarker<HTMLElement>(CENTER)
     const hostColumns = observeMarker<HTMLElement>(RIGHTBAR_COLUMN_SELECTOR)
