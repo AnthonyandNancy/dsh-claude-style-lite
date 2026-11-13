@@ -3,6 +3,7 @@ import { observeMarker, observeMatches, observeSize, subscribeMutations } from '
 import { requestFrame } from '@dsh-claude-style/engine/frame'
 import { motionReduced } from '../../core/prefs'
 import { createChatProcessFollow } from './process-follow'
+import { followHandBackAllowed } from './follow-hand-back'
 import { CHAT_CALL_SELECTOR, CHAT_RUNNING_SELECTOR, CONVERSATION_SCROLL_SELECTOR, DISCLOSURE_HEADER_SELECTOR, DISCLOSURE_ROW_SELECTOR, FLOW_BLOCK_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE, FOLLOWING_TAIL_SELECTOR, FOLLOW_THRESHOLD_PX, PROCESS_BODY_SELECTOR, PROCESS_EXPANDED_MODE_ATTRIBUTE, ROW_PHASE_ATTRIBUTE, RUNNING_STATE, SHIMMER_SELECTOR, STREAMING_SELECTOR, THINK_ROW_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { conversationColumn, conversationScroller, findFollowTailButton } from '@dsh-claude-style/engine/chat-dom'
 import { createStamp } from '@dsh-claude-style/engine/dom'
@@ -245,16 +246,18 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     slide = null
   }
 
-  /** Whether the conversation scroller stands at or follows its tail, and when that was last true. */
+  /**
+   * Whether the conversation has stood at or followed its tail at least once.
+   * The reading is not a follow edge: the host turns its follow off and on
+   * through the attribute, and only that edge may become the clock a hand-back
+   * is measured against. A reader who wheeled just before a growth pinned the
+   * end again would otherwise be read as never having moved.
+   */
   const noteTailIfNear = (scroller: Element | null) => {
-    if (scroller === null) return
+    if (scroller === null || seenAtTail) return
     const atTail = scroller.querySelector(FOLLOWING_TAIL_SELECTOR) !== null
       || scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= FOLLOW_THRESHOLD_PX
-    // The host's word for its follow, taken as it stands: a hand-back is
-    // measured against the last moment this was true (ensure).
-    if (atTail) followSeenAt = performance.now()
-    if (seenAtTail || !atTail) return
-    seenAtTail = true
+    if (atTail) seenAtTail = true
   }
 
   /** The distance the running slide still carries, off its own clock and curve: no style is read. */
@@ -495,14 +498,17 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     const scroller = conversationScroller()
     if (scroller === null) return
     noteTailIfNear(scroller)
-    // A conversation opened onto a saved historical position has never followed the tail.
-    if (!seenAtTail) return
-    // The reader moved the page himself since the host last followed, or a
-    // feature took it to a place he picked: where he reads is his answer, and
+    const gap = scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop
+    // The reader moved the page himself since the host's follow last came on, or
+    // a feature took it to a place he picked: where he reads is his answer, and
     // the skin does not press the host's button.
-    if (readerMovedSince(followSeenAt) || navigationMovedSince(followSeenAt)) return
-    // More than a screen off the end is the reader reading higher up, not a follow that fell one step behind.
-    if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > scroller.clientHeight) return
+    if (!followHandBackAllowed({
+      seenAtTail,
+      readerMoved: readerMovedSince(followSeenAt),
+      navigationMoved: navigationMovedSince(followSeenAt),
+      gap,
+      viewport: scroller.clientHeight,
+    })) return
     // A fold glide is moving the height, and the position is its business until it lands.
     if (foldBusy()) {
       const tries = typeof attempt === 'number' ? attempt : 0

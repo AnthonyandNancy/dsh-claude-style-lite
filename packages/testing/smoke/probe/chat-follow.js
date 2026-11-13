@@ -320,6 +320,60 @@
       }
       readerBlock.remove()
       await probe.settle()
+      // The host's own sample window after a submission (D100). The reader
+      // wheels up, the sample closes the follow a beat later, and that close is
+      // the reader's answer: the skin must not walk the position back and press
+      // the button. The control closes the same mark with no reader move, where
+      // the one hand-back is still expected.
+      var frameCount = function (count) {
+        return new Promise(function (resolve) {
+          var left = count
+          var step = function () {
+            if (left <= 0) { resolve(); return }
+            left -= 1
+            requestAnimationFrame(step)
+          }
+          requestAnimationFrame(step)
+        })
+      }
+      var sampleFollow = function (readerMoves) {
+        followScroller.scrollTop = followScroller.scrollHeight
+        return probe.settle().then(function () {
+          // A fresh follow edge: the host has just said the tail is its own.
+          followColumn.parentElement.setAttribute('data-chat-following-tail', '')
+          return probe.settle()
+        }).then(function () {
+          var pressed = 0
+          var onPress = function () {
+            pressed += 1
+            followColumn.parentElement.setAttribute('data-chat-following-tail', '')
+            followScroller.scrollTop = followScroller.scrollHeight
+          }
+          followButton.addEventListener('click', onPress)
+          if (readerMoves) {
+            followScroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -300 }))
+            followScroller.scrollTop = Math.max(0, followScroller.scrollHeight - followScroller.clientHeight - 300)
+          }
+          return probe.settle().then(function () {
+            // The host's sample settles. With no reader move the loss is the
+            // layout's, and the hand-back walks the position and presses; with
+            // one, the wheel is the close, and the reader stays where he is.
+            followColumn.parentElement.removeAttribute('data-chat-following-tail')
+            var closed = !followColumn.parentElement.hasAttribute('data-chat-following-tail')
+            return frameCount(60).then(function () {
+              followButton.removeEventListener('click', onPress)
+              return {
+                closed: closed,
+                before: pressed === 0 ? endGap() : 0,
+                after: endGap(),
+                presses: pressed,
+              }
+            })
+          })
+        })
+      }
+      r.chatFollow.sampleWithoutReader = await sampleFollow(false)
+      r.chatFollow.sampleWithReader = await sampleFollow(true)
       streamingMark.remove()
       slideBlock.remove()
       runningRow.remove()

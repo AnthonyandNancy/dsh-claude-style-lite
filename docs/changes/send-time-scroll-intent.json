@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-13",
+  "group": "fixes",
+  "order": 22,
+  "external": true,
+  "zh": "修复发送消息后立即向上滚动时对话被压回底部的问题",
+  "en": "Keep the reader's own scroll position when content arrives just after a message is sent"
+}

@@ -122,6 +122,20 @@ export default {
       Number.isFinite(readerGrowth.grew) && readerGrowth.grew >= bound('followReaderGrowthPx') &&
         readerGrowth.before === readerGrowth.after && readerGrowth.slides === 0,
       JSON.stringify(readerGrowth))
+    // The host's own sample window after a submission (D100). A wheel followed
+    // by a growth that pins the end again must leave the reader where he is:
+    // the close of the follow mark is the sample's answer, not a layout loss
+    // the skin may hand back. With no reader move the same close still gets the
+    // one press of the host's button.
+    const sampleWithReader = follow.sampleWithReader || {}
+    check('a wheel inside the host\'s sample window keeps its position when the sample closes the follow',
+      sampleWithReader.closed === true && sampleWithReader.presses === 0 &&
+        sampleWithReader.before > bound('followReaderGrowthPx') && sampleWithReader.after === sampleWithReader.before,
+      JSON.stringify(sampleWithReader))
+    const sampleWithoutReader = follow.sampleWithoutReader || {}
+    check('a sample that closes a follow with no reader move is handed back by one press',
+      sampleWithoutReader.closed === true && sampleWithoutReader.presses === 1 && sampleWithoutReader.after <= AT_END_PX,
+      JSON.stringify(sampleWithoutReader))
   },
   'chat-fold'(r) {
     basicChecks(r)
