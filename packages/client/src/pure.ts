@@ -54,6 +54,8 @@ export { EXTRA_MIN_MS, EXTRA_SPAN_MS, MIN_SHOW_MS, MOMENTS, REACTION_PRIORITY, S
 export type { MascotStage, StageSurroundings } from './features/mascot/mascot-stage'
 export { indexModelCopy, modelIdentity, resolveModelBrand, resolveModelCopy } from './features/model/model-copy'
 export type { ModelCopyIndex } from './features/model/model-copy'
+export { createSearchSources } from './features/search/sources'
+export type { SearchFilter, SearchKind, SearchRow, SearchSection } from './features/search/sources'
 export { levelOneSections } from './features/model/level-one'
 export { keepFlowChildMark } from './features/sodium/flow-items'
 export { SODIUM_MEMBERS } from './features/sodium/members'
