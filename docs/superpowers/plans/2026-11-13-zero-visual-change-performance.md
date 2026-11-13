@@ -16,7 +16,7 @@
 - 不修改任何 CSS、设计令牌、动画名称、动画时长、缓动、关键帧、`will-change`、`mask-image`、`content-visibility` 或 `contain-intrinsic-size`。
 - 不改变可见 DOM 的顺序、类名、属性、文本、焦点、选中项、滚动位置与无障碍名称。
 - 不改变调度器读取、滚动、写入三阶段的顺序，也不改变 `FEATURES` 中的功能顺序。
-- 不改变 `WORD_LOCK_MS`、`WAIT_OVERTIME_MS`、等待行 250 毫秒步长、加载器换场周期、侧栏展开与收起延迟、通知 1500 毫秒周期、首页用量 800 毫秒周期。
+- 不改变 `WORD_LOCK_MS`、`WAIT_OVERTIME_MS`、等待行 250 毫秒步长、加载器换场周期、侧栏展开与收起延迟。
 - 不修改任何动画与动效：关键帧、时长、缓动、延迟、动画名称、`Animation` 的 `startTime`、`currentTime`、`playbackRate`、触发时刻与叠加顺序全部保持原样。
 - 每个任务先写失败测试，再写实现，再运行受影响测试；测试通过后提交一个逻辑改动。
 - `packages/client/src/features/account/footer-mirror.ts` 已 745 行，任何新增逻辑先抽到同目录新模块。
