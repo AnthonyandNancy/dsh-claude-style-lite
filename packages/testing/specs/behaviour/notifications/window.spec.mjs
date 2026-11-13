@@ -15,11 +15,11 @@ export default spec({ page: 'late-forms' }, ({ test }) => {
     const host = await setup(t, { status: initial, list: sessionList(initial) })
     t.expectThat.equal(await host.notifications(), [], 'a run already going at load is the baseline')
 
-    await host.status({ a: { running: true, pendingInteraction: 'approval' } })
-    await host.status({ a: { running: true, pendingInteraction: 'question' } })
-    await host.status({ a: { running: true, pendingInteraction: 'plan-review' } })
-    await host.status({ a: { running: false, pendingInteraction: 'plan-review' } })
-    await host.status({ a: { running: false, pendingInteraction: 'plan-review' } })
+    await host.status({ a: { running: true, pendingInteraction: { kind: 'approval' } } })
+    await host.status({ a: { running: true, pendingInteraction: { kind: 'question' } } })
+    await host.status({ a: { running: true, pendingInteraction: { kind: 'plan-review' } } })
+    await host.status({ a: { running: false, pendingInteraction: { kind: 'plan-review' } } })
+    await host.status({ a: { running: false, pendingInteraction: { kind: 'plan-review' } } })
 
     const rows = await host.notifications()
     t.expectThat.equal(rows.map((row) => row.title), ['Waiting for approval', 'Waiting for an answer', 'Waiting for plan review', 'Task finished'], 'each change has its own title')

@@ -20,11 +20,20 @@ export type AttentionEvent =
   | { kind: 'blocked', sessionId: string, pending: PendingKind }
   | { kind: 'finished', sessionId: string }
 
-/** The host's pending value, read as one of its three kinds. */
+/** Whether a host value names one of the three pending kinds. */
+function isPendingKind(value: unknown): value is PendingKind {
+  return value === 'approval' || value === 'plan-review' || value === 'question'
+}
+
+/**
+ * The host's pending value, read as one of its three kinds. Live hosts carry
+ * `{ kind }`; a bare string and an object without a known kind are older
+ * shapes, whose only blocking meaning was approval.
+ */
 function pendingKindOf(raw: unknown): PendingKind | null {
-  if (raw === 'approval' || raw === 'plan-review' || raw === 'question') return raw
   if (raw === undefined) return null
-  // Earlier hosts carried a bare object here; its only blocking meaning is approval.
+  const kind = typeof raw === 'object' && raw !== null ? (raw as { kind?: unknown }).kind : raw
+  if (isPendingKind(kind)) return kind
   return 'approval'
 }
 

@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-13",
+  "group": "fixes",
+  "order": 0,
+  "external": true,
+  "zh": "修复提示通知窗口把受阻会话一律显示为等待审批的问题，等待计划审阅与等待回答现在按宿主给出的受阻类型分别通知",
+  "en": "Fix the notification window reporting every blocked session as waiting for approval, so plan reviews and questions now raise the notification their own host kind names"
+}

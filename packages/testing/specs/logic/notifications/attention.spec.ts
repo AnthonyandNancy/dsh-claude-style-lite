@@ -25,6 +25,13 @@ test('the host’s three pending kinds stay apart', () => {
   }
 })
 
+test('the live status carries each pending kind in its object', () => {
+  for (const pending of ['approval', 'plan-review', 'question'] as const) {
+    const snapshot = attentionReading(status({ a: { running: true, pendingInteraction: { kind: pending } } }), list(['a'], { a: { running: true } }))
+    expect(snapshot.get('a')).toEqual({ pending: true, pendingKind: pending, running: true, topLevel: true })
+  }
+})
+
 test('a repeated status publishes nothing, and a changed kind publishes once', () => {
   const waiting = readings({ a: { pending: true, pendingKind: 'approval', running: true } })
   expect(attentionEvents(waiting, waiting)).toEqual([])
