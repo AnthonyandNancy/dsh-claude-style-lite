@@ -72,10 +72,15 @@ export type Ui = SchedulerCalls & { [K in HandleName]?: Handles[K] }
 
 /** Run the engine's scheduler over this skin's features, listening to the sources that change what they show. */
 export function installScheduler(ctx: HostContext, ui: Ui, features: HandleName[]) {
-  return installEngineScheduler<HandleName>(ctx, ui, features, {
+  const stop = installEngineScheduler<HandleName>(ctx, ui, features, {
     copyChange: [subscribePrefs, onModelCopyLoaded],
     refresh: [onUsernameLoaded, onHdslLoaded],
     start: loadPrefs,
     systemMotionChanged: refreshMotionAttribute,
   })
+  // The preference read above can install or retire a feature while the engine
+  // is still starting. Its own first index predates that read, so the registry
+  // is indexed once more before the entry uses the scheduler.
+  ui.refreshHandles?.()
+  return stop
 }

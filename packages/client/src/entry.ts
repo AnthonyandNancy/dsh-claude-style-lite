@@ -226,6 +226,7 @@ export function apply(ctx: HostContext) {
       if (handle !== null) delete ui[handle]
       // Retiring goes through even when the feature's own teardown fails too.
       try { stop() } catch (error) { reportError(error) }
+      if (typeof ui.refreshHandles === 'function') ui.refreshHandles()
     }
     if (name === 'footer') retireFooterTakeover()
     if (name === 'composer') retireComposerRestyle()
@@ -241,7 +242,10 @@ export function apply(ctx: HostContext) {
   function install(id: string, handle: HandleName | null, run: () => (() => void) | void) {
     try {
       const stop = run()
-      if (typeof stop === 'function') installed.push({ id, handle, stop })
+      if (typeof stop === 'function') {
+        installed.push({ id, handle, stop })
+        if (typeof ui.refreshHandles === 'function') ui.refreshHandles()
+      }
       return true
     } catch (error) {
       reportFeatureFailure(id, error)
@@ -295,6 +299,7 @@ export function apply(ctx: HostContext) {
       arrived.set(feature.id, run)
       if (!belongs(feature)) return
       install(feature.id, handleName(feature), () => run(ctx, ui))
+      if (typeof ui.refreshHandles === 'function') ui.refreshHandles()
       // The feature's handle joins the next pass, which nothing else asks for.
       if (typeof ui.schedule === 'function') ui.schedule()
     }, (error: unknown) => {
@@ -327,6 +332,7 @@ export function apply(ctx: HostContext) {
     const stop = installed[index].stop
     installed.splice(index, 1)
     delete ui[handle]
+    if (typeof ui.refreshHandles === 'function') ui.refreshHandles()
     // Isolation (D12): a teardown that throws is reported, and the feature
     // stays off for the rest of the generation.
     try {

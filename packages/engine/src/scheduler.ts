@@ -69,6 +69,8 @@ export interface SchedulerCalls {
   schedule?: () => void
   /** Switch one feature off for the rest of this generation. */
   retire: (name: string) => void
+  /** Rebuild the hook indexes after an install, retirement or switch. */
+  refreshHandles?: () => void
 }
 
 /** The registry the scheduler reads: each installed feature's handle under its handle name. */
@@ -120,6 +122,37 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
   /** Whether everything that asked for the pending pass was a batch inside the conversation column. */
   let passContentOnly = false
 
+  /**
+   * The hooks each installed handle carries, in FEATURES order: a batch or an
+   * event walks the entries of one hook instead of checking every feature for
+   * it. A handle that leaves the registry stays out after the next rebuild;
+   * the identity check at each call also covers a handle replaced without one.
+   */
+  type IndexedHook = Exclude<FeatureHook, 'teardown'>
+  const hookNames: IndexedHook[] = ['sync', 'measure', 'owns', 'onPointerDown', 'close', 'onInput', 'onFocusIn', 'reposition', 'measureReposition', 'onCopyChange', 'onKey', 'onActivity']
+  let hookIndex = new Map<IndexedHook, { name: Name, handle: FeatureHandle }[]>()
+  let passSync: { name: Name, handle: FeatureHandle }[] = []
+  let passMeasure: { name: Name, handle: FeatureHandle }[] = []
+
+  /** Rebuild the hook and pass indexes from the handles the registry holds now. */
+  function refreshHandles() {
+    const next = new Map<IndexedHook, { name: Name, handle: FeatureHandle }[]>()
+    for (const hook of hookNames) next.set(hook, [])
+    passSync = []
+    passMeasure = []
+    for (const name of features) {
+      const handle = handleOf(name)
+      if (handle === undefined) continue
+      for (const hook of hookNames) {
+        if (typeof handle[hook] === 'function') next.get(hook)!.push({ name, handle })
+      }
+      if (typeof handle.sync === 'function') passSync.push({ name, handle })
+      if (typeof handle.measure === 'function') passMeasure.push({ name, handle })
+    }
+    hookIndex = next
+  }
+  refreshHandles()
+
   /** The handle a feature registered under `name`, while that feature is installed. */
   function handleOf(name: Name): FeatureHandle | undefined {
     return ui[name]
@@ -132,12 +165,14 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
    * reported where it happened rather than retiring the feature.
    */
   function dispatch<K extends FeatureHook>(hook: K, ...args: Parameters<NonNullable<FeatureHandle[K]>>) {
-    for (const name of features) {
-      const handle = handleOf(name)
-      const call = handle?.[hook] as ((...args: unknown[]) => void) | undefined
-      if (!handle || typeof call !== 'function') continue
+    const indexed = hookIndex.get(hook as IndexedHook)
+    if (indexed === undefined) return
+    for (const entry of indexed) {
+      if (ui[entry.name] !== entry.handle) continue
+      const call = entry.handle[hook] as ((...args: unknown[]) => void) | undefined
+      if (typeof call !== 'function') continue
       try {
-        call.apply(handle, args)
+        call.apply(entry.handle, args)
       } catch (error) {
         reportError(error)
       }
@@ -155,11 +190,12 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
     // A press a feature does not own closes it; features without an `owns`
     // keep their own dismiss route. One feature's close throwing must not keep
     // the others from closing (D12).
-    for (const name of features) {
-      const handle = handleOf(name)
-      if (!handle || typeof handle.owns !== 'function' || typeof handle.close !== 'function') continue
+    for (const entry of hookIndex.get('owns') ?? []) {
+      if (ui[entry.name] !== entry.handle) continue
+      const close = entry.handle.close
+      if (typeof close !== 'function') continue
       try {
-        if (target instanceof Node && !handle.owns(target)) handle.close('outside')
+        if (target instanceof Node && !entry.handle.owns!(target)) close.call(entry.handle, 'outside')
       } catch (error) {
         reportError(error)
       }
@@ -350,9 +386,9 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
         measured = true
         if (stopped) return
         const content = passContentOnly
-        for (const name of features) {
-          if (content && handleOf(name)?.skipOnContentOnly === true) continue
-          runMeasure(name)
+        for (const entry of passMeasure) {
+          if (content && entry.handle.skipOnContentOnly === true) continue
+          runMeasure(entry.name)
         }
       },
       write() {
@@ -373,14 +409,14 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
           // The write phase is running without this frame's read phase (the
           // task was queued after the frame's reads): measure now, before any
           // feature writes.
-          for (const name of features) {
-            if (content && handleOf(name)?.skipOnContentOnly === true) continue
-            runMeasure(name)
+          for (const entry of passMeasure) {
+            if (content && entry.handle.skipOnContentOnly === true) continue
+            runMeasure(entry.name)
           }
         }
-        for (const name of features) {
-          if (content && handleOf(name)?.skipOnContentOnly === true) continue
-          runSync(name)
+        for (const entry of passSync) {
+          if (content && entry.handle.skipOnContentOnly === true) continue
+          runSync(entry.name)
         }
         const currentCard = findComposerCard()
         if (currentCard !== observedCard) {
@@ -393,6 +429,7 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
     })
   }
   ui.schedule = schedule
+  ui.refreshHandles = refreshHandles
 
   // Every change under <body> asks for a pass, the skin's own quiet writes
   // (QUIET_ATTR) aside: the caret motion measures through probes and redraws
@@ -423,6 +460,7 @@ export function installScheduler<Name extends string>(ctx: HostContext, ui: Sche
     // their DOM again, so it is cancelled and every later schedule() refused —
     // a feature's pending promise may still call it.
     stopped = true
+    delete ui.refreshHandles
     if (cancelPass !== null) cancelPass()
     cancelPass = null
     if (cancelViewportFrame !== null) cancelViewportFrame()
