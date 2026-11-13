@@ -38,6 +38,8 @@ export function createMessageFold(requestPass: () => void) {
       requestPass()
     }
   })
+  /** 按行: the bubbles handed to the shared subscription, so a detached one is found after its row left. */
+  const watchedBubbles = new Set<Element>()
   /** The reader's own choice per message. */
   const choices = new WeakMap<Element, FoldChoice>()
   /** The toggle standing under each bubble, while it stands. */
@@ -67,6 +69,7 @@ export function createMessageFold(requestPass: () => void) {
    * comes back is decided again, which subscribes it afresh.
    */
   function release(bubble: Element) {
+    watchedBubbles.delete(bubble)
     sizes.delete(bubble)
     decided.delete(bubble)
     dropToggle(bubble)
@@ -74,9 +77,8 @@ export function createMessageFold(requestPass: () => void) {
 
   /** A row the page dropped leaves its bubble behind; a detached bubble never reports a size again. */
   function prune() {
-    for (const row of rows.all()) {
-      const bubble = bubbles.get(row)
-      if (bubble !== undefined && !bubble.isConnected) release(bubble)
+    for (const bubble of watchedBubbles) {
+      if (!bubble.isConnected) release(bubble)
     }
   }
 
@@ -116,7 +118,8 @@ export function createMessageFold(requestPass: () => void) {
 
   /** Text may arrive after the row; box changes invalidate the earlier height decision. */
   function watchSize(bubble: HTMLElement) {
-    if (sizes.has(bubble)) return
+    if (watchedBubbles.has(bubble)) return
+    watchedBubbles.add(bubble)
     sizes.add(bubble)
   }
 
@@ -288,6 +291,7 @@ export function createMessageFold(requestPass: () => void) {
         bubble.removeAttribute(MESSAGE_FOLD_ATTR)
         dropToggle(bubble)
       }
+      watchedBubbles.clear()
       sizes.stop()
       markedBubbles.release()
       rows.release()
