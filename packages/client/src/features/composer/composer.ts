@@ -3,14 +3,13 @@ import { COMPOSER_ATTACHMENT_RAIL_SELECTOR, COMPOSER_CARD_SELECTOR, COMPOSER_INP
 import { subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
 import { conversationColumn } from '@dsh-claude-style/engine/chat-dom'
-import { COMPOSER_STACK, closestComposerCard, conversationSessionId, conversationViewPreference, findAccessTrigger, findComposerPlaceholder, findComposerRowIn, findPageComposerSeat, findConversationScroller, findConversationSession, findHeroRoot, observeComposerCards, observeComposerPlaceholders } from '@dsh-claude-style/engine/host'
+import { COMPOSER_STACK, closestComposerCard, conversationSessionId, conversationViewPreference, findAccessTrigger, findComposerPlaceholder, findComposerRowIn, findPageComposerSeat, findConversationSession, findHeroRoot, observeComposerCards, observeComposerPlaceholders } from '@dsh-claude-style/engine/host'
 import { composerRestyleRetired, readPrefs } from '../../core/prefs'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureHandle } from '@dsh-claude-style/engine/scheduler'
 import type { FeatureUi } from '../../core/feature'
 import type manifest from './composer.manifest'
 import { closestFrom, setAttributeIfChanged } from '@dsh-claude-style/engine/dom'
-import { writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import { captureComposerCaret, composerComposing, focusKeepingComposerCaret } from '../../shared/composer-caret'
 import { createPlaceholderCopy } from './placeholder-copy'
 import { installWindowBlurMirror } from './selection-mirror'
@@ -445,19 +444,6 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     })
   }
 
-  /**
-   * Keep a reader who was at the transcript's end there while the card
-   * changes height: the card growing with a multi-line draft (or shrinking
-   * back) moves the transcript's bottom edge without any scroll. Within
-   * 150px of the end counts as at the end.
-   */
-  function followTranscript() {
-    const scroller = findConversationScroller()
-    if (scroller === null) return
-    const distance = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
-    if (distance < 150) writeScroll(scroller, scroller.scrollHeight, 'composer')
-  }
-
   ui.composer = {
     sync: syncComposer,
     /** Whether the page shows the hero composer, as of this pass. */
@@ -481,10 +467,9 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
       placeholderCopy.onInput(hero, active)
     },
     onPointerDown: focusEditorOnPress,
-    /** The composer card changed size: the transcript follows it. */
-    reposition(reason: 'viewport' | 'composer') {
+    /** The composer card changed size: measure the card, and leave the transcript to the host's own follow. */
+    reposition(_reason: 'viewport' | 'composer') {
       responsive.measure()
-      if (reason === 'composer') followTranscript()
     }
   }
   readState()

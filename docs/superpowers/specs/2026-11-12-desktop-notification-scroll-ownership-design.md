@@ -396,10 +396,10 @@ export interface Notifier {
 ## 5. 文档与发布
 
 - `docs/INSTALL.md`：说明 Windows 桌面通知需要 PowerShell 5.1；Web 需要站点通知权限；点击切会话依赖自定义协议处理器。
-- `docs/CHANGES-FROM-UPSTREAM.md`：新增“宿主半发送系统通知”与“回到底部按钮按下即结束读者持有”。
+- `docs/CHANGES-FROM-UPSTREAM.md`：新增“宿主半发送系统通知”与“滚动跟随归宿主”。
 - `docs/changes/`：新增一个 `fixes` 片段，写明两处修复。
 - `README.md` / `README.en.md`：更新功能描述，不写决策编号。
-- 需要新 ADR：`D97 桌面通知由宿主发送，身份归插件`。滚动方向由 `D99 宿主回到底部按钮按下即结束读者持有` 取代 D98。两者都约束未来实现，各写一页。
+- 需要新 ADR：`D97 桌面通知由宿主发送，身份归插件`。滚动方向由 `D100 滚动跟随归宿主，皮肤不保存读者的位置` 取代 D99。两者都约束未来实现，各写一页。
 
 ---
 

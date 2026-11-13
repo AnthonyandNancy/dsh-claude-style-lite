@@ -34,7 +34,6 @@
     "packages/engine/src/bus.ts": 3,
     "packages/engine/src/parts.ts": 1,
     "packages/engine/src/scaled-layer.ts": 3,
-    "packages/engine/src/scroll-ease.ts": 1,
-    "packages/engine/src/scroll-owner.ts": 2
+    "packages/engine/src/scroll-ease.ts": 1
   }
 }

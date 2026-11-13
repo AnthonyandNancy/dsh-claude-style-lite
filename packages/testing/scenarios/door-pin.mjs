@@ -26,12 +26,12 @@ const HOST = {
   group: '[data-step-process]', // PROCESS_GROUP_SELECTOR
   body: '[data-step-process-body]', // PROCESS_BODY_SELECTOR
   reasoning: '[data-variant="think"][data-state="running"]', // THINK_ROW_SELECTOR in its running phase
+  followingTail: '[data-chat-following-tail]', // FOLLOWING_TAIL_SELECTOR
 }
 
 /** The skin's own marks (packages/client/src/constants.ts). */
 const SKIN = {
   rolling: '[data-dsh-claude-rolling]', // CHAT_ROLLING_ATTR
-  readerHold: '[data-dsh-claude-reader-hold]', // READER_HOLD_ATTR
 }
 
 /**
@@ -53,7 +53,7 @@ function watch(page) {
         pinned: row !== null && getComputedStyle(row).position === 'sticky',
         overflowing: scroller !== null && scroller.scrollHeight > scroller.clientHeight,
         rolling: document.querySelector(marks.rolling) !== null,
-        reader: scroller !== null && scroller.matches(marks.readerHold),
+        following: document.querySelector(marks.followingTail) !== null,
       })
       if (trace.length < 6000) requestAnimationFrame(sample)
     }
@@ -124,7 +124,7 @@ function doorPinScenario({ check }) {
       // Each door is read on its own frames, from its press to its landing.
       const trace = notes.trace ?? []
       const doorFrames = (door) => door === null || door === undefined ? []
-        : trace.slice(door.from, door.to).filter((frame) => frame.row !== null && frame.overflowing && !frame.reader)
+        : trace.slice(door.from, door.to).filter((frame) => frame.row !== null && frame.overflowing && frame.following)
       const doors = [doorFrames(notes.shut), doorFrames(notes.open)]
       const rolling = doors.flatMap((frames) => frames.filter((frame) => frame.rolling))
       const slipped = rolling.filter((frame) => !frame.pinned)

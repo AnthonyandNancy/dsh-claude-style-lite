@@ -1,40 +1,37 @@
 /**
- * The host's back-to-end button is the reader's answer with the follow: its
- * press ends the reader hold before the host moves the position to the tail, so
- * the growth that follows belongs to the host's follow (D40).
+ * The skin hands the follow back to the host's own control (D40, D100): while the
+ * reader has not moved the page himself, a lost follow is given back by one press
+ * of the host's back-to-end button, and the position is walked to the end first.
  *
  * @capability scroll-ownership
  * @features engine
- * @risk After the reader presses the host's back-to-end button, the next piece of content writes the position the reader left back over the tail and the window jumps to the top.
+ * @risk After a layout change takes the host's follow away, content keeps growing above the tail; or the skin presses the host's button while the reader is reading higher up.
  */
-import { afterEach, expect, test } from 'vitest'
+import { expect, test } from 'vitest'
 import { adoptSkin } from '@dsh-claude-style/engine/skin'
-import { readerHolds, readerScrollPosition } from '@dsh-claude-style/engine/scroll-owner'
-import { CHAT_FLOW_SELECTOR, CONVERSATION_SCROLL_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE } from '@dsh-claude-style/contracts/dom'
-import { TEST_SKIN } from '../../fixtures/vocabulary'
+import { handBackFollow } from '@dsh-claude-style/engine/scroll-owner'
+import { CHAT_FLOW_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE } from '@dsh-claude-style/contracts/dom'
 import { hostElement } from '../../fixtures/host-markup'
+import { ownedPage, wait } from '../../fixtures/scroll-owner'
+import { TEST_SKIN } from '../../fixtures/vocabulary'
 import { createScrollOwnerFixture } from '../../fixtures/scroll-owner'
 
 adoptSkin(TEST_SKIN)
 
-const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
-const cleanups: (() => void)[] = []
-afterEach(() => {
-  while (cleanups.length > 0) cleanups.pop()!()
-})
+const cleanups = ownedPage()
 
 const { scrollBox, join } = createScrollOwnerFixture(cleanups)
 
 /**
- * The host's frame around the follow button: the scroller holds the flow
- * column, and the button stands beside the frame, outside the scroller, so a
- * press on it reaches no scroll intent the owner hears (engine/chat-dom.ts's
- * findFollowTailButton). Its click is the host's returnToBottom: the follow
- * mark comes on and the position goes to the tail.
+ * The host's frame around the follow button: the scroller holds the flow column,
+ * and the button stands beside the frame, outside the scroller, so it is the
+ * shape `findFollowTailButton` reads (engine/chat-dom.ts). Its click is the
+ * host's returnToBottom: the follow mark comes on and the position goes to the
+ * tail.
  */
 function followFrame() {
   join()
-  const scroller = scrollBox(CONVERSATION_SCROLL_SELECTOR)
+  const scroller = scrollBox()
   const column = hostElement(CHAT_FLOW_SELECTOR)
   column.style.height = '2000px'
   scroller.replaceChildren(column)
@@ -54,67 +51,38 @@ function followFrame() {
   outer.append(frame, slot)
   document.body.append(outer)
   cleanups.push(() => outer.remove())
-  return { scroller, column, button, presses }
+  return { scroller, button, presses }
 }
 
-/** The host's own follow pinning the end as content grows. */
-function pinTail(scroller: HTMLElement) {
-  scroller.scrollTop = scroller.scrollHeight
-}
-
-test('the host back-to-end button ends the reader hold and keeps the position at the tail', async () => {
-  const { scroller, button, presses } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  scroller.scrollTop = 0
-  expect(readerHolds(scroller)).toBe(true)
-  expect(readerScrollPosition(scroller)).toBe(0)
-  button.click()
+test('a lost follow is handed back by one press of the host button', async () => {
+  const { button, presses } = followFrame()
+  handBackFollow('follow')
+  await wait(1200)
   expect(presses).toHaveLength(1)
-  expect(readerHolds(scroller)).toBe(false)
-  expect(readerScrollPosition(scroller)).toBeNull()
-  expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
-  await wait(50)
+  expect(button.isConnected).toBe(true)
+})
+
+test('a reader who took the position himself gets no press', async () => {
+  const { presses } = followFrame()
+  handBackFollow('follow', { stillWanted: () => false })
+  await wait(1200)
+  expect(presses).toHaveLength(0)
+})
+
+test('the hand-back walks the position to the end before it presses', async () => {
+  const { scroller, presses } = followFrame()
+  scroller.scrollTop = 0
+  handBackFollow('follow')
+  await wait(1200)
+  expect(presses).toHaveLength(1)
   expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
 })
 
-test('content growing after the host button press stays at the tail the host pins', async () => {
-  const { scroller, column, button, presses } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  scroller.scrollTop = 0
-  button.click()
+test('a settle callback runs once the round is over', async () => {
+  const { presses } = followFrame()
+  let settled = 0
+  handBackFollow('follow', { onSettled: () => { settled += 1 } })
+  await wait(1200)
   expect(presses).toHaveLength(1)
-  const piece = document.createElement('div')
-  piece.style.height = '600px'
-  column.append(piece)
-  pinTail(scroller)
-  await wait(50)
-  expect(presses).toHaveLength(1)
-  expect(readerHolds(scroller)).toBe(false)
-  expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
-})
-
-test('a keyboard activation of the host button ends the reader hold the same way', async () => {
-  const { scroller, button } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  scroller.scrollTop = 0
-  expect(readerHolds(scroller)).toBe(true)
-  button.focus()
-  button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
-  button.click()
-  expect(readerHolds(scroller)).toBe(false)
-  expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
-})
-
-test('the reader who scrolls up again after the button press holds the new position', async () => {
-  const { scroller, button } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  scroller.scrollTop = 0
-  button.click()
-  expect(readerHolds(scroller)).toBe(false)
-  const scrolled = new Promise(resolve => scroller.addEventListener('scroll', resolve, { once: true }))
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  scroller.scrollTop = 200
-  await scrolled
-  expect(readerHolds(scroller)).toBe(true)
-  expect(readerScrollPosition(scroller)).toBe(200)
+  expect(settled).toBe(1)
 })

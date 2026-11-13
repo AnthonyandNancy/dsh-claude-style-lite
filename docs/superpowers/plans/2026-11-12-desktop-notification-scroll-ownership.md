@@ -900,7 +900,7 @@ git commit -m "fix: 回到底部按钮按下即结束读者持有"
 
 **Files:**
 - Add: `docs/adr/D97-host-delivers-desktop-notifications.md`
-- Add: `docs/adr/D99-back-to-bottom-ends-reader-hold.md`
+- Add: `docs/adr/D100-scroll-follow-belongs-to-host.md`
 - Modify: `docs/adr/README.md`
 - Add: `docs/changes/desktop-notifications-and-scroll-return.json`
 - Modify: `docs/INSTALL.md`
@@ -910,7 +910,7 @@ git commit -m "fix: 回到底部按钮按下即结束读者持有"
 
 - [ ] **Step 1: Write the two ADRs**
 
-Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D99 records that the host back-to-end button ends the reader hold before the host writes the tail, and it carries 「取代：D98」.
+Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D99 recorded that the host back-to-end button ends the reader hold before the host writes the tail; D100 取代 it, giving the follow to the host alone.
 
 - [ ] **Step 2: Regenerate the ADR index**
 

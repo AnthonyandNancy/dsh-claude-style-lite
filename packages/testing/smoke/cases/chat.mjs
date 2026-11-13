@@ -115,13 +115,13 @@ export default {
       Number.isFinite(shrink.before) && Number.isFinite(shrink.after) && shrink.animations === 0 &&
         shrink.after <= shrink.before + bound('followSlideRowDriftPx'),
       JSON.stringify(shrink))
-    // A reader holding the conversation keeps the position the host's own pin
-    // would take from him: the growth is given back and nothing slides
-    // (chat-follow.ts's holdGrowth).
-    const hold = follow.hold || {}
-    check('a reader holding the conversation keeps the growth the host\'s pin pushed up, and nothing slides',
-      Number.isFinite(hold.gap) && hold.gap >= bound('followHoldGrowthPx') && hold.slides === 0,
-      JSON.stringify(hold))
+    // A reader reading higher up keeps his place: the host's follow is off, so
+    // a growth lands below him and nothing slides (D100).
+    const readerGrowth = follow.readerGrowth || {}
+    check('a reader reading higher up keeps his place when content grows, and nothing slides',
+      Number.isFinite(readerGrowth.grew) && readerGrowth.grew >= bound('followReaderGrowthPx') &&
+        readerGrowth.before === readerGrowth.after && readerGrowth.slides === 0,
+      JSON.stringify(readerGrowth))
   },
   'chat-fold'(r) {
     basicChecks(r)

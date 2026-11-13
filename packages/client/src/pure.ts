@@ -12,6 +12,7 @@ export type { FileHunk, FileReadCard, FileRowState } from './features/chat-files
 export { byDocumentOrder, createFileMerge, mergeViews, rowCarrier } from './features/chat-files/file-row-merge'
 export type { FileMergeRow } from './features/chat-files/file-row-merge'
 export { foldExpandedBody } from './features/chat-fold/fold-glide-parts'
+export { CATCH_UP_GAP_PX, createChatProcessFollow } from './features/chat-follow/process-follow'
 export { createRowHeightCache, ROW_HEIGHT_CACHE_LIMIT, rowHeightKey } from './features/row-skip/row-heights'
 export { appendRevealSnapshot, revealEntryAt, revealTextSlice } from './features/chat-reveal/reveal-text'
 export { createRevealScanner } from './features/chat-reveal/reveal-diff'

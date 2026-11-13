@@ -828,7 +828,7 @@
       "a structural shrink ends the running offset instead of pushing the column down once": [
         0
       ],
-      "a reader holding the conversation keeps the growth the host's pin pushed up, and nothing slides": [
+      "a reader reading higher up keeps his place when content grows, and nothing slides": [
         0
       ],
       "a thinking row is never pressed by the skin, and stays folded as the host drew it": [

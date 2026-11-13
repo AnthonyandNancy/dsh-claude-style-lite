@@ -92,9 +92,9 @@
       "reason": "How many frames at the end of a recorded walk have to read the same position, within followAtEndPx, for the walk to count as finished rather than interrupted: the recorder stops on this many quiet frames, so the check asserts the stop it made was the walk arriving."
     },
     {
-      "name": "followHoldGrowthPx",
+      "name": "followReaderGrowthPx",
       "value": 100,
-      "reason": "The growth a reader holding the conversation keeps. The probe presses on the column, grows it by a 120px block and pins the end the way the host's own follow does, so the position put back under him reads most of that block; a hold the pin won reads the end, where the pin left it."
+      "reason": "The growth that lands below a reader reading higher up. The probe wheels the conversation away from its end, turns the host's follow off, and grows the column by a 120px block: a follow still writing the end reads none of it, and a growth that lands below the reader reads most of it."
     },
     {
       "name": "answerAnchorTopPx",

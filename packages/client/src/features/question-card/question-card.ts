@@ -1,8 +1,7 @@
-import { CHAIN_OVERLAY_FALLBACK_ATTRIBUTE, CHAT_FLOW_SLOT_SELECTOR, COMPOSER_SELECTOR, CONVERSATION_CONTENT_SELECTOR, CONVERSATION_SCROLL_SELECTOR, QUESTION_CARD_SELECTOR } from '@dsh-claude-style/contracts/dom'
+import { CHAIN_OVERLAY_FALLBACK_ATTRIBUTE, CHAT_FLOW_SLOT_SELECTOR, COMPOSER_SELECTOR, CONVERSATION_CONTENT_SELECTOR, QUESTION_CARD_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { observeMatches } from '@dsh-claude-style/engine/bus'
 import { buildElement, setAttributeIfChanged, writeTextInPlace } from '@dsh-claude-style/engine/dom'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
-import { writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import { createCopy } from '../../core/i18n'
 import { skipsOnContentOnly } from '../../core/pass-scope'
 import type { FeatureUi } from '../../core/feature'
@@ -109,8 +108,6 @@ export function createQuestionCards() {
     // A session switch can publish the card before its transcript. That pass
     // leaves the host layout alone; the next pass sees the completed surface.
     if (content === null || flow === null || flow.parentElement === null || seat === null) return null
-    const scroller = content.querySelector<HTMLElement>(CONVERSATION_SCROLL_SELECTOR)
-    const followsTail = scroller !== null && scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 150
     const mount = buildElement('div', FLOW_ITEM_CLASS)
     frame.setAttribute(RELOCATED_ATTR, '')
     surface.setAttribute(SURFACE_ATTR, '')
@@ -118,7 +115,6 @@ export function createQuestionCards() {
     mount.append(surface)
     placements.set(frame, { surface, mount, seat })
     showComposer(seat)
-    if (followsTail && scroller !== null) writeScroll(scroller, scroller.scrollHeight, 'composer')
     return placements.get(frame)!
   }
 

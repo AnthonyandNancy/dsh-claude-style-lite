@@ -172,14 +172,15 @@
       })
       r.chatFollow.returnToBottom = { followingWasOn: followingWasOn, gap: await returnGap() }
       // The capped body's catch-up is walked in on a curve, not written in one
-      // frame (scroll-ease.ts): grow the content well past the catch-up
-      // threshold and record every frame of the walk out of it.
+      // frame (scroll-ease.ts): put the body at its own end, let the follower
+      // read that, then grow the content well past the catch-up threshold and
+      // record every frame of the walk out of it (process-follow.ts, D100).
       if (cappedBody !== null) {
         var cappedContent = cappedBody.querySelector('[data-step-process-content]')
         var bodyGap = function () {
           return Math.round(cappedBody.scrollHeight - cappedBody.clientHeight - cappedBody.scrollTop)
         }
-        cappedBody.scrollTop = 0
+        cappedBody.scrollTop = cappedBody.scrollHeight
         await probe.settle()
         if (cappedContent !== null) cappedContent.style.height = '900px'
         r.chatFollow.catchUp = await recordWalk(bodyGap, bodyWalking)
@@ -295,36 +296,29 @@
       }
       shrinking.remove()
       await probe.settle()
-      // A reader holding the conversation himself (#230). The host's own follow
-      // pins the end on every growth while its mark stands, and a finger that is
-      // pressed on the screen sends no scroll of its own for the host to stand
-      // down on: the growth the pin pushes up is given back to him where he
-      // holds it, and nothing slides. The shape is the case's: the finger
-      // arrives, the content grows, the host pins.
-      var touchAt = function (type, y) {
-        var contact = new Touch({ identifier: 5, target: followColumn, clientX: 5, clientY: y })
-        followColumn.dispatchEvent(new TouchEvent(type, {
-          bubbles: true, cancelable: true, composed: true,
-          touches: type === 'touchend' ? [] : [contact],
-          targetTouches: type === 'touchend' ? [] : [contact],
-          changedTouches: [contact],
-        }))
-      }
-      var holdBlock = document.createElement('div')
-      holdBlock.style.height = '120px'
-      touchAt('touchstart', 300)
-      followColumn.insertBefore(holdBlock, runningRow)
+      // A reader reading higher up (D100). His own wheel is what stands the
+      // host's follow down; once it is off, a growth lands below what he reads
+      // and the position stays where he left it. The shape is the case's: the
+      // wheel, the growth, the host writing nothing.
       followScroller.scrollTop = followScroller.scrollHeight
-      await probe.frame()
-      await probe.frame()
-      r.chatFollow.hold = { gap: endGap(), slides: followColumn.getAnimations().length }
-      // His own way back: a drag toward the end, lifted there, hands the follow
-      // back without another gesture (scroll-owner.ts, releaseAtTail).
-      touchAt('touchmove', 260)
-      followScroller.scrollTop = followScroller.scrollHeight
-      touchAt('touchend', 260)
       await probe.settle()
-      holdBlock.remove()
+      followScroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -400 }))
+      followScroller.scrollTop = Math.max(0, followScroller.scrollHeight - followScroller.clientHeight - 400)
+      await probe.settle()
+      var readerTop = followScroller.scrollTop
+      var readerGap = endGap()
+      followColumn.parentElement.removeAttribute('data-chat-following-tail')
+      var readerBlock = document.createElement('div')
+      readerBlock.style.height = '120px'
+      followColumn.insertBefore(readerBlock, runningRow)
+      await probe.settle()
+      r.chatFollow.readerGrowth = {
+        before: readerTop,
+        after: followScroller.scrollTop,
+        grew: endGap() - readerGap,
+        slides: followColumn.getAnimations().length,
+      }
+      readerBlock.remove()
       await probe.settle()
       streamingMark.remove()
       slideBlock.remove()

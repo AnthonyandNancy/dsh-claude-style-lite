@@ -1,7 +1,23 @@
+import { afterEach } from 'vitest'
 import { joinScrollOwner, stopScrollFor } from '@dsh-claude-style/engine/scroll-owner'
 import { CONVERSATION_SCROLL_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { hostElement } from './host-markup'
 import { MOTION_ATTR } from './vocabulary'
+
+/** A promise that settles once the page has had `milliseconds` to run. */
+export const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+/**
+ * The page's own cleanups for one spec: every fixture registers what it put on
+ * the page, and they are taken off in the order they were made.
+ */
+export function ownedPage() {
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    while (cleanups.length > 0) cleanups.pop()!()
+  })
+  return cleanups
+}
 
 /** Shared DOM, installation and motion fixtures for the scroll-owner mechanism specs. */
 export function createScrollOwnerFixture(cleanups: (() => void)[]) {

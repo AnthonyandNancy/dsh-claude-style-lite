@@ -135,9 +135,6 @@ export const CHAT_FOLLOW_ATTR = 'data-dsh-claude-chat-follow'
 /** On the flow column while a door rolls (features/chat-follow/chat-follow.ts). A door's height change reads to the host as a reader who left the tail and takes its own data-chat-following-tail away (D3), the gate the waiting line's pin waits for (features/chat-wait/chat-wait.css).
  * This mark stands for that gate until the fold hands the follow back. */
 export const FOLLOW_HOLD_ATTR = 'data-dsh-claude-follow-hold'
-/** On a container the reader has taken over with his own scrolling (packages/engine/src/scroll-owner.ts), until he comes back to its end. The waiting line's pin (features/chat-wait/chat-wait.css) reads it.
- * A pin stands only while the skin's own follow moves the position, never over content the reader scrolled back to. */
-export const READER_HOLD_ATTR = 'data-dsh-claude-reader-hold'
 /** Present while the ported token reveal is installed (features/chat-reveal/): its step rules hang off it, and switching the feature off leaves the page with no trace of it. */
 export const CHAT_REVEAL_ATTR = 'data-dsh-claude-chat-reveal'
 /** The reveal's fade: how many alpha steps a character walks through, the faintest of them, the prefix of each step's highlight name and the custom property an element publishes its own colour to.

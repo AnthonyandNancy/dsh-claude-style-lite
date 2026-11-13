@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-13",
+  "group": "fixes",
+  "order": 0,
+  "external": true,
+  "zh": "修复点回到底部后新内容到达时对话跳回旧位置的问题",
+  "en": "Keep the transcript where the host's own follow puts it after the reader returns to the bottom"
+}

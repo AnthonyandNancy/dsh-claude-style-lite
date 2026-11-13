@@ -1,4 +1,4 @@
-import { ACCOUNT_MENU_ATTR, HANDOFF_ATTR, HERO_MENU_ATTR, HOLDS_ATTR, MORE_MENU_ATTR, PACKAGE_NAME, PART_ATTR, QUIET_ATTR, READER_HOLD_ATTR } from './constants'
+import { ACCOUNT_MENU_ATTR, HANDOFF_ATTR, HERO_MENU_ATTR, HOLDS_ATTR, MORE_MENU_ATTR, PACKAGE_NAME, PART_ATTR, QUIET_ATTR } from './constants'
 import { closeHostSeats } from '@dsh-claude-style/engine/host'
 import { installParts } from '@dsh-claude-style/engine/parts'
 import { installPageScale } from './shared/page-scale'
@@ -33,7 +33,6 @@ import { BUILD_ID } from 'virtual:dsh-claude-style/generated'
 adoptSkin({
   packageName: PACKAGE_NAME,
   quiet: QUIET_ATTR,
-  readerHold: READER_HOLD_ATTR,
   motionReduced,
 })
 

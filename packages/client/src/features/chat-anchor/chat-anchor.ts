@@ -2,7 +2,7 @@ import { CHAT_ANSWER_ROW_SELECTOR, FOLLOW_THRESHOLD_PX, STREAMING_ATTRIBUTE, STR
 import { observeSize, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
 import { conversationColumn, conversationScroller } from '@dsh-claude-style/engine/chat-dom'
-import { holdReader, joinScrollOwner, readerHolds, readerMovedSince, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
+import { joinScrollOwner, readerMovedSince, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureUi } from '../../core/feature'
 import type manifest from './chat-anchor.manifest'
@@ -20,9 +20,10 @@ import type manifest from './chat-anchor.manifest'
  * carries no such mark, and a settled one is no moment to move anybody.
  *
  * The move is the owner's: a jump, the way the turn navigator's walk to a turn
- * the reader picked is, and a hold after it, so the following sources and the
- * stream slide leave the position where the answer begins (D40, D85). A reader
- * away from the tail is not moved at all. One anchor per answer row.
+ * the reader picked is. The host reads the write as the reader's own movement
+ * and turns its follow off, so the position stays where the answer begins
+ * (D40, D85). A reader away from the tail is not moved at all. One anchor per
+ * answer row.
  */
 export function install(_ctx: HostContext, _ui: FeatureUi<typeof manifest>) {
   const leaveOwner = joinScrollOwner()
@@ -76,7 +77,7 @@ export function install(_ctx: HostContext, _ui: FeatureUi<typeof manifest>) {
     const scroller = conversationScroller()
     if (row === null || scroller === null || !row.isConnected) return stopFollow()
     if (row.querySelector(STREAMING_SELECTOR) === null) return stopFollow()
-    if (!readerHolds(scroller) || readerMovedSince(anchoredAt)) return stopFollow()
+    if (readerMovedSince(anchoredAt)) return stopFollow()
     const top = scroller.scrollTop + row.getBoundingClientRect().top - scroller.getBoundingClientRect().top
     writeScroll(scroller, Math.max(0, Math.min(top, scroller.scrollHeight - scroller.clientHeight)), 'jump')
   }
@@ -105,9 +106,10 @@ export function install(_ctx: HostContext, _ui: FeatureUi<typeof manifest>) {
       plan = null
       const scroller = conversationScroller()
       if (intent === null || scroller === null) return
+      // The write is the reader's own place: the host reads it as his movement
+      // and turns its own follow off, so nothing stands beside it (D100).
       anchored = intent.row
       anchoredAt = performance.now()
-      holdReader(scroller)
       writeScroll(scroller, intent.top, 'jump')
       stopFollow()
       stopGrowth = observeSize(intent.row, grow, { afterHost: true })

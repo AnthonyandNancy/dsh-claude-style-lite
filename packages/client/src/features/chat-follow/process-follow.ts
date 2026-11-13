@@ -1,11 +1,12 @@
 import { observeMatches, observeSize, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { PROCESS_BODY_SELECTOR, PROCESS_CONTENT_SELECTOR, PROCESS_EXPANDED_MODE_ATTRIBUTE } from '@dsh-claude-style/contracts/dom'
-import { easeScrollToEndFor, joinScrollOwner, readerHolds, releaseReader, stopScrollFor } from '@dsh-claude-style/engine/scroll-owner'
+import { easeScrollToEndFor, joinScrollOwner, stopScrollFor } from '@dsh-claude-style/engine/scroll-owner'
 
 /**
  * Keep a capped process body at its end while content streams. Beyond the
  * threshold the scroll owner eases past the host's slow smooth scroll (D40);
- * a reader-scrolled body stays held until they return to its end.
+ * the body follows only while its own last reading was its end, so a reader who
+ * scrolled it away keeps his place (D100).
  */
 /** Gap past which the catch-up replaces the host's smooth scroll. */
 export const CATCH_UP_GAP_PX = 40
@@ -33,13 +34,29 @@ export function createChatProcessFollow() {
   /** How far this body still is from its own end. */
   const gapOf = (body: Element) => body.scrollHeight - body.clientHeight - body.scrollTop
 
-  /** Past the threshold, walk the body's position to its end on a curve. */
+  /** Whether each body was at its own end when it was last read. */
+  const atEnd = new WeakMap<Element, boolean>()
+
+  /** Past the threshold and at its end before this growth, walk the body's position to its end on a curve. */
   const catchUp = (body: Element) => {
-    if (readerHolds(body)) return
     if (!followable(body)) return
-    if (gapOf(body) <= CATCH_UP_GAP_PX) return
+    const gap = gapOf(body)
+    const wasAtEnd = atEnd.get(body) ?? gap <= CATCH_UP_GAP_PX
+    atEnd.set(body, gap <= CATCH_UP_GAP_PX)
+    if (!wasAtEnd || gap <= CATCH_UP_GAP_PX) return
     // Ease rather than jump; reduced motion writes the position directly.
     easeScrollToEndFor(body, 'process', () => !stopped && followable(body))
+  }
+
+  /**
+   * The reader's own reading of a body: away from its end, the next growth is
+   * his to keep; back at the end, the body follows again from the growth after.
+   * The host reads the outer scroller the same way (use-scroll-follow.ts); a
+   * capped body has no follow button of its own, so this reading stands for it.
+   */
+  const onBodyScroll = (event: Event) => {
+    const body = event.currentTarget
+    if (body instanceof Element) atEnd.set(body, gapOf(body) <= CATCH_UP_GAP_PX)
   }
 
   // Every content change is judged once. Watching the body itself matters
@@ -63,6 +80,7 @@ export function createChatProcessFollow() {
     let entry = watched.get(body)
     if (entry === undefined) {
       entry = { content: null, stopBody: observeSize(body, onResize), stopContent: null }
+      body.addEventListener('scroll', onBodyScroll, { passive: true })
       watched.set(body, entry)
     } else if (entry.content === content) {
       return
@@ -83,12 +101,14 @@ export function createChatProcessFollow() {
     for (const body of present) syncBody(body)
     for (const [body, entry] of [...watched]) {
       if (present.has(body)) {
-        // A body that was folded and is open again should not carry the last hold over.
-        if (body.hasAttribute('hidden')) releaseReader(body)
+        // A body that was folded and is open again is read afresh: the place it
+        // shows is not a reading the reader made.
+        if (body.hasAttribute('hidden')) atEnd.delete(body)
         continue
       }
       watched.delete(body)
-      releaseReader(body)
+      body.removeEventListener('scroll', onBodyScroll)
+      atEnd.delete(body)
       entry.stopBody()
       if (entry.stopContent !== null) entry.stopContent()
       // A body leaving the page takes its ease with it; the loop would drop
@@ -131,6 +151,8 @@ export function createChatProcessFollow() {
     stopWatch()
     bodies.release()
     for (const [body, entry] of watched) {
+      body.removeEventListener('scroll', onBodyScroll)
+      atEnd.delete(body)
       entry.stopBody()
       if (entry.stopContent !== null) entry.stopContent()
       stopScrollFor(body, 'process')

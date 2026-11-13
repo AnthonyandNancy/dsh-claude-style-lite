@@ -3,7 +3,7 @@
   "files": {
     "packages/testing/scenarios/appearance.mjs": 1,
     "packages/testing/scenarios/custom-brand.mjs": 5,
-    "packages/testing/scenarios/door-pin.mjs": 2,
+    "packages/testing/scenarios/door-pin.mjs": 1,
     "packages/testing/scenarios/ds-bot.mjs": 6,
     "packages/testing/scenarios/file-merge.mjs": 6,
     "packages/testing/scenarios/importance-audit.mjs": 17,
@@ -12,7 +12,6 @@
     "packages/testing/scenarios/motion.mjs": 15,
     "packages/testing/probe.mjs": 6,
     "packages/testing/scenarios/process-summary.mjs": 3,
-    "packages/testing/scenarios/reader-scroll.mjs": 1,
     "packages/testing/scenarios/remote-settings.mjs": 1,
     "packages/testing/scenarios.mjs": 3,
     "packages/testing/shoot.mjs": 4,

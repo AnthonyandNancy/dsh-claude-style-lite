@@ -8,7 +8,7 @@ import { CHAT_TURN_ATTRIBUTE, PEER_SHEET_SELECTOR } from '@dsh-claude-style/cont
 import { buildElement, closestFrom } from '@dsh-claude-style/engine/dom'
 import { POPOVER_CLOSE_DELAY, closeOtherPopovers, createHoverIntent, registerPopover, unregisterPopover } from '../../shared/popover'
 import { inPageBox } from '../../shared/page-zoom'
-import { easeScrollFor, holdReader, scrollPositionFor, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
+import { easeScrollFor, scrollPositionFor, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import { motionMs } from '../../shared/motion'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureUi } from '../../core/feature'
@@ -481,10 +481,10 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   /** Press the host's mark for one turn, glide to where it lands, and line the landed turn. */
   function jumpTo(turn: number) {
     host.jumpToTurn(turn, (scroller, before) => {
-      // A jump is the reader choosing where to read: the follow stands down the
-      // way it does after his own wheel, or the next burst of output drags him
-      // back to the end. Landing at the end releases the hold again.
-      if (scroller !== null) holdReader(scroller)
+      // The host's own navigation turns its follow off before it lands
+      // (use-chat-navigation.ts's pauseFollowing), so the next burst of output
+      // cannot drag the reader back to the end (D100). Landing at the end turns
+      // it back on from the host's own scroll reading.
       glideLanding(scroller, before)
       landing = { turn, since: Date.now() }
       // A loaded turn has landed by now; one outside the window lands when

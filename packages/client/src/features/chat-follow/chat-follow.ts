@@ -1,4 +1,4 @@
-import { CHAT_FOLLOW_ATTR, FOLLOW_HOLD_ATTR, READER_HOLD_ATTR } from '../../constants'
+import { CHAT_FOLLOW_ATTR, FOLLOW_HOLD_ATTR } from '../../constants'
 import { observeMarker, observeMatches, observeSize, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
 import { motionReduced } from '../../core/prefs'
@@ -9,7 +9,7 @@ import { createStamp } from '@dsh-claude-style/engine/dom'
 import { motionEase, motionEaseAt, motionMs } from '../../shared/motion'
 import { inPageBox, pageViewport } from '../../shared/page-zoom'
 import { observeComposerCards } from '@dsh-claude-style/engine/host'
-import { SCROLL_EASE_LEAD_PX, handBackFollow, joinScrollOwner, readerHolds, readerScrollPosition, submissionHolds, writeScroll } from '@dsh-claude-style/engine/scroll-owner'
+import { SCROLL_EASE_LEAD_PX, handBackFollow, joinScrollOwner, navigationMovedSince, readerMovedSince, submissionHolds } from '@dsh-claude-style/engine/scroll-owner'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { FeatureUi } from '../../core/feature'
 import type manifest from './chat-follow.manifest'
@@ -155,14 +155,7 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
   let structureSeen = false
   let guardSeen = false
 
-  /** Whether the reader is reading up there right now (the owner's hold on the conversation). */
-  const readerAway = () => {
-    const scroller = conversationScroller()
-    return scroller !== null && readerHolds(scroller)
-  }
-
-  /**
-   * Whether work counts as in progress right now: the mark the host writes
+  /** Whether work counts as in progress right now: the mark the host writes
    * while it streams, read inside the message column the way the slide reads it
    * (a document query made after the host's own write forces a style pass over
    * the whole page), or the reader's own activity inside the grace window.
@@ -191,6 +184,8 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
   let slide: { column: Animation, counters: Animation[], from: number, duration: number } | null = null
   /** The column the hold mark (FOLLOW_HOLD_ATTR) is on, or null while no door holds it. */
   let heldColumn: HTMLElement | null = null
+  /** When the host last said it follows the end, or 0 before its first word: the clock a hand-back is measured against. */
+  let followSeenAt = 0
   /** Whether the size subscription's first report for the current column has been taken as its baseline. */
   let slideArmed = false
   /** When the last growth arrived, and the smoothed gap before it: the pace a slide is timed to (D95). */
@@ -235,7 +230,6 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     // landing — would be moved by a slide's offset.
     if (submissionHeld()) return false
     if (!streaming()) return false
-    if (readerAway()) return false
     if (foldBusy()) return false
     // The host's own mark that it follows the end, an attribute read: without
     // it this frame's growth was not pinned, and sliding would move content
@@ -251,13 +245,16 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     slide = null
   }
 
-  /** Whether the conversation scroller currently stands at or follows its tail. */
+  /** Whether the conversation scroller stands at or follows its tail, and when that was last true. */
   const noteTailIfNear = (scroller: Element | null) => {
-    if (seenAtTail || scroller === null) return
-    if (scroller.querySelector(FOLLOWING_TAIL_SELECTOR) !== null
-      || scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= FOLLOW_THRESHOLD_PX) {
-      seenAtTail = true
-    }
+    if (scroller === null) return
+    const atTail = scroller.querySelector(FOLLOWING_TAIL_SELECTOR) !== null
+      || scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop <= FOLLOW_THRESHOLD_PX
+    // The host's word for its follow, taken as it stands: a hand-back is
+    // measured against the last moment this was true (ensure).
+    if (atTail) followSeenAt = performance.now()
+    if (seenAtTail || !atTail) return
+    seenAtTail = true
   }
 
   /** The distance the running slide still carries, off its own clock and curve: no style is read. */
@@ -420,7 +417,7 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
    * and the tail is still followed, so the pin's mark stands through the door.
    */
   const holdCheck = () => {
-    if (foldBusy() && !readerAway()) {
+    if (foldBusy()) {
       slideSync()
       if (slideColumn !== null) markHold(slideColumn)
       return
@@ -435,29 +432,9 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
   }
 
   /**
-   * Put this frame's growth back under a reader who holds the conversation.
-   *
-   * The host's own follow pins the end on every growth while its mark stands,
-   * and a finger pressed on the screen sends no scroll of its own: nothing puts
-   * the host into its sampling window, so nothing stands its pin down, and the
-   * position the reader held moves one growth per burst (#230). The slide is
-   * refused while he holds, so this is the one writer left for it. A position
-   * away from the end is the reader's own and stays where he put it.
-   */
-  const holdGrowth = (column: HTMLElement) => {
-    const scroller = column.closest(CONVERSATION_SCROLL_SELECTOR)
-    if (scroller === null || column.closest(FOLLOWING_TAIL_SELECTOR) === null) return
-    if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) return
-    if (foldBusy()) return
-    // The host has already written the new tail. Restore the position the
-    // reader chose, which is the old tail only for a touch held there (#230).
-    writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')
-  }
-
-  /**
    * The column's own box is what grows while text streams, and a resize is the
-   * moment the host has just pinned the end: read the growth this frame
-   * brought and slide it, or give it back to a reader holding it.
+   * moment the host has just pinned the end: read the growth this frame brought
+   * and slide it when the host's follow is the writer that put it up.
    */
   const onSlideResize = (entries: ResizeObserverEntry[]) => {
     const column = slideColumn
@@ -503,28 +480,27 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     slideScrollTop = scrollTop
     holdCheck()
     if (column === null || grew === 0) return
-    if (readerAway()) {
-      holdGrowth(column)
-      if (scroller !== null) slideScrollTop = scroller.scrollTop
-      return
-    }
     if (!slideWanted(column)) return
     if (moved < 0) stopSlide()
     if (moved > 0) startSlide(column, scroller, moved)
   }
 
   /**
-   * Hand this round's follow back. Three gates have to open: the position,
-   * the reader's intent and a fold glide in flight.
+   * Hand this round's follow back. Three gates have to open: the position, the
+   * reader's own move since the host last followed, and a fold glide in flight.
    * @param attempt - how many times this round has been put off by a fold glide.
    */
   const ensure = (attempt?: number) => {
-    if (stopped || readerAway()) return
+    if (stopped) return
     const scroller = conversationScroller()
     if (scroller === null) return
     noteTailIfNear(scroller)
     // A conversation opened onto a saved historical position has never followed the tail.
     if (!seenAtTail) return
+    // The reader moved the page himself since the host last followed, or a
+    // feature took it to a place he picked: where he reads is his answer, and
+    // the skin does not press the host's button.
+    if (readerMovedSince(followSeenAt) || navigationMovedSince(followSeenAt)) return
     // More than a screen off the end is the reader reading higher up, not a follow that fell one step behind.
     if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > scroller.clientHeight) return
     // A fold glide is moving the height, and the position is its business until it lands.
@@ -542,8 +518,8 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     if (now - lastEnsureAt < FOLLOW_MIN_INTERVAL_MS) return
     lastEnsureAt = now
     // A hand-back in flight outlives the frame it began in, so it is told the
-    // feature is gone rather than only that the reader is still up there.
-    handBackFollow('follow', { stillWanted: () => !stopped && !readerAway() })
+    // feature is gone, and told the reader again, before every look it takes.
+    handBackFollow('follow', { stillWanted: () => !stopped && !readerMovedSince(followSeenAt) && !navigationMovedSince(followSeenAt) })
   }
 
   /** A batch of mutations is settled: decide whether to act. */
@@ -581,15 +557,18 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
   const onRecords = (records: MutationRecord[]) => {
     for (const record of records) {
       if (record.type === 'attributes') {
-        // The reader took the conversation over: a slide still carrying an
-        // offset would leave what he scrolls to off its place.
-        if (record.attributeName === READER_HOLD_ATTR) {
-          if (record.target instanceof Element && record.target.hasAttribute(READER_HOLD_ATTR)) stopSlide()
-          continue
-        }
-        // The follow went from present to absent: the host just turned it off.
+        // The host's follow came on: that is the clock a hand-back is measured
+        // against, and the moment the tail was last the host's to write.
         if (record.attributeName === FOLLOWING_TAIL_ATTRIBUTE) {
-          if (record.target instanceof Element && !record.target.hasAttribute(FOLLOWING_TAIL_ATTRIBUTE)) guardSeen = true
+          const following = record.target instanceof Element && record.target.hasAttribute(FOLLOWING_TAIL_ATTRIBUTE)
+          if (following) followSeenAt = performance.now()
+          else {
+            // The follow went from present to absent: the host just turned it
+            // off, and a slide still carrying an offset would leave what the
+            // reader scrolls to off its place.
+            stopSlide()
+            guardSeen = true
+          }
           continue
         }
         // A thinking row leaving "running": the boundary of that piece of work.
@@ -638,7 +617,7 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     subtree: true,
     childList: true,
     characterData: true,
-    attributeFilter: [ROW_PHASE_ATTRIBUTE, FOLLOWING_TAIL_ATTRIBUTE, READER_HOLD_ATTR],
+    attributeFilter: [ROW_PHASE_ATTRIBUTE, FOLLOWING_TAIL_ATTRIBUTE],
     attributeOldValue: true,
   }, onRecords)
 

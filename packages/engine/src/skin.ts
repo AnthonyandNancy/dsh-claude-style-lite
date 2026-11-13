@@ -9,8 +9,6 @@ export interface SkinSeam {
   packageName: string
   /** Skin bookkeeping attribute whose mutations must not wake page subscribers. */
   quiet: string
-  /** Marks reader-owned scrolling until the reader returns to the tail. */
-  readerHold: string
   /** Whether the skin must hold its animations still right now. */
   motionReduced(): boolean
 }
