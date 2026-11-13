@@ -12,6 +12,7 @@ import { CONTENT_ONLY_HANDLES } from '@dsh-claude-style/client/pure'
 
 test('the skip list holds exactly the page-wide handles that own their outside changes', () => {
   expect([...CONTENT_ONLY_HANDLES].sort()).toEqual([
+    'chatWait',
     'heroMenu',
     'homeRipple',
     'mascot',

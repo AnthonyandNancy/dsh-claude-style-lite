@@ -7,6 +7,7 @@ import type { HandleName } from './scheduler'
  * not named here runs on every pass.
  */
 export const CONTENT_ONLY_HANDLES: ReadonlySet<HandleName> = new Set<HandleName>([
+  'chatWait',
   'heroMenu',
   'homeRipple',
   'mascot',
