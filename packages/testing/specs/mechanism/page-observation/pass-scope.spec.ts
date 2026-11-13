@@ -14,6 +14,7 @@ test('the skip list holds exactly the page-wide handles that own their outside c
   expect([...CONTENT_ONLY_HANDLES].sort()).toEqual([
     'chatWait',
     'heroMenu',
+    'homeLayout',
     'homeRipple',
     'mascot',
     'meterRing',
