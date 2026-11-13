@@ -914,6 +914,9 @@
       "the other plugin leaving hands the seat keys back": [
         3
       ],
+      "the waiting clock advances without a full scheduler pass while its wording lock stands": [
+        0
+      ],
       "加载点把三条轨道都建好了——三颗跳球、三颗走路、四颗交换四角——其中一条在用，主机的鲸鱼尾让位": [
         3
       ],

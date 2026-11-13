@@ -199,6 +199,19 @@
         return frames[frames.length - 1]
       }
       r.wait = { working: await awaitWord(function (reading) { return reading.word === 'Thinking…' && reading.copies === 1 }) }
+      // A pass queued before this reading lands inside the two ticks' stretch and
+      // would be counted as the tick's own; settle first so the count answers
+      // what the clock's ticks schedule.
+      await probe.settle()
+      var passBefore = window.__dshClaudePasses || 0
+      var clockBefore = lineOf().clock
+      await probe.sleep(300)
+      var clockAfter = lineOf().clock
+      r.wait.tick = {
+        passes: (window.__dshClaudePasses || 0) - passBefore,
+        before: clockBefore,
+        after: clockAfter,
+      }
       // The whale tail is DeepSeek's own character: under that brand the host's
       // icon comes back and the skin's dots stand down, and the Claude brand
       // takes them up again. The word the line waits on follows the brand too

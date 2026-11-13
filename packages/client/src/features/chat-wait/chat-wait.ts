@@ -12,7 +12,9 @@ import { activityWords, waitingWord, THINKING_KEY } from '../../shared/turn-acti
 import { startWaitLoader, releaseWaitLoader } from './wait-loader'
 import { CHAT_FLOW_SELECTOR, CHAT_RUNNING_SELECTOR, CHAT_RUNNING_HOLDING_ATTRIBUTE, CHAT_RUNNING_TEXT_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { WAIT_OVERTIME_MS, openTurn, waitStart, wordForPass } from './wait-state'
+import { waitTickPlan } from './wait-tick'
 import { foreignRunningLineOwns } from './running-owner'
+import type { WaitTickPlan } from './wait-tick'
 import type { RowWords } from './wait-state'
 import type { HostChatTarget } from '@dsh-claude-style/contracts/services'
 import type { HostContext, HostText } from '@dsh-claude-style/engine/host'
@@ -29,6 +31,14 @@ interface WaitLine {
   badge: HTMLElement
   /** What the row's wording is held under (syncRow): `session:turn` where the snapshot says it, the row itself before that. */
   key: string | HTMLElement
+  /** When the turn began, or null while its snapshot names none. */
+  turnStart: number | null
+  /** When the current wait began, or null while no wait stands. */
+  waitStart: number | null
+  /** Until when the wording written on the row may not be replaced, or null where none is held. */
+  wordUntil: number | null
+  /** Whether the row follows its session's chat subscription. */
+  followed: boolean
 }
 
 /**
@@ -61,7 +71,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
    */
   const TICK_MS = 250
   /** The host's running rows, kept current by the bus: a pass reads this instead of querying (D40). */
-  const runningRows = observeMatches<HTMLElement>(CHAT_RUNNING_SELECTOR)
+  const runningRows = observeMatches<HTMLElement>(CHAT_RUNNING_SELECTOR, scheduleSync)
   /** Each running row with the line drawn into it and the parts a pass writes. */
   const lines = new Map<HTMLElement, WaitLine>()
   const hostWords = new Map<HTMLElement, Element>()
@@ -122,11 +132,12 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
         followed.stop()
         follows.delete(row)
       }
-      return
+      return false
     }
-    if (followed !== undefined && followed.sessionId === sessionId) return
+    if (followed !== undefined && followed.sessionId === sessionId) return true
     followed?.stop()
     follows.set(row, { sessionId, stop: target.subscribe(scheduleSync) })
+    return true
   }
 
   /**
@@ -180,7 +191,13 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     const loader = buildLoader()
     line.append(loader, label, clock, badge)
     words.after(line)
-    const parts = { line, loader, label, clock, badge, key }
+    const parts: WaitLine = {
+      line, loader, label, clock, badge, key,
+      turnStart: null,
+      waitStart: null,
+      wordUntil: null,
+      followed: false,
+    }
     // The line is recorded before its loader starts: wait-loader.ts throws on a
     // lane, fade length or turn the stylesheet leaves out, and with the record
     // unwritten every pass would put up another line and another set of dots
@@ -260,12 +277,16 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     }
     const sessionId = conversationSessionId(closestConversationSession(row))
     const target = sessionId === null ? null : findChatTarget(ctx, sessionId)
-    followRow(row, sessionId, target)
+    const followed = followRow(row, sessionId, target)
     const snapshot = target === null ? null : target.getSnapshot() ?? null
     const turn = snapshot === null ? undefined : openTurn(snapshot)
     const key: string | HTMLElement = sessionId !== null && turn !== undefined ? `${sessionId}:${turn.turn}` : row
     if (typeof key === 'string') live.add(key)
     const line = lineOf(row, words, key)
+    line.followed = followed
+    line.turnStart = turn?.start?.time ?? null
+    line.wordUntil = wording.get(key)?.standing.until ?? null
+    line.waitStart = null
     const { loader, label, clock, badge } = line
     // What the turn is doing, and the one word its brand waits on for a turn
     // whose state cannot be read (D74). Under the Precise choice three states
@@ -308,6 +329,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
         began = waitStart(turn, now)
         waits.set(key, began)
       }
+      line.waitStart = began
       overtime = now - began >= WAIT_OVERTIME_MS
     }
     syncBadge(badge, overtime)
@@ -357,6 +379,16 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     row.removeAttribute(WAIT_ATTR)
   }
 
+  /** Write only the values a quarter-second can change; wording and ownership stay on their own passes. */
+  function writeClock(line: WaitLine, t: HostText, now: number, plan: WaitTickPlan) {
+    line.clock.hidden = line.turnStart === null
+    if (line.turnStart !== null) writeTextInPlace(line.clock, formatHostDuration(Math.max(1000, now - line.turnStart), t))
+    // The badge keeps its own show and exit path: syncBadge writes the text,
+    // takes the exit mark off, and leaves the element laid out until the exit
+    // animation has played. Writing `hidden` here would cut that animation.
+    syncBadge(line.badge, plan.overtime)
+  }
+
   function syncLines() {
     const t = hostChatSeat(ctx)
     const rows = t === null ? [] : runningRows.all()
@@ -383,11 +415,39 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     if (rows.length > 0 && timer === null) {
       timer = window.setInterval(() => {
         if (cancelTick !== null) return
+        const t = hostChatSeat(ctx)
+        if (t === null) return
+        const now = Date.now()
+        const running = runningRows.all()
+        const planned = running.flatMap(line => {
+          const parts = lines.get(line)
+          return parts === undefined ? [] : [{ line: parts, plan: waitTickPlan({
+            turnStart: parts.turnStart,
+            waitStart: parts.waitStart,
+            wordUntil: parts.wordUntil,
+            followed: parts.followed,
+          }, now) }]
+        })
+        // A row the line does not own — a holding slot, a foreign line, or words
+        // the host rebuilt away — can change through an attribute the running-row
+        // registry does not hear: the old full tick is what brings it back, so
+        // any such row keeps that tick.
+        const changed = running.some(row => {
+          if (row.hasAttribute(CHAT_RUNNING_HOLDING_ATTRIBUTE)) return true
+          const words = row.querySelector<HTMLElement>(CHAT_RUNNING_TEXT_SELECTOR)
+          return words === null || foreignRunningLineOwns(words, lines.get(row)?.line, WORDS_ATTR)
+        })
+        const full = changed || planned.length !== running.length || planned.some(entry => entry.plan.full)
         cancelTick = requestFrame({
           read: readTails,
           write() {
             cancelTick = null
-            syncInFrame()
+            if (full) {
+              syncInFrame()
+              return
+            }
+            for (const entry of planned) writeClock(entry.line, t, now, entry.plan)
+            writeTails()
           },
         })
       }, TICK_MS)
@@ -412,7 +472,12 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     }
   }
 
-  ui.chatWait = { measure: readTails, sync: syncInFrame, onCopyChange: sync }
+  ui.chatWait = {
+    measure: readTails,
+    sync: syncInFrame,
+    onCopyChange: sync,
+    skipOnContentOnly: true,
+  }
 
   return () => {
     stopped = true

@@ -19,6 +19,8 @@ export { CHAT_REVEAL_ACTIVE_LIMIT, createRevealState } from './features/chat-rev
 export type { RevealRun, RevealSnapshot, RevealState } from './features/chat-reveal/reveal-params'
 export { countProcessItems, summaryForm, summaryParts, summarySeparator, summaryText } from './features/chat-fold/process-summary'
 export { foreignRunningLineOwns } from './features/chat-wait/running-owner'
+export { waitTickPlan } from './features/chat-wait/wait-tick'
+export type { WaitTickPlan, WaitTickState } from './features/chat-wait/wait-tick'
 export { WORD_LOCK_MS, openTurn, waitStart, wordForPass } from './features/chat-wait/wait-state'
 export { callTokens } from './features/context-stats/call-tokens'
 export { contextBandAt, ringDash } from './features/context-stats/context-meter-face'

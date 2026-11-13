@@ -324,6 +324,10 @@ export default {
     const working = wait.working || {}
     check('the running row takes the skin\'s line beside the host\'s words, which step aside',
       working.marked === true && working.besideWords === true && working.wordsShown === false, JSON.stringify(working))
+    const tick = wait.tick || {}
+    check('the waiting clock advances without a full scheduler pass while its wording lock stands',
+      tick.passes === 0 && /^1m [5-9]s$/.test(tick.before || '') && /^1m [5-9]s$/.test(tick.after || ''),
+      JSON.stringify(tick))
     const loader = working.loader || {}
     const laneOf = (reading, name) => (reading.lanes || []).find((lane) => String(lane.name).includes(name)) || {}
     const numbers = (text) => (String(text).match(/-?[\d.]+/g) || []).map(Number)
