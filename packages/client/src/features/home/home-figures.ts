@@ -398,3 +398,26 @@ export function homePanelData(state: HomeUsageState, listed: ListSummary | null,
 
 /** Every figure the panel draws (homePanelData). */
 export type HomePanel = ReturnType<typeof homePanelData>
+
+/**
+ * One panel's computed figures, reused until one of the four inputs changes
+ * identity. The store mutates its state object in place, so the report value,
+ * the list summary object, the range and the book draw are the cache key.
+ */
+export function createHomePanelMemo() {
+  let stateValue: HomeUsageState['value'] | undefined
+  let listed: ListSummary | null | undefined
+  let range: string | undefined
+  let bookPick: number | undefined
+  let kept: HomePanel | null = null
+
+  return (nextState: HomeUsageState, nextListed: ListSummary | null, nextRange: string, nextBookPick: number) => {
+    if (kept !== null && nextState.value === stateValue && nextListed === listed && nextRange === range && nextBookPick === bookPick) return kept
+    stateValue = nextState.value
+    listed = nextListed
+    range = nextRange
+    bookPick = nextBookPick
+    kept = homePanelData(nextState, nextListed, nextRange, nextBookPick)
+    return kept
+  }
+}

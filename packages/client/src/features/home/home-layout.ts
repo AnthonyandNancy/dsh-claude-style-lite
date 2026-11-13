@@ -7,7 +7,8 @@ import { COMPOSER_STACK, cacheFirstMatch, registerSlotEntries } from '@dsh-claud
 import { readPrefs } from '../../core/prefs'
 import { pageHidden, subscribePageHidden } from '../../core/page-visibility'
 import { motionMs } from '../../shared/motion'
-import { HOME_RANGES, createHomeUsage, homePanelData } from './data'
+import { HOME_RANGES, createHomeUsage } from './data'
+import { createHomePanelMemo } from './home-figures'
 import { createGreetingCopy } from './greeting-copy'
 import { createHomeModels } from './models'
 import { createHomeOverview } from './overview'
@@ -87,6 +88,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
    */
   function HomeUsagePanel() {
     const state = useUsage()
+    const panelMemo = React.useRef<ReturnType<typeof createHomePanelMemo> | null>(null)
     const tabState = React.useState('overview')
     const tab = tabState[0]
     const setTab = tabState[1]
@@ -103,7 +105,8 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
       return () => window.clearTimeout(timer)
     }, [reveal])
     if (layout !== HOME_LAYOUT_STUDIO || !heroPhase()) return null
-    const data = homePanelData(state, usage.list(), range, bookPick)
+    panelMemo.current ??= createHomePanelMemo()
+    const data = panelMemo.current(state, usage.list(), range, bookPick)
     if (!data.known && reveal !== 'placeholders') setReveal('placeholders')
     if (data.known && reveal === 'placeholders') setReveal('revealing')
 
