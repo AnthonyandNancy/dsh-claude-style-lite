@@ -4,6 +4,8 @@
 
 **Goal:** 按收益从高到低减少重复同步、重复测量、重复观察与后台空转，同时保持现有界面、样式、动效、动画、DOM 结构与交互结果不变。
 
+**Animation commitment:** 本计划不修改任何动画与动效。关键帧、时长、缓动、延迟、动画名称、`Animation` 的时间值、触发时刻与叠加方式全部保持原样；会挪动动画起点或相位的改造不进入本计划。
+
 **Architecture:** 先把高频路径拆成“可见结果刷新”和“数据重新计算”，再把能由宿主快照、尺寸订阅或 DOM 变化订阅驱动的功能移出正文批次。所有缓存都绑定明确的失效来源，所有观察器路由都保持原回调顺序与每批一次语义。
 
 **Tech Stack:** TypeScript、浏览器 DOM、MutationObserver、ResizeObserver、requestAnimationFrame、React（宿主提供）、Vitest、Playwright、仓库自带 `npm run build` 与 `npm run verify`。
@@ -15,6 +17,7 @@
 - 不改变可见 DOM 的顺序、类名、属性、文本、焦点、选中项、滚动位置与无障碍名称。
 - 不改变调度器读取、滚动、写入三阶段的顺序，也不改变 `FEATURES` 中的功能顺序。
 - 不改变 `WORD_LOCK_MS`、`WAIT_OVERTIME_MS`、等待行 250 毫秒步长、加载器换场周期、侧栏展开与收起延迟、通知 1500 毫秒周期、首页用量 800 毫秒周期。
+- 不修改任何动画与动效：关键帧、时长、缓动、延迟、动画名称、`Animation` 的 `startTime`、`currentTime`、`playbackRate`、触发时刻与叠加顺序全部保持原样。
 - 每个任务先写失败测试，再写实现，再运行受影响测试；测试通过后提交一个逻辑改动。
 - `packages/client/src/features/account/footer-mirror.ts` 已 745 行，任何新增逻辑先抽到同目录新模块。
 - 停止线：任一源文件接近 750 行时停止添加并先拆分；不得为了通过 lint 压缩代码。
@@ -196,8 +199,10 @@ Add the lightweight writer before `syncLines`:
   function writeClock(line: WaitLine, t: HostText, now: number, plan: WaitTickPlan) {
     line.clock.hidden = line.turnStart === null
     if (line.turnStart !== null) writeTextInPlace(line.clock, formatHostDuration(Math.max(1000, now - line.turnStart), t))
-    line.badge.hidden = !plan.overtime
-    if (plan.overtime) writeTextInPlace(line.badge, copy('chatWaitOvertime'))
+    // The badge keeps its own show and exit path: syncBadge writes the text,
+    // takes the exit mark off, and leaves the element laid out until the exit
+    // animation has played. Writing `hidden` here would cut that animation.
+    syncBadge(line.badge, plan.overtime)
   }
 ```
 
@@ -1764,466 +1769,7 @@ git commit -m "perf: 过程摘要复用头部样式读数"
 
 ---
 
-### Task 11: 后台轮询等待可见页面
-
-**Files:**
-- Create: `packages/client/src/shared/visibility-gate.ts`
-- Modify: `packages/client/src/features/notifications/notifications.ts:40-155`
-- Modify: `packages/client/src/features/home/home-store.ts:44-190, 287-305`
-- Modify: `packages/client/src/pure.ts:74-82`
-- Modify: `packages/testing/smoke/stand-in/host-fetch.js:40-44`
-- Test: `packages/testing/specs/logic/page-visibility/gate.spec.ts`
-- Test: `packages/testing/specs/behaviour/notifications/window.spec.mjs`
-- Test: `packages/testing/specs/behaviour/page-visibility/hold-still.spec.mjs`
-
-**Interfaces:**
-- Consumes: `pageHidden()` 与 `subscribePageHidden()`。
-- Produces: `createVisibilityGate({ hidden, subscribe }): { run(task: () => void): boolean; pending(): boolean; stop(): void }`；隐藏期间 `run` 保存最后任务，回到可见时执行一次。
-
-- [ ] **Step 1: Write the failing gate test**
-
-Create `packages/testing/specs/logic/page-visibility/gate.spec.ts`:
-
-```ts
-/**
- * A background poll does not run while the page is hidden, keeps only the
- * latest task, and runs one task when the page returns. The gate is the one
- * piece both the notification and usage pollers use.
- *
- * @capability page-visibility
- * @features notifications, home
- * @risk A hidden page keeps polling, or a return to the page replays every skipped request.
- */
-import { expect, test } from 'vitest'
-import { createVisibilityGate } from '@dsh-claude-style/client/pure'
-
-test('a hidden gate holds the latest task and runs one task on return', () => {
-  let hidden = false
-  let listener: ((hidden: boolean) => void) | null = null
-  const gate = createVisibilityGate({
-    hidden: () => hidden,
-    subscribe: (next) => {
-      listener = next
-      return () => { listener = null }
-    },
-  })
-  const calls: string[] = []
-  expect(gate.run(() => calls.push('a'))).toBe(true)
-  hidden = true
-  expect(gate.run(() => calls.push('b'))).toBe(false)
-  expect(gate.run(() => calls.push('c'))).toBe(false)
-  expect(calls).toEqual(['a'])
-  expect(gate.pending()).toBe(true)
-  hidden = false
-  listener?.(false)
-  expect(calls).toEqual(['a', 'c'])
-  expect(gate.pending()).toBe(false)
-  gate.stop()
-})
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `npx vitest run packages/testing/specs/logic/page-visibility/gate.spec.ts`
-Expected: FAIL because `createVisibilityGate` is not exported.
-
-- [ ] **Step 3: Create the gate**
-
-Create `packages/client/src/shared/visibility-gate.ts`:
-
-```ts
-import { pageHidden, subscribePageHidden } from '../core/page-visibility'
-
-export interface VisibilityGateOptions {
-  hidden(): boolean
-  subscribe(listener: (hidden: boolean) => void): () => void
-}
-
-/** One queued task that waits for the page to come back. */
-export function createVisibilityGate(options: VisibilityGateOptions = { hidden: pageHidden, subscribe: subscribePageHidden }) {
-  let queued: (() => void) | null = null
-  let stopped = false
-  const off = options.subscribe(hidden => {
-    if (hidden || stopped) return
-    const task = queued
-    queued = null
-    task?.()
-  })
-
-  return {
-    run(task: () => void) {
-      if (stopped) return false
-      if (options.hidden()) {
-        queued = task
-        return false
-      }
-      task()
-      return true
-    },
-    pending() { return queued !== null },
-    stop() {
-      stopped = true
-      queued = null
-      off()
-    },
-  }
-}
-```
-
-Export from `pure.ts`:
-
-```ts
-export { createVisibilityGate } from './shared/visibility-gate'
-export type { VisibilityGateOptions } from './shared/visibility-gate'
-```
-
-- [ ] **Step 4: Gate the notification activation poll**
-
-In `notifications.ts`, import the gate:
-
-```ts
-import { createVisibilityGate } from '../../shared/visibility-gate'
-```
-
-Add `const activationGate = createVisibilityGate()` beside `activationTimer`, and extract the fetch into a named function:
-
-```ts
-  function pollActivation() {
-    void fetch(NOTIFY_ACTIVATION_PATH, { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() as Promise<{ activation: HostNotifyActivation | null }> : null)
-      .then((answer) => {
-        if (stopped || answer === null || answer.activation === null) return
-        const activation = answer.activation
-        const key = `${activation.sessionId}:${activation.at}`
-        if (seen.has(key)) return
-        seen.add(key)
-        openSession(activation.sessionId)
-        window.focus()
-      })
-      .catch((error: unknown) => {
-        console.warn('notifications: the activation read failed', error)
-      })
-  }
-
-  function startActivationPoll() {
-    if (activationTimer !== null) return
-    activationTimer = window.setInterval(() => {
-      activationGate.run(pollActivation)
-    }, ACTIVATION_POLL_MS)
-  }
-```
-
-In the teardown, before clearing the timer:
-
-```ts
-    activationGate.stop()
-```
-
-- [ ] **Step 5: Gate the home usage poll**
-
-In `home-store.ts`, import:
-
-```ts
-import { createVisibilityGate } from '../../shared/visibility-gate'
-```
-
-Create the gate inside `createHomeUsage`:
-
-```ts
-  const pollGate = createVisibilityGate()
-```
-
-Change the poll scheduling:
-
-```ts
-        pollTimer = setTimeout(() => {
-          pollTimer = null
-          pollGate.run(read)
-        }, HOME_POLL_MS)
-```
-
-In `stop()`, add `pollGate.stop()` before `stopPolling()`.
-
-- [ ] **Step 6: Record activation reads and add the hidden-page behavior assertion**
-
-In `packages/testing/smoke/stand-in/host-fetch.js`, count every activation read:
-
-```js
-    if (url === '/dsh-claude-style-lite/notify-activation') {
-      window.__activationReads = (window.__activationReads || 0) + 1
-      var activation = hostNotify ? hostNotify.activation : null
-      if (hostNotify) hostNotify.activation = null
-      return Promise.resolve(jsonResponse({ ok: true, activation: activation }))
-    }
-```
-
-In `packages/testing/specs/behaviour/notifications/host.mjs`, expose the count:
-
-```js
-    activationReads: () => t.page.evaluate(() => window.__activationReads ?? 0),
-```
-
-Append to `packages/testing/specs/behaviour/notifications/window.spec.mjs`:
-
-```js
-  test('a hidden page performs no activation poll until it returns', async (t) => {
-    const initial = { a: { running: true } }
-    const host = await setup(t, { status: initial, list: sessionList(initial), capability: { ok: true, channel: 'toast', clickReturnsSession: true } })
-    await t.page.evaluate(() => {
-      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    const before = await host.activationReads()
-    await t.page.waitForTimeout(1800)
-    t.expectThat.equal(await host.activationReads(), before, 'the hidden page asks for no activation')
-    await t.page.evaluate(() => {
-      delete document.visibilityState
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    await t.page.waitForTimeout(1800)
-    t.expectThat.equal((await host.activationReads()) > before, true, 'the visible page resumes the poll')
-  })
-```
-
-- [ ] **Step 7: Run the visibility tests**
-
-Run: `npx vitest run packages/testing/specs/logic/page-visibility/gate.spec.ts`
-Run: `npm run verify -- --only feature:notifications`
-Run: `npm run verify -- --only feature:home`
-Run: `npm run verify -- --only case:page-visibility`
-Expected: gate test passes, visible notification timing remains, hidden-page request count does not grow, and the existing hold-still case passes.
-
-- [ ] **Step 8: Build and commit**
-
-Run: `npm run build`
-Then:
-
-```bash
-git add packages/client/src/shared/visibility-gate.ts packages/client/src/features/notifications/notifications.ts packages/client/src/features/home/home-store.ts packages/client/src/pure.ts packages/testing/smoke/stand-in/host-fetch.js packages/testing/specs/behaviour/notifications/host.mjs packages/testing/specs/logic/page-visibility/gate.spec.ts packages/testing/specs/behaviour/notifications/window.spec.mjs
-git commit -m "perf: 后台轮询等待可见页面"
-```
-
----
-
-### Task 12: 指针活动合并到一帧
-
-**Files:**
-- Modify: `packages/engine/src/scheduler.ts:128-168, 202-228, 421-449`
-- Test: `packages/testing/specs/mechanism/page-observation/activity.spec.ts`
-
-**Interfaces:**
-- Consumes: `requestFrame`、`dispatch('onActivity')`、`FeatureHandle.onActivity`。
-- Produces: `pointermove` 活动每帧最多派发一次；`pointerdown` 与 `keydown` 仍即时派发；调度器停止时取消未执行帧。
-
-- [ ] **Step 1: Write the failing coalescing test**
-
-Create `packages/testing/specs/mechanism/page-observation/activity.spec.ts`:
-
-```ts
-/**
- * A pointer sweep is one activity per frame: the mascot updates its quiet
- * clock once, while a press or a key still reaches the feature immediately.
- *
- * @capability page-observation
- * @features engine
- * @risk The mascot never wakes, wakes several times for one sweep, or a press stops reaching it.
- */
-import { afterEach, expect, test } from 'vitest'
-import { installScheduler } from '@dsh-claude-style/engine/scheduler'
-import type { HostContext } from '@dsh-claude-style/engine/host'
-
-const cleanups: (() => void)[] = []
-afterEach(() => {
-  for (const cleanup of cleanups.splice(0)) cleanup()
-})
-
-const ctx = { get: () => undefined } as unknown as HostContext
-const frame = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-
-test('two pointer moves in one frame reach onActivity once, and a press reaches it at once', async () => {
-  let calls = 0
-  const ui = { retire: () => {} } as Record<string, unknown> & { schedule?: () => void; retire: () => void }
-  cleanups.push(installScheduler(ctx, ui as never, ['mascot'], {
-    copyChange: [],
-    refresh: [],
-    start() {},
-    systemMotionChanged() {},
-  }))
-  ui.mascot = { onActivity() { calls += 1 } }
-  ui.schedule?.()
-  await frame()
-  calls = 0
-  document.dispatchEvent(new PointerEvent('pointermove'))
-  document.dispatchEvent(new PointerEvent('pointermove'))
-  expect(calls).toBe(0)
-  await frame()
-  expect(calls).toBe(1)
-  calls = 0
-  document.dispatchEvent(new PointerEvent('pointerdown'))
-  expect(calls).toBe(1)
-})
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `npx vitest run packages/testing/specs/mechanism/page-observation/activity.spec.ts`
-Expected: FAIL because the second move calls `onActivity` synchronously and `calls` is already one or two before the frame.
-
-- [ ] **Step 3: Coalesce the move event**
-
-In `scheduler.ts`, add a frame state beside `cancelViewportFrame`:
-
-```ts
-  /** The pending pointer sweep, one activity dispatch per frame. */
-  let cancelActivityFrame: (() => void) | null = null
-  function onPointerMove() {
-    if (cancelActivityFrame !== null) return
-    cancelActivityFrame = requestFrame({
-      write() {
-        cancelActivityFrame = null
-        dispatch('onActivity')
-      },
-    })
-  }
-```
-
-Replace the listener:
-
-```ts
-  document.addEventListener('pointermove', onPointerMove, { passive: true })
-```
-
-Replace both cleanup calls:
-
-```ts
-    document.removeEventListener('pointermove', onPointerMove)
-```
-
-Cancel the pending frame in the teardown before removing listeners:
-
-```ts
-    if (cancelActivityFrame !== null) cancelActivityFrame()
-    cancelActivityFrame = null
-```
-
-`onGlobalPointerDown` and `onGlobalKeyDown` keep calling `onGlobalActivity()` immediately.
-
-- [ ] **Step 4: Run the activity test**
-
-Run: `npx vitest run packages/testing/specs/mechanism/page-observation/activity.spec.ts`
-Expected: PASS; two moves coalesce, a press is immediate.
-
-- [ ] **Step 5: Run mascot behavior**
-
-Run: `npm run verify -- --only feature:mascot`
-Run: `npm run verify -- --only scenario:sidebarPeek`
-Expected: mascot waking and sleeping checks pass; no pointer activity warning appears.
-
-- [ ] **Step 6: Build and commit**
-
-Run: `npm run build`
-Then:
-
-```bash
-git add packages/engine/src/scheduler.ts packages/testing/specs/mechanism/page-observation/activity.spec.ts
-git commit -m "perf: 指针活动每帧派发一次"
-```
-
----
-
-### Task 13: 侧栏预览指针判定合并到一帧
-
-**Files:**
-- Modify: `packages/client/src/features/sidebar-peek/sidebar-peek.ts:207-315`
-- Test: `packages/testing/scenarios/sidebar-peek.mjs`
-
-**Interfaces:**
-- Consumes: `requestFrame`、现有 `inside()`、`held()`、`judge()`、`LEAVE_DELAY_MS`、`OPEN_DELAY_MS`。
-- Produces: `pointermove` 只保存最新坐标与按键状态；同一帧只执行一次 `inside()` 与离开计时器更新。
-
-- [ ] **Step 1: Add the frame-reading assertion to the scenario**
-
-In `packages/testing/scenarios/sidebar-peek.mjs`, record the open and leave timers around a burst of pointer moves:
-
-```js
-    const before = await page.evaluate(() => ({ open: document.querySelector('[data-dsh-claude-sidebar-peek]')?.getAttribute('data-dsh-claude-sidebar-peek') ?? null }))
-    await page.mouse.move(620, 320)
-    await page.mouse.move(621, 321)
-    await page.mouse.move(622, 322)
-    await page.waitForTimeout(350)
-    const after = await page.evaluate(() => ({ open: document.querySelector('[data-dsh-claude-sidebar-peek]')?.getAttribute('data-dsh-claude-sidebar-peek') ?? null }))
-    check('a pointer sweep keeps the peek state to one frame decision', before.open === after.open, JSON.stringify({ before, after }))
-```
-
-Place it after the existing hover-open assertion, before the leave assertion, so the scenario still exercises the real open and close paths.
-
-- [ ] **Step 2: Run the scenario to verify the current behavior**
-
-Run: `npm run verify -- --only scenario:sidebarPeek`
-Expected: the existing checks pass; the new assertion also passes on the old implementation because the final pointer position has the same result. This assertion is the regression guard for the frame path, not evidence that the old code was slow.
-
-- [ ] **Step 3: Replace the per-event judge with a frame task**
-
-Add a pending frame field beside `pointer`:
-
-```ts
-  let pointerFrame: (() => void) | null = null
-```
-
-Replace `onPointerMove`:
-
-```ts
-  function onPointerMove(event: PointerEvent) {
-    pointer = { x: event.clientX, y: event.clientY }
-    const pressed = event.buttons !== 0
-    if (pointerFrame !== null) return
-    pointerFrame = requestFrame({
-      read() {
-        pointerFrame = null
-        const insideNow = inside()
-        const heldNow = held(pressed)
-        if (phase !== 'open' || insideNow || heldNow) {
-          window.clearTimeout(leaveTimer)
-          leaveTimer = undefined
-          return
-        }
-        if (leaveTimer !== undefined) return
-        leaveTimer = window.setTimeout(() => {
-          leaveTimer = undefined
-          if (!inside() && !held(false)) close()
-        }, LEAVE_DELAY_MS)
-      },
-    })
-  }
-```
-
-Import `requestFrame` at the top of the file if it is not already imported. If `requestFrame` is already imported, leave the import unchanged.
-
-In the teardown, cancel the pending frame:
-
-```ts
-    pointerFrame?.()
-    pointerFrame = null
-```
-
-- [ ] **Step 4: Run the sidebar peek scenario**
-
-Run: `npm run verify -- --only scenario:sidebarPeek`
-Expected: the scenario passes, including the existing 120ms open, 300ms leave and pin checks.
-
-- [ ] **Step 5: Build and commit**
-
-Run: `npm run build`
-Then:
-
-```bash
-git add packages/client/src/features/sidebar-peek/sidebar-peek.ts packages/testing/scenarios/sidebar-peek.mjs
-git commit -m "perf: 侧栏预览每帧判定指针"
-```
-
----
-
-### Task 14: 调度器维护事件钩子索引
+### Task 11: 调度器维护事件钩子索引
 
 **Files:**
 - Modify: `packages/engine/src/scheduler.ts:20-75, 106-168, 332-411`
@@ -2393,194 +1939,14 @@ git commit -m "perf: 调度器按钩子维护句柄索引"
 
 ---
 
-### Task 15: 非 Claude 品牌下等待加载器使用虚拟状态（条件任务）
-
-**Decision gate:** 本任务在品牌切换恰好落入 300 毫秒换场窗口时无法保证像素级等价，必须先获得读者对这处边界的明确同意。未同意时跳过本任务，第 1 至 14 项仍独立完成并通过零视觉变化验收。
-
-**Files:**
-- Modify: `packages/client/src/features/chat-wait/wait-loader.ts:1-419`
-- Modify: `packages/client/src/features/chat-wait/chat-wait.ts:139-192`
-- Test: `packages/testing/specs/logic/waiting-line/loader-state.spec.ts`
-- Test: `packages/testing/smoke/probe/chat-wait.js`
-- Test: `packages/testing/smoke/cases/chat.mjs`
-
-**Interfaces:**
-- Consumes: `LANES`、`nextMotion`、`timelineNow`、`motionMs`、`startWaitLoader`、`releaseWaitLoader`。
-- Produces: `createVirtualLoader(start: number, random: () => number): { motion: WaitLoaderMotion; startedAt: number; handOverAt: number | null }`；`startWaitLoader(loader, options?: { virtual?: boolean })`；`resumeWaitLoader(loader, virtual, now)`。
-
-- [ ] **Step 1: Write the failing virtual-state test**
-
-Create `packages/testing/specs/logic/waiting-line/loader-state.spec.ts`:
-
-```ts
-/**
- * A loader hidden under a non-Claude brand keeps the same random motion and
- * rotation clock without building ten dots or measuring hand-over pairs. When
- * the brand returns, the visible lane starts at the phase the hidden clock
- * reached.
- *
- * @capability waiting-line
- * @features chat-wait
- * @risk The loader jumps to a new motion when the brand changes, or a hidden loader keeps a timer and dot work alive.
- */
-import { expect, test } from 'vitest'
-import { createVirtualLoader } from '@dsh-claude-style/client/pure'
-
-test('the virtual loader keeps one motion and advances its rotation from the given clock', () => {
-  const loader = createVirtualLoader(1000, () => 0.5)
-  expect(loader.motion).toMatch(/bounce|line|orbit/)
-  expect(loader.startedAt).toBe(1000)
-  expect(loader.handOverAt).toBe(1000 + 10000)
-  loader.advance(10_500)
-  expect(loader.handOverAt).toBe(10_500 + 10000)
-})
-```
-
-- [ ] **Step 2: Run the test to verify it fails**
-
-Run: `npx vitest run packages/testing/specs/logic/waiting-line/loader-state.spec.ts`
-Expected: FAIL because `createVirtualLoader` is not exported.
-
-- [ ] **Step 3: Add the virtual loader state**
-
-In `wait-loader.ts`, add:
-
-```ts
-export interface VirtualLoader {
-  readonly created: number
-  readonly motion: WaitLoaderMotion
-  handOverAt: number
-  advance(now: number): void
-}
-
-export function createVirtualLoader(start: number, random: () => number = Math.random): VirtualLoader {
-  const opening = LANES[Math.floor(random() * LANES.length)].motion
-  const period = motionMs('--dsh-claude-period-dot-rotate')
-  return {
-    created: start,
-    motion: opening,
-    handOverAt: start + period,
-    advance(now: number) {
-      while (now >= this.handOverAt) {
-        this.motion = nextMotion(this.motion)
-        this.handOverAt += period
-      }
-    },
-  }
-}
-```
-
-Export from `pure.ts`:
-
-```ts
-export { createVirtualLoader } from './features/chat-wait/wait-loader'
-export type { VirtualLoader } from './features/chat-wait/wait-loader'
-```
-
-- [ ] **Step 4: Gate DOM and animation work in the loader**
-
-Add a virtual path to `startWaitLoader`:
-
-```ts
-const virtualLoaders = new WeakMap<HTMLElement, VirtualLoader>()
-
-export function startWaitLoader(loader: HTMLElement, options?: { virtual?: boolean }) {
-  if (options?.virtual === true) {
-    if (virtualLoaders.has(loader)) return
-    const virtual = createVirtualLoader(timelineNow())
-    virtualLoaders.set(loader, virtual)
-    const tick = () => {
-      const state = virtualLoaders.get(loader)
-      if (state === undefined || !loader.isConnected) return
-      state.advance(timelineNow())
-      window.setTimeout(tick, Math.max(0, state.handOverAt - timelineNow()))
-    }
-    window.setTimeout(tick, Math.max(0, virtual.handOverAt - timelineNow()))
-    return
-  }
-  if (loaders.has(loader)) return
-  // Existing DOM path unchanged.
-  const opening = LANES[Math.floor(Math.random() * LANES.length)].motion
-  const state: LoaderState = { motion: opening, timer: null, handOvers: 0 }
-  loaders.set(loader, state)
-  handOver(loader, state, null, opening)
-  if (!motionReduced()) rotate(loader, state)
-}
-
-export function releaseWaitLoader(loader: HTMLElement) {
-  virtualLoaders.delete(loader)
-  const state = loaders.get(loader)
-  if (state === undefined) return
-  if (state.timer !== null) window.clearTimeout(state.timer)
-  loaders.delete(loader)
-}
-```
-
-In `chat-wait.ts`, build the loader as today but decide the start mode from the brand:
-
-```ts
-    const claude = readPrefs().brand === BRAND_CLAUDE
-    startWaitLoader(loader, { virtual: !claude })
-```
-
-Keep the loader DOM built in both brands so `.dsh-claude-chat-wait-loader` remains present and the existing `display:none` rule receives the same node. On a brand change, the existing `subscribePrefs` callback calls `sync()`; add a loader sync there:
-
-```ts
-    for (const line of lines.values()) {
-      if (readPrefs().brand === BRAND_CLAUDE) startWaitLoader(line.loader)
-      else startWaitLoader(line.loader, { virtual: true })
-    }
-```
-
-When switching from virtual to visible, `startWaitLoader` builds the DOM path. The visible loader must not replay the opening fade: set the current lane active, set every other lane resting, and set each dot's CSS animation `startTime` to the virtual loader's lane start. If the switch lands inside the 300 milliseconds after `handOverAt`, rebuild that one hand-over with its recorded start and leave the resulting animations at the elapsed frame. The hidden virtual clock keeps the chosen motion and the hand-over deadline. The existing loader smoke case asserts the visible lane, dots, animation name, duration, and seat after the switch; keep those assertions unchanged.
-
-- [ ] **Step 5: Add the virtual/visible smoke assertion**
-
-In `packages/testing/smoke/probe/chat-wait.js`, after the existing deepseek and claude-again readings, record:
-
-```js
-      r.wait.loaderSwitch = {
-        deepseekDots: (r.wait.deepseek?.loader?.lanes || []).reduce(function (sum, lane) { return sum + (lane.opacity || []).length }, 0),
-        claudeDots: (r.wait.claudeAgain?.loader?.lanes || []).reduce(function (sum, lane) { return sum + (lane.opacity || []).length }, 0),
-      }
-```
-
-In `packages/testing/smoke/cases/chat.mjs`, add:
-
-```js
-    const switched = wait.loaderSwitch || {}
-    check('the hidden loader comes back with the same three lanes and ten dots', switched.deepseekDots === 0 && switched.claudeDots === 10, JSON.stringify(switched))
-```
-
-The DeepSeek page hides the loader with CSS, so the visible reading still has the loader node; the virtual path has no dot children while hidden, and the Claude path has all ten after the switch. This assertion is part of the conditional task and does not change the strict acceptance of Tasks 1 to 14.
-
-- [ ] **Step 6: Run the waiting line tests**
-
-Run: `npx vitest run packages/testing/specs/logic/waiting-line/loader-state.spec.ts`
-Run: `npm run verify -- --only feature:chat-wait`
-Run: `npm run verify -- --only scenario:waitLine`
-Expected: the virtual state test passes; the existing loader lane, dot count, animation name, duration, shadow, seat, reduced-motion and brand-switch checks pass.
-
-- [ ] **Step 7: Build and commit**
-
-Run: `npm run build`
-Then:
-
-```bash
-git add packages/client/src/features/chat-wait/wait-loader.ts packages/client/src/features/chat-wait/chat-wait.ts packages/client/src/pure.ts packages/testing/specs/logic/waiting-line/loader-state.spec.ts packages/testing/smoke/probe/chat-wait.js packages/testing/smoke/cases/chat.mjs
-git commit -m "perf: 非 Claude 品牌下等待加载器只走虚拟状态"
-```
-
----
-
-### Task 16: 统一测量与性能记录
+### Task 12: 统一测量与性能记录
 
 **Files:**
 - Modify: `docs/AB-PERFORMANCE.md:1-200`
 - Test: none
 
 **Interfaces:**
-- Consumes: 前 15 个任务全部通过后的构建产物；现有 `idle-60`、`thinking-60`、`typing-1000-200`、`session-500` 场景。
+- Consumes: Task 1 至 Task 11 全部通过后的构建产物；现有 `idle-60`、`thinking-60`、`typing-1000-200`、`session-500` 场景。
 - Produces: 同一机器、同一窗口尺寸下改动前后四项指标记录；未实测的格子保持 `待实测`。
 
 - [ ] **Step 1: Run the four scenarios on the unmodified baseline**
@@ -2608,7 +1974,18 @@ Update the eight `待实测` cells in `docs/AB-PERFORMANCE.md` with the measured
 
 Add a short table under the existing measurement section with baseline and finished values, the ratio and the command names. Do not add a claim that a change is faster unless the table has the matching measured pair.
 
-- [ ] **Step 5: Run the final gates**
+- [ ] **Step 5: Confirm the branch adds no animation or motion change**
+
+Run the two scans and expect no output from either:
+
+```bash
+git diff --name-only 562e4ef6..HEAD -- '*.css' 'packages/client/src/theme/**' 'packages/client/src/shared/motion.css'
+git diff -U0 562e4ef6..HEAD -- packages | rg '^\+.*(animation|@keyframes|transition|startTime|currentTime|playbackRate|\.animate\()'
+```
+
+The second command exits 1 when it finds nothing; that is the expected answer. Any added line it prints is a change to animation or motion and stops the task.
+
+- [ ] **Step 6: Run the final gates**
 
 Run:
 
@@ -2621,7 +1998,7 @@ npm run verify -- --full
 
 Expected: all four commands exit 0. If `element-collections` fails because a new element-keyed collection was added, update `packages/testing/data/element-collections.json` with `npm run element-collections` and state the lifetime level in the source comment.
 
-- [ ] **Step 6: Commit the measurements**
+- [ ] **Step 7: Commit the measurements**
 
 ```bash
 git add docs/AB-PERFORMANCE.md packages/testing/data/element-collections.json
@@ -2634,9 +2011,10 @@ If no element collection changed, leave the JSON file out of the commit.
 
 ## 计划自检
 
-- 规格覆盖：15 个改造项分别对应 Task 1 至 Task 15；Task 15 带明确决策门，未确认时只执行前 14 项；排除项在第 4 节逐项记录，不进入实现。
+- 规格覆盖：11 个改造项分别对应 Task 1 至 Task 11，Task 12 统一测量与记录；排除项在设计的第 3 节逐项记录，不进入实现。
 - 占位扫描：计划中没有 `TBD`、`TODO`、`实现后续` 或 `补测试` 一类占位步骤；每个代码变更都有具体文件、代码片段和命令。
-- 类型一致性：`waitTickPlan`、`createHomePanelMemo`、`createSearchSources`、`createVisibilityGate`、`createVirtualLoader` 的名称在设计与计划中一致；`observeSizes` 只在 Task 4 引入，Task 5 使用同一签名。
-- 依赖顺序：Task 1 先于 Task 2 的 `chatWait` 跳过；Task 4 先于 Task 5 的共享订阅；Task 6 先于 `homeLayout` 跳过；Task 14 在 Task 2 之后，避免同时改动调度与句柄行为。
-- 视觉约束：Task 1 至 14 不修改 CSS、动画参数、DOM 文本、焦点、滚动位置与首屏呈现；每个缓存都有失效来源，无法证明的条目进入排除表。Task 15 的换场窗口边界单独确认。
+- 类型一致性：`waitTickPlan`、`createHomePanelMemo`、`createSearchSources` 的名称在设计与计划中一致；`observeSizes` 只在 Task 4 引入，Task 5 使用同一签名。
+- 依赖顺序：Task 1 先于 Task 2 的 `chatWait` 跳过；Task 4 先于 Task 5 的共享订阅；Task 6 先于 `homeLayout` 跳过；Task 11 在 Task 2 之后，避免同时改动调度与句柄行为。
+- 动画约束：Task 1 至 Task 11 不修改任何动画与动效的代码、参数、触发时刻、起始时刻或相位；Task 12 的第 5 步扫描新增行，任何命中都停止任务。
+- 视觉约束：Task 1 至 Task 11 不修改 CSS、DOM 文本、焦点、滚动位置与首屏呈现；每个缓存都有失效来源，无法证明的条目进入排除表。
 
