@@ -556,6 +556,8 @@ interface SizeSubscription {
   /** The same elements as a set: one batch can carry thousands of entries, and `includes()` would scan them per entry. */
   lookup: Set<Element>
   callback: (entries: ResizeObserverEntry[]) => void
+  /** False once the owner lets go, so a subscription removed inside a callback hears no later subscription's batch. */
+  active: boolean
 }
 
 /** One resize observer, its subscriptions in the order they were made, and how many watch each element. */
@@ -563,22 +565,99 @@ interface SizeRegistry {
   observer: ResizeObserver | null
   subscriptions: SizeSubscription[]
   watchers: Map<Element, number>
+  /** Every subscription watching one target, so a batch reads only its own entries. */
+  routes: Map<Element, Set<SizeSubscription>>
 }
 
-const early: SizeRegistry = { observer: null, subscriptions: [], watchers: new Map() }
-const afterHost: SizeRegistry = { observer: null, subscriptions: [], watchers: new Map() }
+const early: SizeRegistry = { observer: null, subscriptions: [], watchers: new Map(), routes: new Map() }
+const afterHost: SizeRegistry = { observer: null, subscriptions: [], watchers: new Map(), routes: new Map() }
 
 /** Each subscription hears its own elements' entries of a batch, once per batch, in subscription order. */
 function makeSizeObserver(registry: SizeRegistry) {
   return new ResizeObserver(entries => {
-    for (const subscription of registry.subscriptions.slice()) {
-      if (!registry.subscriptions.includes(subscription)) continue
-      const own = entries.filter(entry => subscription.lookup.has(entry.target))
-      if (own.length === 0) continue
+    const owned = new Map<SizeSubscription, ResizeObserverEntry[]>()
+    for (const entry of entries) {
+      const watchers = registry.routes.get(entry.target)
+      if (watchers === undefined) continue
+      for (const subscription of watchers) {
+        const kept = owned.get(subscription)
+        if (kept === undefined) owned.set(subscription, [entry])
+        else kept.push(entry)
+      }
+    }
+    for (const subscription of registry.subscriptions) {
+      if (!subscription.active) continue
+      const own = owned.get(subscription)
+      if (own === undefined) continue
       // A failing subscription must not keep the rest of the batch from hearing it (D12); reportError still surfaces the failure.
       try { subscription.callback(own) } catch (error) { reportError(error) }
     }
   })
+}
+
+/** A size subscription whose target set can grow and shrink without rebuilding the shared observer. */
+export function observeSizes(callback: (entries: ResizeObserverEntry[]) => void, options?: { afterHost?: boolean }) {
+  const registry = options?.afterHost === true ? afterHost : early
+  const subscription: SizeSubscription = { targets: [], lookup: new Set(), callback, active: true }
+  registry.subscriptions.push(subscription)
+  if (registry === afterHost) {
+    // Made anew, so it is younger than the host's; every element is watched
+    // again and reports its size once more, which a size callback takes as no change.
+    registry.observer?.disconnect()
+    registry.observer = makeSizeObserver(registry)
+    for (const element of registry.watchers.keys()) registry.observer.observe(element)
+  } else if (registry.observer === null) {
+    registry.observer = makeSizeObserver(registry)
+  }
+
+  function add(target: Element) {
+    if (!subscription.active || subscription.lookup.has(target)) return
+    subscription.targets.push(target)
+    subscription.lookup.add(target)
+    registry.watchers.set(target, (registry.watchers.get(target) ?? 0) + 1)
+    let watched = registry.routes.get(target)
+    if (watched === undefined) {
+      watched = new Set()
+      registry.routes.set(target, watched)
+    }
+    watched.add(subscription)
+    // Watched again, so the new subscription hears the current size first.
+    if (registry.watchers.get(target)! > 1) registry.observer?.unobserve(target)
+    registry.observer?.observe(target)
+  }
+
+  function remove(target: Element) {
+    if (!subscription.lookup.delete(target)) return
+    subscription.targets = subscription.targets.filter(one => one !== target)
+    const watched = registry.routes.get(target)
+    watched?.delete(subscription)
+    if (watched !== undefined && watched.size === 0) registry.routes.delete(target)
+    const count = registry.watchers.get(target)! - 1
+    if (count > 0) {
+      registry.watchers.set(target, count)
+      return
+    }
+    registry.watchers.delete(target)
+    registry.observer?.unobserve(target)
+  }
+
+  return {
+    add,
+    delete: remove,
+    has: (target: Element) => subscription.lookup.has(target),
+    stop() {
+      if (!subscription.active) return
+      subscription.active = false
+      const at = registry.subscriptions.indexOf(subscription)
+      if (at !== -1) registry.subscriptions.splice(at, 1)
+      for (const target of [...subscription.targets]) remove(target)
+      subscription.targets = []
+      subscription.lookup.clear()
+      if (registry.subscriptions.length > 0) return
+      registry.observer?.disconnect()
+      registry.observer = null
+    },
+  }
 }
 
 /**
@@ -589,40 +668,8 @@ function makeSizeObserver(registry: SizeRegistry) {
  * @returns unsubscribe.
  */
 export function observeSize(targets: Element | Element[], callback: (entries: ResizeObserverEntry[]) => void, options?: { afterHost?: boolean }) {
-  const registry = options?.afterHost === true ? afterHost : early
   const list = Array.isArray(targets) ? [...targets] : [targets]
-  const subscription = { targets: list, lookup: new Set(list), callback }
-  registry.subscriptions.push(subscription)
-  for (const target of subscription.targets) registry.watchers.set(target, (registry.watchers.get(target) ?? 0) + 1)
-  if (registry === afterHost) {
-    // Made anew, so it is younger than the host's; every element is watched
-    // again and reports its size once more, which a size callback takes as no change.
-    registry.observer?.disconnect()
-    registry.observer = makeSizeObserver(registry)
-    for (const element of registry.watchers.keys()) registry.observer.observe(element)
-  } else {
-    if (registry.observer === null) registry.observer = makeSizeObserver(registry)
-    for (const target of subscription.targets) {
-      // Watched again, so the new subscription hears the current size first.
-      if (registry.watchers.get(target)! > 1) registry.observer.unobserve(target)
-      registry.observer.observe(target)
-    }
-  }
-  return () => {
-    const at = registry.subscriptions.indexOf(subscription)
-    if (at === -1) return
-    registry.subscriptions.splice(at, 1)
-    for (const target of subscription.targets) {
-      const count = registry.watchers.get(target)! - 1
-      if (count > 0) {
-        registry.watchers.set(target, count)
-        continue
-      }
-      registry.watchers.delete(target)
-      registry.observer?.unobserve(target)
-    }
-    if (registry.subscriptions.length > 0) return
-    registry.observer?.disconnect()
-    registry.observer = null
-  }
+  const shared = observeSizes(callback, options)
+  for (const target of list) shared.add(target)
+  return () => shared.stop()
 }

@@ -11,7 +11,7 @@
  * @risk A feature misses the host's change and the page stops following the conversation, or reacts to its own writes in a loop that never lets the page idle.
  */
 import { afterEach, expect, test } from 'vitest'
-import { batchAdditions, observeMarker, observeMatches, observeSize, subscribeMutations } from '@dsh-claude-style/engine/bus'
+import { batchAdditions, observeMarker, observeMatches, observeSize, observeSizes, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { QUIET_ATTR } from '../../fixtures/vocabulary'
 
 /** The attribute these specs match on; the registry is told the selector. */
@@ -464,4 +464,27 @@ test('one batch answers every subscriber with the same additions', async () => {
   // The same object, derived once: a feature reading it does not walk the batch.
   expect(seen[0]).toBe(seen[1])
   expect((seen[0] as { added: Element[] }).added).toEqual([node])
+})
+
+test('one shared subscription adds and removes targets and hears their entries once per batch', async () => {
+  const a = host()
+  const b = host()
+  for (const element of [a, b]) element.style.height = '10px'
+  const seen: Element[] = []
+  const shared = observeSizes(entries => seen.push(...entries.map(entry => entry.target)))
+  cleanups.push(shared.stop)
+  shared.add(a)
+  shared.add(b)
+  await nextFrame()
+  seen.length = 0
+  a.style.height = '20px'
+  b.style.height = '20px'
+  await nextFrame()
+  expect(seen).toEqual([a, b])
+  shared.delete(a)
+  seen.length = 0
+  a.style.height = '30px'
+  b.style.height = '30px'
+  await nextFrame()
+  expect(seen).toEqual([b])
 })
