@@ -154,6 +154,17 @@ export function createArchivedList(deps: ArchivedListDeps): ArchivedList {
   let cursor = ARCHIVED_PAGE_SIZE
   /** What the last render answered; unchanged snapshots write nothing. */
   let signature = ''
+  /** The snapshots and cursor the last read used, so a repeated pass reuses its sorted order. */
+  let readCache: {
+    archived: readonly string[]
+    sessions: unknown
+    workspaces: unknown
+    current: string | null
+    order: string[]
+    byId: Record<string, HostSessionSummary>
+    sigCursor: number
+    sig: string
+  } | null = null
   /** The freshest reading, what append and render draw from. */
   let latest = { order: [] as string[], byId: {} as Record<string, HostSessionSummary>, sig: '' }
   /** One queued append per frame: a scroll storm at the foot adds one page, not many. */
@@ -164,19 +175,28 @@ export function createArchivedList(deps: ArchivedListDeps): ArchivedList {
   function read() {
     const workspaces = deps.host.workspaces()
     const sessions = deps.host.sessions()
-    const archived = workspaces?.list.getSnapshot().archivedSessionIds ?? []
-    const snapshot = sessions?.list.getSnapshot()
-    const byId = snapshot?.byId ?? {}
+    const workspaceSnapshot = workspaces?.list.getSnapshot() ?? null
+    const sessionSnapshot = sessions?.list.getSnapshot() ?? null
+    const archived = workspaceSnapshot?.archivedSessionIds ?? []
+    const byId = sessionSnapshot?.byId ?? {}
     const current = deps.host.currentSession()
-    const order = archivedOrder(archived, byId, current)
+    let order: string[]
+    if (readCache !== null && readCache.archived === archived && readCache.workspaces === workspaceSnapshot && readCache.sessions === sessionSnapshot && readCache.current === current) {
+      order = readCache.order
+    } else {
+      order = archivedOrder(archived, byId, current)
+    }
     // The window the list draws is what a re-render has to see: a change below
     // it cannot move a row the reader holds, and signing the whole archive
     // would build a string over every archived title on each pass.
-    const sig = JSON.stringify([
-      current,
-      cursor,
-      order.slice(0, cursor).map((id) => [id, byId[id]?.updatedAt, byId[id]?.displayTitle]),
-    ])
+    const sig = readCache !== null && readCache.order === order && readCache.sigCursor === cursor
+      ? readCache.sig
+      : JSON.stringify([
+        current,
+        cursor,
+        order.slice(0, cursor).map((id) => [id, byId[id]?.updatedAt, byId[id]?.displayTitle]),
+      ])
+    readCache = { archived, sessions: sessionSnapshot, workspaces: workspaceSnapshot, current, order, byId, sigCursor: cursor, sig }
     return { order, byId, sig }
   }
 
@@ -414,6 +434,7 @@ export function createArchivedList(deps: ArchivedListDeps): ArchivedList {
     cancelAppend = null
     container = null
     signature = ''
+    readCache = null
     cursor = ARCHIVED_PAGE_SIZE
     // The freshest reading holds every shown summary and its titles: a list
     // taken off the page has nothing left to draw from it.

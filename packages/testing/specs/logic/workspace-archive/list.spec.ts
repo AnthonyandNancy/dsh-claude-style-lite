@@ -120,3 +120,36 @@ test('leaving and remounting restores the first page and releases the listener',
   list.mount(root)
   expect(rows(root)).toHaveLength(30)
 })
+
+test('two syncs over the same snapshots do not sort the archive twice', () => {
+  let reads = 0
+  const archived = ['a', 'b']
+  const byId = {
+    a: { id: 'a', displayTitle: 'A', updatedAt: 2 },
+    b: { id: 'b', displayTitle: 'B', updatedAt: 1 },
+  }
+  for (const id of archived) {
+    Object.defineProperty(byId[id as 'a' | 'b'], 'updatedAt', {
+      get() { reads += 1; return id === 'a' ? 2 : 1 },
+      configurable: true,
+    })
+  }
+  const root = document.createElement('div')
+  document.body.append(root)
+  // A host list hands out one snapshot object until it publishes the next.
+  const workspaceSnapshot = { items: [], archivedSessionIds: archived }
+  const sessionSnapshot = { ids: archived, byId, projectionsBySession: {} }
+  const workspaces = { list: { getSnapshot: () => workspaceSnapshot, subscribe: () => () => {} }, unarchiveSession: async () => {} }
+  const sessions = { list: { getSnapshot: () => sessionSnapshot, subscribe: () => () => {} }, binding: () => undefined, refresh: async () => {} }
+  const list = createArchivedList({
+    host: { workspaces: () => workspaces, sessions: () => sessions, currentSession: () => null },
+    actions: { open: () => {}, unarchive: () => {}, remove: () => {} },
+    schedule: () => {},
+  })
+  list.mount(root)
+  const first = reads
+  list.sync()
+  expect(reads).toBe(first)
+  list.dispose()
+  root.remove()
+})
