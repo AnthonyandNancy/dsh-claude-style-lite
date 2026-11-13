@@ -40,7 +40,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   /** Keep the book draw with the shell and renew it on each return to the hero. */
   let bookPick = Math.random()
   /** The hero headline's greeting, renewed on every return to the hero page. */
-  const greeting = createGreetingCopy()
+  const greeting = createGreetingCopy(() => ui.schedule?.())
   let slotsFiber: HostFiber | null = null
   /** The cold start screen's panel: `{ stack, element, root }`, or null. */
   let coldSeat: { stack: Element, element: HTMLElement, root: ReactDOM.Root } | null = null
@@ -231,7 +231,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   window.addEventListener('focus', onWindowWake)
   const stopWatchingVisibility = subscribePageHidden(hidden => { if (!hidden) onWindowWake() })
 
-  ui.homeLayout = { sync }
+  ui.homeLayout = { sync, skipOnContentOnly: true }
 
   registerPanel()
   setLayout(readPrefs().homeLayout)
@@ -242,6 +242,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     unmountColdSeat()
     usage.stop()
     greeting.restore()
+    greeting.stop()
     document.body.removeAttribute(HOME_LAYOUT_ATTR)
     markedRoot?.removeAttribute(HOME_HERO_ATTR)
     markedRoot = null

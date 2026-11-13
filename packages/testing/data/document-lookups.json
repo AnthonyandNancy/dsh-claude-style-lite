@@ -69,10 +69,6 @@
       "count": 2,
       "reason": "The effort popover's instance-scoped node, swept when its card is built and when the control is switched off or torn down."
     },
-    "packages/client/src/features/home/greeting-copy.ts": {
-      "count": 1,
-      "reason": "The hero's title groups, read in the pass that writes the greeting. The part mark is written onto the host's node after it mounts, which a registry of added nodes cannot see."
-    },
     "packages/client/src/features/permissions/stray-nodes.ts": {
       "count": 3,
       "reason": "The first pass of an install reads the control's nodes a previous generation left in the document (a client reload drops its disposals); later passes work from the nodes the feature holds."

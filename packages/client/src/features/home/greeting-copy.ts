@@ -1,3 +1,4 @@
+import { observeMarker } from '@dsh-claude-style/engine/bus'
 import { HOME_LAYOUT_STUDIO } from '../../constants'
 import { getUsername } from '../../shared/identity'
 import { readPrefs } from '../../core/prefs'
@@ -9,27 +10,33 @@ import { pickHeroGreeting, pickStudioGreeting } from './greetings'
  * time the page comes back to the hero so a session left and reopened reads
  * a different line.
  */
-export function createGreetingCopy() {
+export function createGreetingCopy(requestPass?: () => void) {
   /** The classic hero's draw, renewed on every return to the hero page. */
   let draw = Math.random()
   let wasHero = false
   /** Each greeting span this copy has written, with the host's own line it replaced. */
   const replaced = new Map<Element, { host: string, written: string }>()
+  /**
+   * The host renders one title group per hero variant; the first span of each
+   * is the greeting (a preview badge may sit before it). The registry hears a
+   * group that arrives by attribute on a standing node, which a pass alone
+   * would reach only after some other change asked for one.
+   */
+  const groups = observeMarker<HTMLElement>('[data-dsh-claude-part~="hero-title-group"]', requestPass)
 
   return {
     /** One pass: the headline reads the greeting the layout and the clock pick. */
     sync(hero: boolean) {
       if (hero && !wasHero) draw = Math.random()
       wasHero = hero
+      for (const span of replaced.keys()) if (!span.isConnected) replaced.delete(span)
+      const titleGroups = groups.all()
+      if (!hero && replaced.size === 0 && titleGroups.length === 0) return
       const greeting = readPrefs().homeLayout === HOME_LAYOUT_STUDIO
         ? pickStudioGreeting(getUsername())
         : pickHeroGreeting(getUsername(), draw)
-      for (const span of replaced.keys()) if (!span.isConnected) replaced.delete(span)
-      // The host renders one title group per hero variant; the first span of
-      // each is the greeting (a preview badge may sit before it).
-      const groups = document.querySelectorAll('[data-dsh-claude-part~="hero-title-group"]')
-      for (let i = 0; i < groups.length; i++) {
-        const spans = groups[i].children
+      for (let i = 0; i < titleGroups.length; i++) {
+        const spans = titleGroups[i].children
         for (let j = 0; j < spans.length; j++) {
           const span = spans[j]
           const cls = span.getAttribute('class') || ''
@@ -51,6 +58,10 @@ export function createGreetingCopy() {
         if (span.isConnected && span.textContent === line.written) span.textContent = line.host
       }
       replaced.clear()
+    },
+    /** End the marker subscription with the feature that owns it. */
+    stop() {
+      groups.release()
     },
   }
 }

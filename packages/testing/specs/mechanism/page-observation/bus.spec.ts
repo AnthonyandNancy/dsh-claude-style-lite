@@ -478,6 +478,22 @@ test('a released marker registry stops answering', async () => {
   expect(markers.all()).toEqual([])
 })
 
+test('a marker registry hears a marker that arrives by attribute and reports one change', async () => {
+  const root = host()
+  const child = document.createElement('span')
+  child.setAttribute(PROBE, '')
+  root.append(child)
+  let changed = 0
+  const marks = observeMarker<HTMLElement>(`[${PROBE}]`, () => { changed += 1 })
+  cleanups.push(() => marks.release())
+  await settle()
+  expect(marks.all()).toEqual([child])
+  child.removeAttribute(PROBE)
+  await settle()
+  expect(marks.all()).toEqual([])
+  expect(changed).toBe(1)
+})
+
 test('one batch answers every subscriber with the same additions', async () => {
   const root = host()
   const seen: unknown[] = []
