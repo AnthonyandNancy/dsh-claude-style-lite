@@ -7,6 +7,7 @@ import { motionReduced } from '../../core/prefs'
 import { buildElement } from '@dsh-claude-style/engine/dom'
 import { motionMs } from '../../shared/motion'
 import { inPagePixels } from '../../shared/page-zoom'
+import { createSummaryWidthCache } from './summary-width'
 import { SWEEP_BAND_CLASS, buildSweepBand } from '../../shared/sweep-band'
 import { ASSISTANT_STEP_KIND, CHAT_GROUP_PART_ATTRIBUTE, CHAT_GROUP_PART_REASONING, FLOW_KIND_ATTRIBUTE, PROCESS_ACTIVITY_SELECTOR, PROCESS_CONTENT_SELECTOR, PROCESS_GROUP_SELECTOR, SHIMMER_ATTRIBUTE, SHIMMER_SELECTOR, TOOL_CALL_KIND } from '@dsh-claude-style/contracts/dom'
 
@@ -176,6 +177,8 @@ export function createProcessSummary() {
   let faceEpoch = 0
   /** What each running summary's band copy says, so a pass that changes nothing writes nothing. */
   const bandSentences = new WeakMap<HTMLElement, string>()
+  /** The header's own spacing, padding and border, kept until a face or copy change. */
+  const widthCache = createSummaryWidthCache()
 
   /** One figure's count, rolled from the one it showed. */
   function setCount(roll: HTMLElement, count: number) {
@@ -218,24 +221,7 @@ export function createProcessSummary() {
 
   /** Measure against the containing block: the content-sized header would otherwise validate its current wording. */
   function availableWidth(header: HTMLElement, summary: HTMLElement) {
-    const style = getComputedStyle(header)
-    const parent = header.parentElement
-    const parentStyle = parent === null ? null : getComputedStyle(parent)
-    const limit = parent === null || parentStyle === null
-      ? header.clientWidth
-      : parent.clientWidth - (parseFloat(parentStyle.paddingLeft) || 0) - (parseFloat(parentStyle.paddingRight) || 0)
-    const gap = parseFloat(style.columnGap) || 0
-    let room = limit
-      - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0)
-      - (parseFloat(style.borderLeftWidth) || 0) - (parseFloat(style.borderRightWidth) || 0)
-    for (const child of header.children) {
-      if (child === summary) continue
-      // The child's box in the pixels the styles around it are given in
-      // (shared/page-zoom.ts).
-      const width = inPagePixels(child.getBoundingClientRect().width)
-      if (width > 0) room -= width + gap
-    }
-    return Math.max(0, room)
+    return widthCache.available(header, summary)
   }
 
   /** Font signature completes the width cache key and is cached per faceEpoch. */
@@ -484,6 +470,7 @@ export function createProcessSummary() {
   const onFacesLoaded = () => {
     faceEpoch += 1
     fitWidths.clear()
+    widthCache.invalidateAll()
   }
   document.fonts.addEventListener('loadingdone', onFacesLoaded)
 
@@ -504,6 +491,7 @@ export function createProcessSummary() {
       stopMutations()
       document.fonts.removeEventListener('loadingdone', onFacesLoaded)
       fitWidths.clear()
+      widthCache.invalidateAll()
       for (const [digit, timer] of leaving) {
         window.clearTimeout(timer)
         digit.remove()
