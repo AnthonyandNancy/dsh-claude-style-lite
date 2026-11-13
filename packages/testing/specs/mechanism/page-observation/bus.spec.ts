@@ -184,6 +184,34 @@ test('an afterHost subscription runs after a resize observer made before it', as
   expect(calls).toEqual(['early', 'host', 'after host'])
 })
 
+test('a size batch routes each entry only to the subscriptions watching its target', async () => {
+  const a = host()
+  const b = host()
+  for (const element of [a, b]) element.style.height = '10px'
+  const seen: string[][] = []
+  cleanups.push(observeSize(a, entries => seen.push(['a', ...entries.map(entry => (entry.target as HTMLElement).id)])))
+  cleanups.push(observeSize(b, entries => seen.push(['b', ...entries.map(entry => (entry.target as HTMLElement).id)])))
+  a.id = 'a'
+  b.id = 'b'
+  await nextFrame()
+  seen.length = 0
+  a.style.height = '20px'
+  b.style.height = '20px'
+  await nextFrame()
+  expect(seen).toEqual([['a', 'a'], ['b', 'b']])
+  const shared = host()
+  shared.id = 'shared'
+  shared.style.height = '10px'
+  const paired: string[][] = []
+  cleanups.push(observeSize(shared, entries => paired.push(['first', ...entries.map(entry => (entry.target as HTMLElement).id)])))
+  cleanups.push(observeSize(shared, entries => paired.push(['second', ...entries.map(entry => (entry.target as HTMLElement).id)])))
+  await nextFrame()
+  paired.length = 0
+  shared.style.height = '20px'
+  await nextFrame()
+  expect(paired).toEqual([['first', 'shared'], ['second', 'shared']])
+})
+
 test('a subscription over several elements hears one batch per frame, holding only its own elements', async () => {
   const a = host()
   const b = host()
