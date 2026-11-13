@@ -794,170 +794,83 @@ git commit -m "feat: 通知改走宿主系统通道"
 
 ---
 
-### Task 4: 增长写回先判断读者位置
+### Task 4: 宿主回到底部按钮按下即结束读者持有
 
 **Files:**
-- Modify: `packages/client/src/features/chat-follow/chat-follow.ts:440-470`
+- Modify: `packages/engine/src/scroll-owner.ts`
+- Modify: `packages/client/src/features/chat-follow/chat-follow.ts`
+- Modify: `packages/client/src/features/chat-fold/fold-glide-parts.ts`
 - Test: `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`
+- Test: `packages/testing/smoke/probe/chat-follow.js`
+- Test: `packages/testing/smoke/cases/chat.mjs`
 
 **Interfaces:**
-- Consumes: `readerScrollPosition(container): number | null`, `writeScroll(container, value, source): boolean`
-- Produces: no new export; `holdGrowth` keeps its signature and gains the empty-position guard.
+- Consumes: `findFollowTailButton()`, `conversationScroller()`, `setHeld(container, false)`
+- Produces: no new export; the scroll owner's document listeners gain the host button's capture-phase `click`.
 
-- [ ] **Step 1: Write the failing growth-after-hand-back test**
+- [ ] **Step 1: Write the failing button-hold test**
 
-Replace `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts` with this file:
+Replace `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts` with a fixture whose button stands outside the scroller and writes the tail plus the follow mark on click, then assert:
 
 ```ts
-/**
- * A hand-back returns the conversation to the host: the reader hold goes, the
- * host button is pressed once, and a growth that arrives afterwards is written
- * to the tail by the host alone. The position the growth path reads is gone,
- * so that path returns instead of writing a cleared value (D40, D99).
- *
- * @capability scroll-ownership
- * @features engine
- * @risk After the reader presses the host's back-to-end button, the next piece of content makes the skin write its cleared reader position over the tail and the window jumps to the top.
- */
-import { afterEach, expect, test } from 'vitest'
-import { adoptSkin } from '@dsh-claude-style/engine/skin'
-import { handBackFollow, handBackPending, readerHolds, readerScrollPosition } from '@dsh-claude-style/engine/scroll-owner'
-import { CHAT_FLOW_SELECTOR, CONVERSATION_SCROLL_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE } from '@dsh-claude-style/contracts/dom'
-import { TEST_SKIN } from '../../fixtures/vocabulary'
-import { hostElement } from '../../fixtures/host-markup'
-import { createScrollOwnerFixture } from '../../fixtures/scroll-owner'
-
-adoptSkin(TEST_SKIN)
-
-const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
-const cleanups: (() => void)[] = []
-afterEach(() => {
-  while (cleanups.length > 0) cleanups.pop()!()
-})
-
-const { scrollBox, join } = createScrollOwnerFixture(cleanups)
-
-/**
- * The host's shape around the follow button: the flow column sits in the
- * scroller, the scroller's parent is the frame, and the frame's next sibling
- * holds the button. The button stands outside the scroller, so its press is no
- * scroll intent the owner hears.
- */
-function followFrame() {
-  const following = document.createElement('div')
-  const pressed: number[] = []
-  const settled: number[] = []
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.addEventListener('click', () => {
-    pressed.push(performance.now())
-    following.setAttribute(FOLLOWING_TAIL_ATTRIBUTE, '')
-    scroller.scrollTop = scroller.scrollHeight
-  })
-  join()
-  const scroller = scrollBox(CONVERSATION_SCROLL_SELECTOR)
-  const column = hostElement(CHAT_FLOW_SELECTOR)
-  column.style.height = '2000px'
-  scroller.replaceChildren(following)
-  following.append(column)
-  const frame = document.createElement('div')
-  const slot = document.createElement('div')
-  const outer = document.createElement('div')
-  slot.append(button)
-  frame.append(scroller)
-  outer.append(frame)
-  outer.append(slot)
-  document.body.append(outer)
-  cleanups.push(() => outer.remove())
-  return {
-    scroller,
-    column,
-    pressed,
-    settled,
-    settle: () => { settled.push(performance.now()) },
-  }
-}
-
-test('a hand-back presses the host button once and clears the reader position', async () => {
-  const { scroller, pressed } = followFrame()
+test('the host back-to-end button ends the reader hold and keeps the position at the tail', async () => {
+  const { scroller, button, presses } = followFrame()
   scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
+  scroller.scrollTop = 0
   expect(readerHolds(scroller)).toBe(true)
-  handBackFollow({ source: 'reader', reason: 'reader' })
-  await wait(800)
-  expect(pressed).toHaveLength(1)
-  expect(readerHolds(scroller)).toBe(false)
-  expect(readerScrollPosition(scroller)).toBeNull()
-  expect(handBackPending(scroller)).toBe(false)
-})
-
-test('growth after the hand-back stays at the host tail', async () => {
-  const { scroller, column, pressed } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  expect(readerHolds(scroller)).toBe(true)
-  handBackFollow({ source: 'reader', reason: 'reader' })
-  // The host's own write to the tail, on the press.
-  expect(readerHolds(scroller)).toBe(false)
-  expect(readerScrollPosition(scroller)).toBeNull()
-  const piece = document.createElement('div')
-  piece.style.height = '600px'
-  column.append(piece)
-  // The host's follow pins the end on growth.
-  scroller.scrollTop = scroller.scrollHeight
-  await wait(50)
-  expect(pressed).toHaveLength(1)
+  expect(readerScrollPosition(scroller)).toBe(0)
+  button.click()
+  expect(presses).toHaveLength(1)
   expect(readerHolds(scroller)).toBe(false)
   expect(readerScrollPosition(scroller)).toBeNull()
   expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
-})
-
-test('the position stays readable for the growth path after a hand-back', async () => {
-  const { scroller } = followFrame()
-  scroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
-  expect(readerHolds(scroller)).toBe(true)
-  expect(readerScrollPosition(scroller)).not.toBeNull()
-  handBackFollow({ source: 'reader', reason: 'reader' })
-  expect(readerHolds(scroller)).toBe(false)
-  // The write-back guard reads exactly this value: a hand-back leaves none.
-  expect(readerScrollPosition(scroller)).toBeNull()
+  await wait(50)
+  expect(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop).toBe(0)
 })
 ```
+
+The file also covers growth after the press, keyboard activation, and a later upward scroll that takes the hold again.
 
 - [ ] **Step 2: Run the test and confirm it fails**
 
 Run:
 
 ```powershell
-node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
+npx vitest run packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
 ```
 
-Expected: FAIL: the growth test reads `scrollTop` as `0` even though `readerScrollPosition` is null.
+Expected: FAIL, because `button.click()` leaves `readerHolds(scroller)` true.
 
-- [ ] **Step 3: Guard the growth write-back against a cleared reader position**
+- [ ] **Step 3: Restore the upstream scroll implementation and add the button activation**
 
-In `packages/client/src/features/chat-follow/chat-follow.ts`, change `holdGrowth` to:
+Restore `packages/engine/src/scroll-owner.ts`, `packages/client/src/features/chat-follow/chat-follow.ts` and `packages/client/src/features/chat-fold/fold-glide-parts.ts` to the `dsh-claude-style` 0.20.3 implementation. In `scroll-owner.ts`, add:
 
 ```ts
-const holdGrowth = (column: HTMLElement) => {
-  const scroller = column.closest(CONVERSATION_SCROLL_SELECTOR)
-  if (scroller === null || column.closest(FOLLOWING_TAIL_SELECTOR) === null) return
-  if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) return
-  if (foldBusy()) return
-  // The host's follow has written the new tail. Give it back only where the
-  // reader still holds a position of his own; a hand-back has cleared it.
-  const position = readerScrollPosition(scroller)
-  if (position === null) return
-  writeScroll(scroller, position, 'reader')
+const FOLLOW_TAIL_ACTIVATION_TYPE = 'click'
+
+function noteFollowTailActivation(event: Event) {
+  const target = event.target
+  if (!(target instanceof Node)) return
+  const button = findFollowTailButton()
+  if (button === null || (target !== button && !button.contains(target))) return
+  const scroller = conversationScroller()
+  if (scroller === null) return
+  setHeld(scroller, false)
 }
 ```
 
-Remove `handBackPending` from the import; no other line in the file reads it.
+`joinScrollOwner` registers it in the capture phase beside the intent listeners and removes it with them:
+
+```ts
+document.addEventListener(FOLLOW_TAIL_ACTIVATION_TYPE, noteFollowTailActivation, { capture: true, passive: true })
+```
 
 - [ ] **Step 4: Run the mechanism specs**
 
 Run:
 
 ```powershell
-node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership
+npx vitest run packages/testing/specs/mechanism/scroll-ownership
 ```
 
 Expected: PASS, every owner, touch-hold and return case.
@@ -967,18 +880,18 @@ Expected: PASS, every owner, touch-hold and return case.
 Run:
 
 ```powershell
-node node_modules/vitest/vitest.mjs run packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
+npm run build
 node packages/testing/stand-in.mjs --case chat-follow
 node packages/testing/stand-in.mjs --spec chat-follow
 ```
 
-Expected: PASS. If the stand-in smoke reports `a structural moment hands the scroll back` as `{"before":60,"after":60}`, that is the lane's own fixture lacking a host button press and not this change; record the output and run the case again on a tree with the fix applied.
+Expected: PASS. The case now presses the host button and grows the column, and reads the tail distance afterwards.
 
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add packages/client/src/features/chat-follow/chat-follow.ts packages/testing/specs/mechanism/scroll-ownership/return.spec.ts
-git commit -m "fix: 增长写回先判断读者位置"
+git add packages/engine/src/scroll-owner.ts packages/client/src/features/chat-follow/chat-follow.ts packages/client/src/features/chat-fold/fold-glide-parts.ts packages/testing/specs/mechanism/scroll-ownership/return.spec.ts packages/testing/smoke/probe/chat-follow.js packages/testing/smoke/cases/chat.mjs
+git commit -m "fix: 回到底部按钮按下即结束读者持有"
 ```
 
 ---
@@ -987,7 +900,7 @@ git commit -m "fix: 增长写回先判断读者位置"
 
 **Files:**
 - Add: `docs/adr/D97-host-delivers-desktop-notifications.md`
-- Add: `docs/adr/D99-growth-checks-the-reader-position.md`
+- Add: `docs/adr/D99-back-to-bottom-ends-reader-hold.md`
 - Modify: `docs/adr/README.md`
 - Add: `docs/changes/desktop-notifications-and-scroll-return.json`
 - Modify: `docs/INSTALL.md`
@@ -997,7 +910,7 @@ git commit -m "fix: 增长写回先判断读者位置"
 
 - [ ] **Step 1: Write the two ADRs**
 
-Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D99 records that a growth checks whether the reader position still exists before writing it back, and it carries 「取代：D98」.
+Use the shape of `docs/adr/D95-stream-slide-counter-pins.md`: 背景、决定、后果、重审条件. D97 records that the Windows notification identity belongs to the plugin and the host half sends it through a bounded system process. D99 records that the host back-to-end button ends the reader hold before the host writes the tail, and it carries 「取代：D98」.
 
 - [ ] **Step 2: Regenerate the ADR index**
 
@@ -1020,7 +933,7 @@ Create `docs/changes/desktop-notifications-and-scroll-return.json`:
   "group": "fixes",
   "order": 1,
   "external": true,
-  "zh": "修复桌面端提示通知没有系统气泡，以及点回到底部后新内容到达时窗口跳到旧位置的问题",
+  "zh": "修复桌面端提示通知没有系统气泡，以及点回到底部后新内容到达时窗口跳回顶部的问题",
   "en": "Deliver system notifications from the desktop host and keep the transcript at the end after the reader returns to it"
 }
 ```

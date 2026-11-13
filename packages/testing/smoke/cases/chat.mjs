@@ -41,6 +41,14 @@ export default {
     check('a reader who scrolled away himself is left where he is',
       follow.readerBefore === 60 && follow.readerAfter === 60,
       JSON.stringify({ before: follow.readerBefore, after: follow.readerAfter }))
+    // The host's own back-to-end button is the reader answering with the
+    // follow: the press ends the hold, the host writes the tail, and the next
+    // growth stays there (scroll-owner.ts's button press, chat-follow.ts's
+    // holdGrowth).
+    const returned = follow.returnToBottom || {}
+    check('the host back-to-end button hands the follow back: growth after the press stays at the tail',
+      returned.followingWasOn === false && returned.gap <= AT_END_PX,
+      JSON.stringify(returned))
     const catchUp = follow.catchUp || []
     const catchUpSteps = walkedSteps(catchUp, AT_END_PX)
     check('the capped body walks to its end instead of jumping: the recording starts far off, every frame closes on it, and the last one is at the end',

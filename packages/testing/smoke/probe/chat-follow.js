@@ -48,6 +48,7 @@
     await probe.onlyFor(['chat-follow'], async function () {
       var followScroller = document.querySelector('[data-conversation-scroll]')
       var followColumn = document.querySelector('[data-chat-flow]')
+      var followButton = document.querySelector('#debugTail button')
       var cappedBody = document.querySelector('[data-step-process]:not([data-group-expanded-mode]) [data-step-process-body]')
       var expandedBody = document.querySelector('[data-step-process][data-group-expanded-mode] [data-step-process-body]')
       var endGap = function () {
@@ -132,6 +133,44 @@
       r.chatFollow.readerBefore = endGap()
       await structuralMoment()
       r.chatFollow.readerAfter = endGap()
+      // The reader presses the host's own back-to-end button. Its click is the
+      // host's returnToBottom: the follow mark comes back and the position goes
+      // to the tail. The growth after it belongs to the host's follow; the
+      // owner's held position must not be written over the new tail. The page
+      // stands in for the host's own write: the button handler is the only
+      // place a position is written here, as returnToBottom is on the host.
+      var returnGap = function () {
+        var row = document.createElement('div')
+        row.setAttribute('data-chat-flow-key', 'return-growth')
+        row.style.height = '300px'
+        var pressAndGrow = function () {
+          followButton.click()
+          followColumn.appendChild(row)
+          // The host's follow pins the end when its column grows.
+          followScroller.scrollTop = followScroller.scrollHeight
+          return probe.sleep(160).then(function () {
+            var gap = endGap()
+            row.remove()
+            followScroller.scrollTop = followScroller.scrollHeight
+            return gap
+          })
+        }
+        followScroller.scrollTop = 0
+        followScroller.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -400 }))
+        followScroller.scrollTop = 0
+        return pressAndGrow()
+      }
+      var followingWasOn = followColumn.parentElement.hasAttribute('data-chat-following-tail')
+      // The host's button is drawn only while its follow is off, which a click
+      // here also settles: the button stands in the page's own frame.
+      followButton.style.display = 'inline-block'
+      // The host's returnToBottom: the follow mark comes on and the position
+      // lands at the tail, once, when the button is pressed.
+      followButton.addEventListener('click', function () {
+        followColumn.parentElement.setAttribute('data-chat-following-tail', '')
+        followScroller.scrollTop = followScroller.scrollHeight
+      })
+      r.chatFollow.returnToBottom = { followingWasOn: followingWasOn, gap: await returnGap() }
       // The capped body's catch-up is walked in on a curve, not written in one
       // frame (scroll-ease.ts): grow the content well past the catch-up
       // threshold and record every frame of the walk out of it.

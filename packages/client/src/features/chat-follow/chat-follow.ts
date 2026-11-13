@@ -449,12 +449,9 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     if (scroller === null || column.closest(FOLLOWING_TAIL_SELECTOR) === null) return
     if (scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0.5) return
     if (foldBusy()) return
-    // The host has already written the new tail. Give it back only where the
-    // reader still holds a position of his own; a hand-back has cleared it,
-    // and a cleared position is no position to write (D99).
-    const position = readerScrollPosition(scroller)
-    if (position === null) return
-    writeScroll(scroller, position, 'reader')
+    // The host has already written the new tail. Restore the position the
+    // reader chose, which is the old tail only for a touch held there (#230).
+    writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')
   }
 
   /**
@@ -546,7 +543,7 @@ export function createChatFollowGuard(options: { foldBusy: () => boolean, submis
     lastEnsureAt = now
     // A hand-back in flight outlives the frame it began in, so it is told the
     // feature is gone rather than only that the reader is still up there.
-    handBackFollow({ source: 'follow', reason: 'structure', stillWanted: () => !stopped && !readerAway() })
+    handBackFollow('follow', { stillWanted: () => !stopped && !readerAway() })
   }
 
   /** A batch of mutations is settled: decide whether to act. */

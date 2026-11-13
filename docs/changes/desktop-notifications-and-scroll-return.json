@@ -3,6 +3,6 @@
   "group": "fixes",
   "order": 1,
   "external": true,
-  "zh": "修复点回到底部后新内容到达时对话跳回旧位置的问题",
+  "zh": "修复点回到底部后新内容到达时对话跳回顶部的问题",
   "en": "Keep the transcript at the end after the reader returns to it"
 }

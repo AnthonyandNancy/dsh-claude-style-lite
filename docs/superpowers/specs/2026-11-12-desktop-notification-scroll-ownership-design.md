@@ -5,7 +5,7 @@
 > 适用仓库：`dsh-claude-style-lite`（DeepSeek Harness 桌面主题插件）
 > 核查基线：DSH 桌面端 `0.2.2-rc.1`、本仓分支 `feat/session-panel-notification-thinking`
 > 案例依据：`docs/superpowers/specs/2026-11-12-notification-github-research.md`
-> 状态：旧结论已更正；根因由替身页逐帧复现证实，源码未修改
+> 状态：根因由宿主动作与滚动主人的持有状态证实；源码已修改
 
 ---
 
@@ -14,7 +14,7 @@
 | 编号 | 现象 | 根因 | 解决方案 |
 | --- | --- | --- | --- |
 | P1 | 设置里已有「提示通知窗口」入口，桌面端没有任何系统通知 | 当前实现只调用页面 `Notification`，没有任何证据显示它到达了系统通知中心；桌面壳的主进程没有为应用设置自己的 `AppUserModelID`/`ToastActivatorCLSID`，页面构造器的投递与点击激活依赖 Electron 的默认身份；插件也没有宿主侧发送通道。本次 20:09 启动后，DSH 注册到 Windows 通知系统的标识没有新增历史条目 | 把通知发送移到宿主半，经已有私有路由与 `subprocess` 服务发送 Windows Toast，并复用 DSH 自己在 Windows 上注册的通知身份；点击走插件自定义协议写交接文件，浏览器半轮询同一私有路由领取会话切换 |
-| P2 | 读者手动滚上去，点宿主的回到底部按钮，之后响应或操作到达时窗口跳到非预期位置 | `handBackFollow` 在点击宿主按钮前调用 `releaseReaderHold(scroller)`，`readerPositions` 被删除；新内容到达时宿主把位置写到末尾，增长写回路径仍以 `readerScrollPosition(scroller)!` 读取读者位置，得到 null 并把它交给 `writeScroll`，`scrollTop = null` 被浏览器解释为 0。复现中按钮恰好点击一次，增长后下一帧从 960 回到 0 | 增长写回先判断读者位置是否存在：`holdGrowth` 读到 null 时直接返回，把这次增长交给宿主跟随；同时去掉非空断言，读者仍持有对话时保留原有写回 |
+| P2 | 读者手动滚上去，点宿主的回到底部按钮，之后响应或操作到达时窗口跳到非预期位置 | 宿主按钮位于对话滚动容器之外，按钮点击不产生滚动容器上的读者意图；滚动主人仍保留读者离开时的持有。宿主 `returnToBottom()` 把位置写到末尾并打开跟随后，内容增长时 `holdGrowth` 按持有写回旧位置，宿主再次写末尾，窗口在末尾与顶部之间往返。复现中按钮恰好点击一次 | 滚动主人在捕获阶段监听宿主「回到底部」按钮的 `click`，命中时结束会话滚动容器的读者持有；其余滚动实现恢复上游 0.20.3 的写法，增长与跟随交给宿主 |
 
 两处问题分开交付：通知通道只改宿主半与通知功能；滚动修复只改滚动主人及其调用点。两者没有共享状态。
 
@@ -70,36 +70,32 @@
 
 ### 1.4 回到底部跳动的代码路径
 
-以下链路来自 2026-11-12 在 `chat-follow` 替身页上的逐帧复现：读者在末尾，滚轮上滚到顶部，按下宿主的「回到底部」按钮，按钮把位置写到末尾，随后一行 600px 的结构内容到达。录制文件为 `.debug/runs/scroll-return/repro-full.json`、`.debug/runs/scroll-return/repro-control.json`。
+读者在末尾，滚轮上滚到顶部，按下宿主的「回到底部」按钮，按钮把位置写到末尾，随后新内容到达。宿主的按钮本身只调用 `returnToBottom()`；点击发生在滚动容器之外，容器上的滚动意图与滚动事件都不会出现。
 
 | 步骤 | 位置 | 行为 |
 | --- | --- | --- |
 | 1 | 宿主 `ChatView.tsx:272-283` | `followingTail === false` 时渲染「回到底部」按钮 |
-| 2 | 宿主 `use-chat-scroll.ts` 的 `returnToBottom` | 取消在途动态、取消导航、调用 `reading.followTail()`，并把 `scrollTop` 写到末尾 |
-| 3 | 皮肤 `chat-follow.ts:521-547` | 结构变化与跟随关闭时调用 `handBackFollow({ source: 'follow', reason: 'structure', ... })` |
-| 4 | `scroll-owner.ts:547-579` | 记录请求代次、设置 `handBackUntil` 为 500ms、调用 `releaseReaderHold(scroller)`，得到宿主按钮后点击一次 |
-| 5 | 宿主按钮点击 | 按钮在对话滚动容器之外，点击事件不冒泡到滚动容器，`noteIntent` 看不到它，`noteScroll` 只看到宿主写入末尾 |
-| 6 | `scroll-owner.ts:143-157` | `releaseReaderHold` 调用 `setHeld(false)`，删除 `held`、`readerPositions`、`readerFloors`、`heldTowardEnd`，并撤掉 `READER_HOLD_ATTR` |
-| 7 | `scroll-owner.ts:204-221` | 点击后若读者再产生滚动意图，`noteIntent` 会重新建立持有；复现没有这一步，增长前持有已由 `setHeld(false)` 清掉 |
-| 8 | `chat-follow.ts:447-456` | 增长到达时 `holdGrowth` 看到 `FOLLOWING_TAIL_SELECTOR` 与末尾位置，调用 `writeScroll(scroller, readerScrollPosition(scroller)!, 'reader')` |
-| 9 | 复现结果 | 点击后 `top=960/gap=0`；新内容到达后下一帧 `top=0/gap=1560`，按钮只被点击一次 |
+| 2 | 宿主 `use-chat-scroll.ts` 的 `returnToBottom` | 取消在途动态、取消导航、调用 `reading.followTail()` |
+| 3 | 宿主 `use-chat-reading.ts` 的 `followTail` | 调用 `viewport.scrollToBottom`，把位置写到末尾，保存 `followingTail = true` |
+| 4 | `scroll-owner.ts` 的 `noteIntent` | 按钮在滚动容器之外，这里收不到这次点击；读者持有停在离开时的位置 |
+| 5 | 宿主按钮点击后的增长 | 宿主跟随把位置写到新的末尾 |
+| 6 | `chat-follow.ts` 的 `holdGrowth` | 调用处由 `readerAway()` 判定，持有仍成立；读取 `readerScrollPosition` 得旧位置并以 `reader` 来源写回 |
+| 7 | 重复 | 宿主再次写到末尾，下一次增长再次被写回，窗口在末尾与旧位置之间往返 |
 
-复现里最关键的一帧是增长到达之后：宿主把 `scrollTop` 写到新的末尾，下一帧它回到 0。`handBackFollow` 此时已经把持有记录删掉，`readerScrollPosition(scroller)` 得到 null。`holdGrowth` 的非空断言没有改变这个值，`writeScroll(scroller, null, 'reader')` 把 null 交给浏览器，浏览器把它解释为 0。回弹来自这条写回。
+根因是「读者用宿主的入口交出了跟随，滚动主人仍保留读者持有」：
 
-根因是「位置已为空，写回仍把它交给滚动主人」：
+1. **容器外点击听不到**：滚动主人只在会话滚动容器上记录意图，宿主按钮位于容器之外。
+2. **两套跟随状态不同步**：宿主已经恢复 `followingTail`，滚动主人仍返回 `readerHolds(scroller) === true`。
+3. **增长写回按旧持有执行**：`holdGrowth` 在宿主写到末尾后把读者旧位置写回，宿主再写末尾，形成往返。
 
-1. **手回清掉位置**：`handBackFollow` 在点击宿主按钮前调用 `releaseReaderHold(scroller)`，再由 `setHeld(false)` 删除 `readerPositions`，此后 `readerScrollPosition(scroller)` 返回 null。
-2. **写回不判断空值**：`holdGrowth` 在宿主增长且位置在末尾时读取 `readerScrollPosition(scroller)!`；非空断言只改变类型，运行时仍把 null 交给 `writeScroll`。
-3. **空值被浏览器解释为 0**：`writeScroll` 执行 `container.scrollTop = null`，浏览器把 null 转成 0，末尾被替换成顶部；这就是录到的回弹，按钮只点击一次。
-
-宿主行为是清楚的：按钮点击把位置写到末尾并把跟随打开；之后的内容增长由宿主写末尾。皮肤的职责是：没有读者位置时不得写回，增长交给宿主跟随。
+宿主行为是清楚的：按钮点击是读者要求回到末尾，玩家交给宿主的跟随。皮肤的职责是让滚动主人同时结束读者持有，之后的增长只由宿主跟随写末尾。
 
 ### 1.5 为什么不是普通滚动误差
 
 - 跳动发生在「响应或别的操作到达时」，也就是新内容改变 `scrollHeight` 的时刻，而不是按钮点击的同一帧。
 - 复现中按钮点击恰好一次，`pressed=1`，排除重复点击。
-- 点击后 `readerScrollPosition(scroller)` 为 null，`holdGrowth` 的非空断言把 null 写入 `scrollTop`，1560px 的末尾被替换成 0。
-- 修复的门是持有状态：读者不持有时，任何增长都由宿主跟随负责；读者持有时才允许写回其自己的位置。
+- 增长到达后持有时仍为 `true`，读者位置仍是按钮按下前的值；宿主写到末尾，下一帧又被写回。
+- 修复的门是持有状态：读者按下宿主的按钮，持有结束；读者没有按下按钮时，持有与写回保持不变。
 
 ---
 
@@ -143,7 +139,7 @@
 - 即使由宿主补上 `app.setAppUserModelId('com.deepseek.dsh')`，也要求桌面壳发行版本更新；插件要立即可用，必须自己拥有发送进程。
 - 宿主补修仍应作为上游建议提出：桌面壳设置自己的 AppUserModelID 与 ToastActivatorCLSID，后续可让页面构造器直接工作。
 
-### 2.2 滚动：增长写回先判断读者位置
+### 2.2 滚动：宿主回到底部按钮按下即结束读者持有
 
 **目标行为**
 
@@ -154,26 +150,23 @@
 
 **改动原则**
 
-1. `holdGrowth` 的调用处已经以 `readerAway()` 为门，这个门就是 `readerHolds(scroller)`。
-2. `holdGrowth` 读 `readerScrollPosition(scroller)`；为 null 时直接返回，不调用 `writeScroll`。
-3. `holdGrowth` 在位置存在时写回，去掉 `readerScrollPosition(scroller)!` 的非空断言。
-4. `handBackFollow` 继续在点击宿主按钮前调用 `releaseReaderHold(scroller)`；`handBackUntil` 继续表示交接窗口。
-5. 读者再次滚动时由 `noteIntent` 正常建立新的持有；这次滚动是唯一能让位置离开末尾的操作。
+1. 滚动主人在文档捕获阶段监听 `click`，用 `findFollowTailButton()` 判定命中宿主「回到底部」按钮。
+2. 命中时对 `conversationScroller()` 执行 `setHeld(scroller, false)`，删除持有、读者位置、读者记录与朝末尾标记，并撤掉持有标记。
+3. 捕获阶段早于宿主的 `onClick`：宿主 `returnToBottom()` 写到末尾之前，持有已经结束。
+4. 宿主按钮的键盘激活产生同一个 `click`，与鼠标和触屏走同一条路径。
+5. 滚动主人的手回、增长写回与内部时序恢复上游 0.20.3：`handBackFollow(source, options)`、`FOLLOW_LOOK_*`、`holdGrowth` 的原有写回都恢复。
+6. 读者再次滚动时由 `noteIntent` 正常建立新的持有；这次滚动是唯一能让位置离开末尾的操作。
 
 **写入顺序**
 
 ```
-读者点击按钮
-  -> 皮肤 handBackFollow({ source: 'reader', reason: 'reader' })
-  -> releaseReaderHold(scroller): held / readerPositions / readerFloors / heldTowardEnd 清空
-  -> 点击宿主按钮（一次）
+读者按下宿主按钮
+  -> 捕获阶段 noteFollowTailActivation(): setHeld(scroller, false)
   -> 宿主 returnToBottom(): scrollTop = 末尾, followingTail = true
   -> 新内容到达 -> 宿主跟随写末尾
-  -> holdGrowth 读 readerScrollPosition: null，直接返回
+  -> readerHolds(scroller) = false，增长写回不进入
   -> 位置停在末尾
 ```
-
-皮肤不再参与“新内容到达后把位置写回旧处”。
 
 ---
 
@@ -325,45 +318,48 @@ export interface Notifier {
 
 ### 3.2 滚动所有权
 
-#### Task S1：增长写回先判断读者位置
+#### Task S1：宿主回到底部按钮按下即结束读者持有
 
 **Files**
 
-- Modify: `packages/client/src/features/chat-follow/chat-follow.ts:440-470`
+- Modify: `packages/engine/src/scroll-owner.ts`
+- Modify: `packages/client/src/features/chat-follow/chat-follow.ts`
+- Modify: `packages/client/src/features/chat-fold/fold-glide-parts.ts`
 - Test: `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`
-- Test: `packages/testing/specs/mechanism/scroll-ownership/owner.spec.ts`
 
 **实现要点**
 
-- `holdGrowth` 的调用处已经在 `readerAway()` 为 true 时进入；`readerAway()` 就是 `readerHolds(scroller)` 的读取。因此真正缺失的判断是位置：`readerScrollPosition(scroller)` 为 null 时直接返回，不调用 `writeScroll`。
-- `holdGrowth` 在位置存在时以 `reader` 来源写回，去掉 `readerScrollPosition(scroller)!` 的非空断言。
-- `ensure` 继续调用 `handBackFollow({ source: 'follow', reason: 'structure', stillWanted: () => !stopped && !readerAway() })`。
-- `handBackFollow` 与 `handBackPending` 保持现有签名；`handBackPending` 在 `holdGrowth` 不再需要时从导入中移除，由测试继续读取。
-- `handBackPending` 的 500 毫秒窗口不是本次修复的判据；它只在其他路径需要读到交接窗口时保留。
+- `packages/engine/src/scroll-owner.ts` 恢复上游 0.20.3 的 `handBackFollow(source, options)` 与 `FOLLOW_LOOK_*` 时序。
+- 新增 `FOLLOW_TAIL_ACTIVATION_TYPE = 'click'` 与 `noteFollowTailActivation(event)`；命中 `findFollowTailButton()` 时执行 `setHeld(scroller, false)`。
+- `joinScrollOwner` 在订阅时加上捕获阶段的 `click` 监听，在最后一个使用者离开时摘下。
+- `packages/client/src/features/chat-follow/chat-follow.ts` 恢复上游写法：`holdGrowth` 的写回、`ensure` 的 `handBackFollow('follow', ...)` 与导入都回到 0.20.3。
+- `packages/client/src/features/chat-fold/fold-glide-parts.ts` 恢复 `handBackFollow('fold', ...)`。
 - `docs/superpowers/plans/2026-11-12-desktop-notification-scroll-ownership.md` 的 Task 4 按同一判断生成测试与实现。
 
 **失败模式**
 
-- 按钮在点击前消失：`handBackFollow` 的现有确认结束本轮；宿主已被视为恢复跟随。
-- 读者在点击后再次上滚：`noteIntent` 重新建立 `held`，`readerHolds` 返回 true，下一次增长写回读者自己的位置，而非旧位置。
-- 按钮点击后宿主没有把位置写到末尾：`readerHolds` 读到末尾距离仍大于阈值，返回 true；持有成立时写回读者位置，不改变本轮按钮次数。
-- `readerScrollPosition(scroller)` 为 null：`holdGrowth` 直接返回，不再把 null 写进 `scrollTop`。
+- 按钮在点击前消失：`findFollowTailButton()` 返回 null，监听不命中；读者可以自己滚回末尾，`releaseAtTail` 交出跟随。
+- 读者在点击后再次上滚：`noteIntent` 重新建立 `held`，`readerHolds` 返回 true，下一次增长写回读者自己的位置，而非末尾。
+- 按钮点击后宿主没有把位置写到末尾：持有已结束，跟随状态由宿主的 `returnToBottom()` 负责；皮肤不写回旧位置。
+- 按钮由脚本点击（`handBackFollow` 自己按的）：监听同样命中，持有结束与读者按下时一致。
 
 #### Task S2：补一条从回到底部到流式增长的机制测试
 
 **Files**
 
 - Modify: `packages/testing/specs/mechanism/scroll-ownership/return.spec.ts`
-- Modify: `packages/testing/specs/fixtures/scroll-owner.ts`
+- Modify: `packages/testing/smoke/probe/chat-follow.js`
+- Modify: `packages/testing/smoke/cases/chat.mjs`
 
 **测试场景**
 
 1. 读者滚上去后宿主按钮出现；点击按钮一次，按钮把 `scrollTop` 写到末尾、把 `data-chat-following-tail` 写回。
-2. 点击后立即增长 600px 并触发宿主写末尾；断言 `scrollTop` 保持在末尾、`readerHolds(scroller)` 为 false、`readerScrollPosition(scroller)` 为 null。
-3. 点击后 50ms 增长内容；断言位置仍在末尾。
-4. 点击后 120ms 增长内容，覆盖宿主跟随状态晚于 500ms 稳定的窗口；断言位置仍在末尾。
-5. 点击后立刻上滚；断言读者重新持有，后续增长写回读者自己的位置。
-6. 去掉 `holdGrowth` 的空值判断、恢复 `readerScrollPosition(scroller)!` 后，第 2 至第 4 条必须失败，证明测试确实覆盖这条回归。
+2. 按下按钮后断言 `readerHolds(scroller)` 为 false、`readerScrollPosition(scroller)` 为 null，位置在末尾。
+3. 点击后立即增长 600px 并触发宿主写末尾；断言 `scrollTop` 保持在末尾。
+4. 键盘激活宿主按钮走同一条路径；断言持有结束、位置在末尾。
+5. 点击后立刻上滚；断言读者重新持有，读者位置是新的位置。
+6. 去掉捕获阶段监听后，第 2 至第 4 条必须失败，证明测试确实覆盖这条回归。
+7. 替身页的 chat-follow 用例点击宿主按钮后再增长 300px，断言末尾距离仍在阈值内。
 
 #### Task S3：真实桌面验收
 
@@ -386,24 +382,24 @@ export interface Notifier {
 | 系统通知被专注助手或系统设置拦截 | Toast 不出现在屏幕 | 宿主在发送后读取 `LastNotificationAddedTime` 或在失败时报告；设置行显示投递状态 |
 | Windows Defender 或企业策略阻止 PowerShell | 宿主通道无法启动 | 发送失败回答 500，页面报告一次并保留同一状态；下一次事件重试，不自动改用页面构造器，因为页面构造器在桌面端正是当前失败的那条通道 |
 | 桌面壳后续更换 AUMID | 宿主 Toast 的应用名跟随 DSH 变化 | 每次发送前重新读取快捷方式；验收覆盖桌面壳升级后的第一条 Toast |
-| `holdGrowth` 的空值判断影响流式内容与触屏持有 | 触屏读者持有的增长可能不再写回 | 先跑 `owner.spec.ts` 的 `#230` 场景与 `touch-hold.spec.ts`；读者位置存在时写回是必须保留的行为 |
+| 新增按钮监听影响滚动主人其他入口 | 读者持有可能被提前结束 | 监听只匹配 `findFollowTailButton()`；`owner.spec.ts` 与 `touch-hold.spec.ts` 覆盖滚轮、键盘、触屏与滚动条持有 |
 | 宿主改变按钮结构 | 找不到按钮 | 保留 `conversationColumn` 的形状判断；找不到时视为宿主已恢复跟随，不再尝试 |
 | 通知与提示音同时开启 | 两次打断 | 通知固定 `silent: true`，声音只由「提示音效」决定 |
 
 **回退**
 
 - 通知：删除 `NOTIFY_PATH` 路由与 `notify` 目录，浏览器半 `channel` 固定回答 `browser`，恢复现有行为。
-- 滚动：恢复 `holdGrowth` 的空值判断与 `readerScrollPosition(scroller)!` 写法；不通过 Git 回滚，按文件手工恢复。
+- 滚动：删除捕获阶段的按钮 `click` 监听；不通过 Git 回滚，按文件手工恢复。
 
 ---
 
 ## 5. 文档与发布
 
 - `docs/INSTALL.md`：说明 Windows 桌面通知需要 PowerShell 5.1；Web 需要站点通知权限；点击切会话依赖自定义协议处理器。
-- `docs/CHANGES-FROM-UPSTREAM.md`：新增“宿主半发送系统通知”与“回到底部后的增长写回先判断读者位置”。
+- `docs/CHANGES-FROM-UPSTREAM.md`：新增“宿主半发送系统通知”与“回到底部按钮按下即结束读者持有”。
 - `docs/changes/`：新增一个 `fixes` 片段，写明两处修复。
 - `README.md` / `README.en.md`：更新功能描述，不写决策编号。
-- 需要新 ADR：`D97 桌面通知由宿主发送，身份归插件`。滚动方向由 `D99 增长写回先判断读者位置` 取代 D98。两者都约束未来实现，各写一页。
+- 需要新 ADR：`D97 桌面通知由宿主发送，身份归插件`。滚动方向由 `D99 宿主回到底部按钮按下即结束读者持有` 取代 D98。两者都约束未来实现，各写一页。
 
 ---
 

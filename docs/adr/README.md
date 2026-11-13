@@ -36,7 +36,7 @@
 | [D95](D95-stream-slide-counter-pins.md) | 流式输出的跟随由宿主写位置，皮肤只画位移并抵消吸附元素的跳动 | D85、D71 |
 | [D96](D96-session-panel-default-open.md) | 会话详情入口常驻，默认打开由读者决定 | D94 |
 | [D97](D97-host-delivers-desktop-notifications.md) | 桌面通知由宿主半以已安装的 DSH 身份发送 |  |
-| [D99](D99-growth-checks-the-reader-position.md) | 增长写回先判断读者位置 | D98 |
+| [D99](D99-back-to-bottom-ends-reader-hold.md) | 宿主回到底部按钮按下即结束读者持有 | D98 |
 
 ## 作废的编号
 
