@@ -3,6 +3,7 @@ import { findFootArea } from '@dsh-claude-style/engine/host'
 import { hasSkinClass } from '@dsh-claude-style/engine/dom'
 import { FOOTER_BLOCK_ATTR, FOOTER_SEAT_ATTR, FOOTER_SEATS } from '../../constants'
 import { buildPopoverItem } from '../../shared/popover'
+import { createFooterFixedCache } from './footer-fixed'
 import { copy } from './copy'
 
 /**
@@ -185,17 +186,12 @@ export function createFooterMirror(options: {
     return isFixedPanel(el)
   }
 
-  /**
-   * The footer elements laid out as fixed panels, read in the pass's read phase
-   * and taken by the same pass's sync (D40): a computed style read while the
-   * pass writes forces the page's whole style recalc under it. `measured` tells
-   * a later sync which nodes already have an answer; a panel mounted between
-   * that read and the sync is measured on its own rather than collapsed as an
-   * ordinary entry (the Remote page's backdrop).
-   */
+  /** Each pass's fixed-panel answers, taken by its sync (D40); `measured` names the nodes already answered. */
   let fixedRead: { footArea: Element, fixed: Set<Element>, measured: Set<Element> } | null = null
+  let fixedCache: ReturnType<typeof createFooterFixedCache> | null = null
 
   function measure(footArea: Element) {
+    fixedCache ??= createFooterFixedCache(footArea)
     const fixed = new Set<Element>()
     const measured = new Set<Element>()
     for (const entry of footerEntriesIn(footArea)) {
@@ -208,7 +204,7 @@ export function createFooterMirror(options: {
         // `sync` with no reading for a panel it had marked. The node then falls
         // back to the entry's first control, which takes the panel's box away
         // with `display: contents` (the Remote page's own backdrop is the case).
-        if (!isOverlay(el) && isFixedPanel(el)) fixed.add(el)
+        if (!isOverlay(el) && fixedCache.fixed(el)) fixed.add(el)
       }
     }
     fixedRead = { footArea, fixed, measured }
@@ -732,8 +728,10 @@ export function createFooterMirror(options: {
     }
   }
 
-  /** Take the press tracker off: the listeners outlive no generation. */
+  /** Take the press tracker and the fixed-position cache off: neither outlives the generation. */
   function stop() {
+    fixedCache?.stop()
+    fixedCache = null
     document.removeEventListener('pointerdown', onPressStart, true)
     document.removeEventListener('pointerup', onPressEnd, true)
     document.removeEventListener('pointercancel', onPressCleared, true)
