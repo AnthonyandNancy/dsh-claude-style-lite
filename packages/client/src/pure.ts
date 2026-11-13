@@ -3,6 +3,7 @@
  */
 
 export { switchedOff } from './core/switches'
+export { CONTENT_ONLY_HANDLES } from './core/pass-scope'
 export { resolveMascot } from './core/prefs'
 export { accentInk, cssString } from './features/brand/brand'
 export { createFooterMirror } from './features/account/footer-mirror'

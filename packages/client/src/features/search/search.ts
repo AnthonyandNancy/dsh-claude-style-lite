@@ -7,6 +7,7 @@ import { createSearchSources } from './sources'
 import type { ContentHit, SearchFilter, SearchRow } from './sources'
 import { buildElement, createStamp } from '@dsh-claude-style/engine/dom'
 import { motionMs } from '../../shared/motion'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { closeOtherPopovers, registerPopover, unregisterPopover } from '../../shared/popover'
 import { createSlidingPill } from '../../shared/sliding-pill'
 import { createTurnNavHost } from '../turn-nav/turn-nav-host'
@@ -526,7 +527,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     if (filterBar !== null) filterPill.measure(filterBar)
   }
 
-  ui.search = { measure, sync, onFocusIn: takeover.onFocusIn }
+  ui.search = { measure, sync, onFocusIn: takeover.onFocusIn, skipOnContentOnly: skipsOnContentOnly('search') }
 
   return () => {
     disposed = true

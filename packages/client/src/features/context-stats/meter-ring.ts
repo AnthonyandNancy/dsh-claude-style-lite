@@ -3,6 +3,7 @@ import { COMPOSER_VARIANT_ATTRIBUTE, DIALOG_TRIGGER_SELECTOR } from '@dsh-claude
 import { observeMatches, subscribeMutations } from '@dsh-claude-style/engine/bus'
 import { closestComposerCard, findModelSlotIn, findPrimaryModelSlot, observeComposerCards } from '@dsh-claude-style/engine/host'
 import { readPrefs } from '../../core/prefs'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { removeStrayNodes } from '../../shared/popover'
 import { setAttributeIfChanged } from '@dsh-claude-style/engine/dom'
 import { CONTEXT_STOPS, rampPosition, writeRamp } from './stats-ramp'
@@ -391,6 +392,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
       face.answered = percent
       paintRing(face)
     },
+    skipOnContentOnly: skipsOnContentOnly('meterRing'),
     teardown,
   }
 

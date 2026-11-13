@@ -4,6 +4,7 @@ import { buildElement, setAttributeIfChanged, writeTextInPlace } from '@dsh-clau
 import { requestFrame } from '@dsh-claude-style/engine/frame'
 import { writeScroll } from '@dsh-claude-style/engine/scroll-owner'
 import { createCopy } from '../../core/i18n'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import type { FeatureUi } from '../../core/feature'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type manifest from './question-card.manifest'
@@ -268,6 +269,7 @@ export function install(_ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     onInput: questionCards.sync,
     /** The custom option's label follows the locale. */
     onCopyChange: questionCards.sync,
+    skipOnContentOnly: skipsOnContentOnly('questionCard'),
   }
   return () => questionCards.release()
 }

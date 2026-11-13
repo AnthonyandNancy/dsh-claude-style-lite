@@ -6,6 +6,7 @@ import { createHostAccountMenu } from '../account/host-menu'
 import { adoptSettingsForm, motionReduced, readPrefs, savePrefs, subscribePrefs } from '../../core/prefs'
 import { cacheFirstMatch, hostSlots } from '@dsh-claude-style/engine/host'
 import { motionMs } from '../../shared/motion'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { ClaudeStyleSegmentGroup, createSettingsControls, tabRows } from './settings-controls'
 import { createSettingsAppearanceTab } from './settings-tab-appearance'
 import { createSettingsGeneralTab } from './settings-tab-general'
@@ -477,6 +478,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
         e.preventDefault()
         hostSettings.openSettings()
       },
+      skipOnContentOnly: skipsOnContentOnly('settingsNav'),
     }
     quickProviderHandle = () => ui.quickProviders ?? null
   }

@@ -5,6 +5,7 @@ import type { MatchList } from '@dsh-claude-style/engine/bus'
 import { createStamp } from '@dsh-claude-style/engine/dom'
 import { markPartsWithin } from '@dsh-claude-style/engine/parts'
 import { createHostToast } from '../../shared/host-toast'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { createViewStoreFollower } from './view-store'
 import { createSegmentControl } from './segments'
 import { createArchivedActions } from './archived-actions'
@@ -197,6 +198,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     // The archived list reads its labels from the skin's copy; a locale change
     // has to reach the rows the page already holds.
     onCopyChange() { list.copyChanged() },
+    skipOnContentOnly: skipsOnContentOnly('workspace'),
   }
 
   return () => {

@@ -6,6 +6,7 @@ import { findHeroRoot } from '@dsh-claude-style/engine/host'
 import type { FrameTask } from '@dsh-claude-style/engine/frame'
 import { HOME_LAYOUT_OFF } from '../../constants'
 import { motionReduced, readPrefs } from '../../core/prefs'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { pageHidden, subscribePageHidden } from '../../core/page-visibility'
 import { inPageBox, inPagePixels } from '../../shared/page-zoom'
 import { createGlyphField, readColour } from './ripple-field'
@@ -248,7 +249,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     if (mounted === null && root !== null) mounted = mount(root)
   }
 
-  ui.homeRipple = { sync }
+  ui.homeRipple = { sync, skipOnContentOnly: skipsOnContentOnly('homeRipple') }
 
   return () => {
     unmount()

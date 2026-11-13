@@ -1,5 +1,6 @@
 import { MASCOT_CRAB, MASCOT_DEEPY, MASCOT_SCOPE_ALL, MASCOT_WHALEGIRL } from '../../constants'
 import { readPrefs, resolveMascot } from '../../core/prefs'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { createMascotCrab } from './crab'
 import { createMascotWhaleGirl } from './whale-girl'
 import { createMascotWhale } from './whale'
@@ -44,7 +45,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     whaleGirl.onActivity()
   }
 
-  ui.mascot = { sync, onActivity }
+  ui.mascot = { sync, onActivity, skipOnContentOnly: skipsOnContentOnly('mascot') }
 
   return () => {
     crab.dispose()

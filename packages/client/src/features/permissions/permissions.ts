@@ -4,6 +4,7 @@ import { closestConversationSession, conversationSessionId, currentPreset, curre
 import { buildElement, closestFrom, setAttributeIfChanged } from '@dsh-claude-style/engine/dom'
 import { SEGMENTS_CLASS, SEGMENT_CLASS } from '../../shared/segment-control'
 import { removeStrayNodes } from '../../shared/popover'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { createSlidingPill } from '../../shared/sliding-pill'
 import type { HostContext } from '@dsh-claude-style/engine/host'
 import type { HostSession } from '@dsh-claude-style/contracts/services'
@@ -416,6 +417,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     reposition() {
       for (const slot of slots.values()) slot.card.placeOpen()
     },
+    skipOnContentOnly: skipsOnContentOnly('permissions'),
   }
 
   // The composer restyle hides the host's access button only while this

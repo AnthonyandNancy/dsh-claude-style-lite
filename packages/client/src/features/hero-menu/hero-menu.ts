@@ -1,6 +1,7 @@
 import { AUTO_POPOVER_ALL, HERO_MENU_ATTR } from '../../constants'
 import { cacheFirstMatch, findHostMenu } from '@dsh-claude-style/engine/host'
 import { readPrefs } from '../../core/prefs'
+import { skipsOnContentOnly } from '../../core/pass-scope'
 import { closestFrom, createStamp } from '@dsh-claude-style/engine/dom'
 import { POPOVER_CLOSE_DELAY, POPOVER_MARGIN, POPOVER_OPEN_DELAY, anchorSpace, clampToViewport, closeOtherPopovers, createHoverIntent, isProgrammaticPress, pressKeepsPopoverOpen, programmaticPress, registerPopover, resolveAnchoredPosition, unregisterPopover } from '../../shared/popover'
 import type { HostContext } from '@dsh-claude-style/engine/host'
@@ -245,7 +246,7 @@ const findCardTrigger = cacheFirstMatch<HTMLElement>('[data-dsh-claude-part~="ca
   // (shared/popover.ts): the entry closes whatever menu the row opened.
   registerPopover('hero', closeHeroMenu)
 
-  ui.heroMenu = { sync: syncHeroMenu, reposition: repositionHeroMenu }
+  ui.heroMenu = { sync: syncHeroMenu, reposition: repositionHeroMenu, skipOnContentOnly: skipsOnContentOnly('heroMenu') }
   return () => {
     hoverIntent.cancel()
     openedByHover = false
