@@ -38,7 +38,7 @@ export function createMessageFold(requestPass: () => void) {
       requestPass()
     }
   })
-  /** 按行: the bubbles handed to the shared subscription, so a detached one is found after its row left. */
+  /** The bubbles handed to the shared subscription, so a detached one is found after its row left. */
   const watchedBubbles = new Set<Element>()
   /** The reader's own choice per message. */
   const choices = new WeakMap<Element, FoldChoice>()

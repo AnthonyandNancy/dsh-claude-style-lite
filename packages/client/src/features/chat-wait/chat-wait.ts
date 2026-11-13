@@ -385,7 +385,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
     if (line.turnStart !== null) writeTextInPlace(line.clock, formatHostDuration(Math.max(1000, now - line.turnStart), t))
     // The badge keeps its own show and exit path: syncBadge writes the text,
     // takes the exit mark off, and leaves the element laid out until the exit
-    // animation has played. Writing `hidden` here would cut that animation.
+    // has played. Writing `hidden` here would cut that exit short.
     syncBadge(line.badge, plan.overtime)
   }
 
