@@ -20,14 +20,14 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   const player = createSoundPlayer()
   let disposed = false
   let timer: number | null = null
-  let pending = new Set<'blocked' | 'finished'>()
+  let pending = new Set<'blocked' | 'ended'>()
 
   function flush() {
     timer = null
     if (disposed) return
     const events = pending
     pending = new Set()
-    const kind = events.has('blocked') ? 'blocked' : events.has('finished') ? 'finished' : null
+    const kind = events.has('blocked') ? 'blocked' : events.has('ended') ? 'ended' : null
     if (kind === null) return
     const name = kind === 'blocked' ? SOUND_CUE_PERMISSION : SOUND_CUE_COMPLETION
     // The player reports its own downgrade to the browser voices; a cue never

@@ -11,6 +11,30 @@
     "zh": "任务完成",
     "en": "Task finished"
   },
+  "notificationStopped": {
+    "zh": "任务已停止",
+    "en": "Task stopped"
+  },
+  "notificationFailed": {
+    "zh": "任务失败",
+    "en": "Task failed"
+  },
+  "notificationInterrupted": {
+    "zh": "任务中断",
+    "en": "Task interrupted"
+  },
+  "notificationTruncated": {
+    "zh": "输出达到上限",
+    "en": "Output limit reached"
+  },
+  "notificationBlocked": {
+    "zh": "任务已阻塞",
+    "en": "Task blocked"
+  },
+  "notificationUnknown": {
+    "zh": "任务已结束",
+    "en": "Task ended"
+  },
   "notificationApproval": {
     "zh": "等待审批",
     "en": "Waiting for approval"

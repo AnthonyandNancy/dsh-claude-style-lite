@@ -75,6 +75,24 @@ export async function setSnapshotStatus(t, status, waitMs = 350) {
   if (waitMs > 0) await t.page.waitForTimeout(waitMs)
 }
 
+/**
+ * What ended each named session's latest turn, as the private route answers it.
+ *
+ * A session named here holds `{ outcome, at }`; one left out answers null, the
+ * way a host with no `turn/end` for it does. The page's own fetch stub reads
+ * this through `window.__turnOutcomes`.
+ */
+export async function setTurnOutcomes(t, outcomes) {
+  await t.page.evaluate((entries) => { window.__turnOutcomes = entries }, outcomes)
+}
+
+/** Mark one session's latest turn ending with one host reason. */
+export async function endTurn(t, sessionId, reason = 'completed') {
+  await t.page.evaluate(({ id, kind }) => {
+    window.__turnOutcomes = { ...(window.__turnOutcomes ?? {}), [id]: { outcome: kind, at: Date.now() } }
+  }, { id: sessionId, kind: reason })
+}
+
 /** A list holding the named sessions, each row carrying the status's running flag. */
 export function sessionList(status, { subagents = [] } = {}) {
   const ids = Object.keys(status).filter(id => !subagents.includes(id))

@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-13",
+  "group": "fixes",
+  "order": 1,
+  "external": true,
+  "zh": "修复提示通知窗口把停止、暂停与失败的任务一律显示为任务完成的问题；宿主半记录每轮结束原因，通知按完成、停止、失败、中断、输出达到上限或未知分别说明，提示音仍只按时机响一声",
+  "en": "Fix the notification window reporting a stopped, paused or failed task as finished; the host half records why each turn ended and the notification now names completion, a stop, a failure, an interruption, an output limit or an unknown ending, while the sound cue still sounds once per ending"
+}

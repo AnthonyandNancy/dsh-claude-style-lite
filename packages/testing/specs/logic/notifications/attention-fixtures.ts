@@ -8,6 +8,7 @@ export function readings(entries: Record<string, Partial<AttentionReading>>): Ma
     pendingKind: entry.pendingKind ?? null,
     running: entry.running ?? false,
     topLevel: entry.topLevel !== false,
+    outcome: entry.outcome ?? null,
   }]))
 }
 

@@ -1,13 +1,15 @@
 /**
  * A notification stand-in records every constructor and lets the spec press a
- * notification's click handler. The fixture supplies the host's two snapshots,
- * then the skin applies; the feature's first reading is that baseline.
+ * notification's click handler. The fixture supplies the host's two snapshots
+ * and the ending reason of each session's latest turn, then the skin applies;
+ * the feature's first reading is that baseline.
  */
-import { applySnapshotHost, installSnapshotHost, restartSnapshotHost, sessionList, setSnapshotStatus } from './snapshot-host.mjs'
+import { applySnapshotHost, endTurn, installSnapshotHost, restartSnapshotHost, sessionList, setSnapshotStatus, setTurnOutcomes } from './snapshot-host.mjs'
 
 export { sessionList }
 
-export async function setup(t, { status, list, capability }) {
+export async function setup(t, { status, list, capability, outcomes }) {
+  if (outcomes !== undefined) await setTurnOutcomes(t, outcomes)
   if (capability !== undefined) {
     await t.page.evaluate((input) => {
       window.__hostNotify = { capability: input, sent: [], activation: null }
@@ -64,6 +66,8 @@ export async function setup(t, { status, list, capability }) {
       await restartSnapshotHost(t, capability)
     },
     status: (next, waitMs) => setSnapshotStatus(t, next, waitMs),
+    /** Name what ended the session's latest turn before its stop is published. */
+    endTurn: (sessionId, reason) => endTurn(t, sessionId, reason),
     /** Give the page its own host capability before the feature's one read. */
     capability: (value) => t.page.evaluate((input) => {
       window.__hostNotify = { capability: input, sent: [], activation: null }

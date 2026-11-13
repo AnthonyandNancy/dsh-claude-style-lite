@@ -1,4 +1,8 @@
+import type { TurnOutcome } from '@dsh-claude-style/contracts/attention'
 import type { HostSessionListSnapshot, HostSessionStatusSnapshot } from '@dsh-claude-style/contracts/services'
+
+export { turnOutcomeOf } from '@dsh-claude-style/contracts/attention'
+export type { TurnOutcome } from '@dsh-claude-style/contracts/attention'
 
 /** The host's blocking interaction kinds: approval, plan review and question. */
 export type PendingKind = 'approval' | 'plan-review' | 'question'
@@ -13,12 +17,14 @@ export interface AttentionReading {
   running: boolean
   /** The session is a top-level conversation, not a subagent. */
   topLevel: boolean
+  /** What ended the session's latest turn, when the host reports one. */
+  outcome: TurnOutcome | null
 }
 
-/** What a reading changed: a prompt the reader has not answered, or a finished run. */
+/** What a reading changed: a prompt the reader has not answered, or a run that ended. */
 export type AttentionEvent =
   | { kind: 'blocked', sessionId: string, pending: PendingKind }
-  | { kind: 'finished', sessionId: string }
+  | { kind: 'ended', sessionId: string, outcome: TurnOutcome }
 
 /** Whether a host value names one of the three pending kinds. */
 function isPendingKind(value: unknown): value is PendingKind {
@@ -42,8 +48,15 @@ function pendingKindOf(raw: unknown): PendingKind | null {
  * with the live status laid over them, then any session the status carries that
  * the list has not reached (a subagent, or a list still loading). A session the
  * list does not prove top-level counts as a child, so only its prompt can cue.
+ *
+ * @param outcomes - what ended each session's latest turn, as the host half
+ *     keeps it; a session missing from the map reads null.
  */
-export function attentionReading(status: HostSessionStatusSnapshot | null, list: HostSessionListSnapshot | null): Map<string, AttentionReading> {
+export function attentionReading(
+  status: HostSessionStatusSnapshot | null,
+  list: HostSessionListSnapshot | null,
+  outcomes: ReadonlyMap<string, TurnOutcome> = new Map(),
+): Map<string, AttentionReading> {
   const readings = new Map<string, AttentionReading>()
   if (list !== null) {
     for (let i = 0; i < list.ids.length; i++) {
@@ -56,6 +69,7 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
         pendingKind,
         running: live?.running ?? row?.running === true,
         topLevel: row?.origin !== 'subagent',
+        outcome: outcomes.get(id) ?? null,
       })
     }
   }
@@ -68,6 +82,7 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
         pendingKind,
         running: live.running === true,
         topLevel: false,
+        outcome: outcomes.get(id) ?? null,
       })
     }
   }
@@ -79,6 +94,9 @@ export function attentionReading(status: HostSessionStatusSnapshot | null, list:
  * baseline: a prompt already pending or a run already going makes no event
  * until it changes. A session that stops running while a new prompt waits
  * answers both events here.
+ *
+ * A turn the host reports as forked is the reader's own branch: the run ended
+ * because the work moved elsewhere, so it asks for no ending event.
  */
 export function attentionEvents(previous: ReadonlyMap<string, AttentionReading>, next: ReadonlyMap<string, AttentionReading>): AttentionEvent[] {
   const events: AttentionEvent[] = []
@@ -88,7 +106,9 @@ export function attentionEvents(previous: ReadonlyMap<string, AttentionReading>,
     if (now.pendingKind !== null && now.pendingKind !== before.pendingKind) {
       events.push({ kind: 'blocked', sessionId: id, pending: now.pendingKind })
     }
-    if (now.topLevel && before.running && !now.running) events.push({ kind: 'finished', sessionId: id })
+    if (!now.topLevel || !before.running || now.running) continue
+    if (now.outcome === 'forked') continue
+    events.push({ kind: 'ended', sessionId: id, outcome: now.outcome ?? 'unknown' })
   }
   return events
 }

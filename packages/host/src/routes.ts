@@ -12,7 +12,7 @@
  * the browser half addresses the same names.
  */
 import { PACKAGE_NAME } from '@dsh-claude-style/contracts/package'
-import { HDSL_PATH, HDSL_SKIN_PATH, PRICES_PATH, ROUTE_PREFIX, SESSION_COST_PATH, SESSION_DELETE_PATH, SESSION_PANEL_PATH, SESSION_SEARCH_PATH, SOUND_PATH, USAGE_PATH, USERNAME_PATH, WEBFONTS_PATH } from '@dsh-claude-style/contracts/routes'
+import { HDSL_PATH, HDSL_SKIN_PATH, PRICES_PATH, ROUTE_PREFIX, SESSION_COST_PATH, SESSION_DELETE_PATH, SESSION_PANEL_PATH, SESSION_SEARCH_PATH, SOUND_PATH, TURN_OUTCOME_PATH, USAGE_PATH, USERNAME_PATH, WEBFONTS_PATH } from '@dsh-claude-style/contracts/routes'
 import { OPTIONAL_WEBFONTS } from '@dsh-claude-style/contracts/webfonts'
 import { existsSync, readFileSync, readdirSync, realpathSync, rmSync, statSync } from 'node:fs'
 import { userInfo } from 'node:os'
@@ -34,6 +34,7 @@ import { QUERY_MAX, createSessionSearch } from './search.js'
 import { billingRowsOf, createSessionCost } from './session-cost.js'
 import { createSessionPanel } from './session-panel.js'
 import { sessionDirectoryName } from './session-name.js'
+import { createTurnOutcomes } from './turn-outcome.js'
 import { createUsage } from './usage.js'
 import { HOME_SESSION_SCOPE_ACTIVE, HOME_SESSION_SCOPE_ALL, HOME_SESSION_SCOPE_WORKSPACE } from '@dsh-claude-style/contracts/prefs'
 
@@ -301,6 +302,10 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
     // The panel's answers are folded on demand; the watch only marks a fold
     // stale, so a reader who never opens the panel never builds one.
     sessionPanel.ensure()
+    // Turn outcomes are kept as the host commits, because the browser's live
+    // status carries no end reason (D97).
+    const turnOutcomes = createTurnOutcomes(ctx)
+    disposers.push(turnOutcomes.dispose)
 
     const register = (label: string, route: DshRoute) => {
       try {
@@ -453,6 +458,18 @@ export function registerRoutes(ctx: DshContext, scope: DshScope) {
     }
     register('notify', createNotifyRoute(ctx, notifyHost))
     register('notify activation', createNotifyActivationRoute(ctx, notifyHost))
+
+    register('turn outcome', {
+      kind: 'exact',
+      path: TURN_OUTCOME_PATH,
+      handler: (req: DshRequest, res: DshResponse) => {
+        // The browser half names one session and reads what ended its latest
+        // turn; a session no `turn/end` has reached answers null.
+        const sessionId = guardedSessionId(req, res)
+        if (sessionId === null) return
+        sendJson(res, 200, { ok: true, outcome: turnOutcomes.read(sessionId) })
+      },
+    })
 
     register('HDSL account', {
       kind: 'exact',

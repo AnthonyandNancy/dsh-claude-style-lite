@@ -11,9 +11,21 @@ import type { HostNotifyActivation, HostNotifyCapability } from '@dsh-claude-sty
 import type manifest from './notifications.manifest'
 import type { NotificationChannel, NotificationRequest, Notifier } from './notifier'
 
+/** The title one ending outcome states; the body names the session it belongs to. */
+const ENDING_TITLES = {
+  completed: 'notificationFinished',
+  stopped: 'notificationStopped',
+  failed: 'notificationFailed',
+  interrupted: 'notificationInterrupted',
+  forked: 'notificationFinished',
+  truncated: 'notificationTruncated',
+  blocked: 'notificationBlocked',
+  unknown: 'notificationUnknown',
+} as const
+
 /** One notification title per event; the body names the session it belongs to. */
 function titleOf(event: AttentionEvent) {
-  if (event.kind === 'finished') return copy('notificationFinished')
+  if (event.kind === 'ended') return copy(ENDING_TITLES[event.outcome])
   if (event.pending === 'approval') return copy('notificationApproval')
   if (event.pending === 'plan-review') return copy('notificationPlanReview')
   return copy('notificationQuestion')
@@ -21,7 +33,7 @@ function titleOf(event: AttentionEvent) {
 
 /** The event's kind in the shared notification vocabulary. */
 function kindOf(event: AttentionEvent): NotificationRequest['kind'] {
-  if (event.kind === 'finished') return 'finished'
+  if (event.kind === 'ended') return 'finished'
   return event.pending
 }
 

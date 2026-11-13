@@ -52,5 +52,8 @@ export const NOTIFY_PATH = `${ROUTE_PREFIX}/notify`
 /** `GET` takes the session a clicked notification asked to open, once. */
 export const NOTIFY_ACTIVATION_PATH = `${ROUTE_PREFIX}/notify-activation`
 
+/** `?id=` names the session; `GET` answers what ended its latest turn. */
+export const TURN_OUTCOME_PATH = `${ROUTE_PREFIX}/turn-outcome`
+
 /** `?id=` selects the session; the answer is the session overview panel's folded data (D96). */
 export const SESSION_PANEL_PATH = `${ROUTE_PREFIX}/session-panel`

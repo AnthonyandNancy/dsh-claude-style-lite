@@ -42,6 +42,11 @@
       if (hostNotify) hostNotify.activation = null
       return Promise.resolve(jsonResponse({ ok: true, activation: activation }))
     }
+    if (url.split('?')[0] === '/dsh-claude-style-lite/turn-outcome') {
+      var outcomes = (window.__turnOutcomes || {})
+      var outcomeId = new URL(url, location.origin).searchParams.get('id') || ''
+      return Promise.resolve(jsonResponse({ ok: true, outcome: outcomes[outcomeId] || null }))
+    }
     if (url === '/dsh-claude-style-lite/username') return Promise.resolve(jsonResponse({ ok: true, username: 'Tester' }))
     if (url === '/dsh-claude-style-lite/brand') {
       // The custom-brand case holds both images; the bytes are the runner's to
