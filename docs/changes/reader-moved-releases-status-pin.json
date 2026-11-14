@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-14",
+  "group": "fixes",
+  "order": 0,
+  "external": true,
+  "zh": "修复对话运行时向上滚动后「正在思考」状态行仍停在输入框上方数百毫秒才随内容移动的问题",
+  "en": "Release the running status line's pin on the frame the reader scrolls up, instead of after the host's sampling window"
+}

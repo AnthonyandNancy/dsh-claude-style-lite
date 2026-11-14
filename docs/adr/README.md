@@ -37,6 +37,7 @@
 | [D96](D96-session-panel-default-open.md) | 会话详情入口常驻，默认打开由读者决定 | D94 |
 | [D97](D97-host-delivers-desktop-notifications.md) | 桌面通知由宿主半以已安装的 DSH 身份发送 |  |
 | [D100](D100-scroll-follow-belongs-to-host.md) | 滚动跟随归宿主，皮肤不保存读者的位置 | D99 |
+| [D101](D101-reader-move-releases-the-pin.md) | 读者的移动立即撤下状态行钉住 | 无 |
 
 ## 作废的编号
 

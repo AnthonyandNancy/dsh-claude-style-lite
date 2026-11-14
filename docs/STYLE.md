@@ -832,8 +832,9 @@ composer's own height, the fade band above it and the host's transcript padding 
 with the canvas carried on down to the composer's top, since the host's clip
 leaves a strip under the row where the line a stream slide brings up would
 otherwise show below the line. The pin stands only while the host reports the
-tail (or the stream glide holds the position) and steps aside for the reader's
-own scrolling.
+tail (or the stream glide holds the position) and stands down on the frame the
+reader scrolls away, before the host's sampling window closes its follow; the
+host's own follow edge puts it back when the reader returns.
 
 ## Process rows · 过程行
 
