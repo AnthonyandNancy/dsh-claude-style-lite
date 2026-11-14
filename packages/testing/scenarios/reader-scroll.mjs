@@ -13,6 +13,7 @@
  * spot over what he went back to read. The scenario wheels once, mid-turn, and
  * reads the frames it recorded.
  */
+import surfaceTable from '../data/surface.json' with { type: 'json' }
 import { bound } from '../bounds.mjs'
 
 /** The host's page markers this scenario reads, as packages/testing/lane.mjs names them. */
@@ -23,6 +24,8 @@ const HOST = {
 
 /** The host's own mark that content follows the end (FOLLOWING_TAIL_SELECTOR, packages/contracts/src/dom.ts). */
 const FOLLOWING_TAIL = '[data-chat-following-tail]'
+/** The skin's mark on the scroller while the reader's own move stands (surface.json, D101). */
+const READER_MOVED = surfaceTable.surface.find((entry) => entry.id === 'chat-wait.reader-moved').attribute
 
 /** How much of the pinned row's own height a frame may sit within and still count as floating at the pin. */
 const PIN_SLACK_PX = bound('readerScrollPinSlackPx')
@@ -50,16 +53,18 @@ function watch(page) {
     const sample = () => {
       const scroller = document.querySelector(host.scroller)
       const row = document.querySelector(host.running)
+      const movedAttr = host.movedAttr
       trace.push({
         top: scroller === null ? null : Math.round(scroller.scrollTop),
         gap: scroller === null ? null : Math.round(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop),
         row: row === null ? null : Math.round(row.getBoundingClientRect().top),
         pinned: row !== null && getComputedStyle(row).position === 'sticky',
+        moved: scroller !== null && scroller.hasAttribute(movedAttr),
       })
       if (trace.length < 6000) requestAnimationFrame(sample)
     }
     requestAnimationFrame(sample)
-  }, HOST)
+  }, { ...HOST, movedAttr: READER_MOVED })
 }
 
 function readerScrollScenario({ check }) {
@@ -98,8 +103,9 @@ function readerScrollScenario({ check }) {
       await page.waitForFunction((marks) => {
         if (document.querySelector(marks.followingTail) !== null) return false
         const scroller = document.querySelector(marks.scroller)
-        return scroller !== null && scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0
-      }, { followingTail: FOLLOWING_TAIL, ...HOST }, { timeout: 5000 })
+        if (scroller === null || !scroller.hasAttribute(marks.movedAttr)) return false
+        return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop > 0
+      }, { followingTail: FOLLOWING_TAIL, movedAttr: READER_MOVED, ...HOST }, { timeout: 5000 })
       const frame = await page.evaluate(() => (window.__readerScrollTrace ?? []).length)
       const position = await page.evaluate((selector) => {
         const scroller = document.querySelector(selector)
@@ -121,6 +127,9 @@ function readerScrollScenario({ check }) {
       const spots = before.filter((frame) => frame.pinned && frame.row !== null).map((frame) => frame.row)
       const pinnedSpot = spots.length === 0 ? null : Math.max(...spots)
       const pinnedAfter = after.filter((frame) => frame.pinned)
+      // The reader's move is marked from the frame it lands, and stays marked
+      // while the host's sample closes its follow.
+      const movedAfter = after.filter((frame) => !frame.moved)
       // Floating: a frame whose row sits at the pinned spot while the reader is
       // hundreds of pixels away from the tail it belongs to.
       const floated = after.filter((frame) => frame.pinned && frame.row !== null
@@ -130,6 +139,7 @@ function readerScrollScenario({ check }) {
         check('读者的滚动发生在状态行钉住时', left !== null && pinnedSpot !== null && Math.abs(left.row - pinnedSpot) <= 2, `the wheel at row ${left === null ? 'n/a' : left.row}, the pinned spot ${pinnedSpot === null ? 'never pinned' : `${pinnedSpot}px`} (${spots.length} frames)`),
         check('滚动之后宿主不再跟随末尾', left !== null && !followingNow, left === null ? 'no reader phase in the trace' : `gap ${left.gap}px when the wheel landed`),
         check('读者滚动期间状态行不再钉住', left !== null && pinnedAfter.length === 0, `${pinnedAfter.length} pinned of ${after.length} frames after the wheel`),
+        check('读者的移动从滚轮后的第一帧起就留在对话容器上', left !== null && movedAfter.length === 0, `${movedAfter.length} of ${after.length} frames without the move mark`),
         check('宿主的跟随一直关着', left !== null && !followingNow, `the host follows the end at the end of the turn: ${followingNow}`),
         check('后续增长不改变读者选择的滚动位置', left !== null && left.top !== null && after.length > 10 && after.every((frame) => frame.top === left.top), left === null ? 'no reader position' : `wanted ${left.top}px, readings ${[...new Set(after.map((frame) => frame.top))].join('/')}px`),
         check('状态行不再浮在内容上', floated.length === 0, floated.length === 0 ? 'held its document place' : `${floated.length} frames at the pinned spot`),

@@ -475,6 +475,29 @@
       waitSession.setAttribute('data-chat-following-tail', '')
       await probe.settle()
       r.wait.pin = { on: pinOf() }
+      // The reader's own move stands the pin down before the host's sample
+      // closes its follow (chat-wait.css, D101). The reading is split because
+      // this page carries the host composer's scroller as well: the mark is
+      // judged where the product writes it, and the veto is judged where the
+      // row stands, which is the scroller this fixture mounted.
+      var movedAttr = probe.surface('chat-wait.reader-moved')
+      var conversation = document.querySelector('[data-conversation-scroll]')
+      conversation.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: -120 }))
+      r.wait.pin.readerMoved = await probe.until(function () {
+        return conversation.hasAttribute(movedAttr)
+      }, function (readings) { return readings[readings.length - 1] === true }, 'the reader move marked on the conversation')
+      waitHolder.setAttribute(movedAttr, '')
+      r.wait.pin.readerVeto = await probe.until(pinOf, function (frames) {
+        var last = frames[frames.length - 1]
+        return last.pinned === false && last.mask === null
+      }, 'the pin standing down for the reader move')
+      waitHolder.removeAttribute(movedAttr)
+      waitSession.removeAttribute('data-chat-following-tail')
+      waitSession.setAttribute('data-chat-following-tail', '')
+      r.wait.pin.readerReturned = await probe.until(pinOf, function (frames) {
+        var last = frames[frames.length - 1]
+        return last.pinned === true && last.mask !== null
+      }, 'the pin coming back on the host follow edge')
       var unpinnedFor = async function (content, what) {
         await probe.until(pinOf, function (frames) {
           var last = frames[frames.length - 1]

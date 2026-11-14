@@ -628,6 +628,11 @@ export default {
       pin.afterMessage?.pinned === false && pin.afterMessage?.mask === null &&
         pin.afterQuestion?.pinned === false && pin.afterQuestion?.mask === null,
       JSON.stringify(pin))
+    // 读者自己的上滚在宿主采样窗口内先撤钉，宿主的跟随重新出现时钉回（chat-wait.css, D101）。
+    check('状态行随读者的上滚在下一帧撤钉，宿主跟随重新出现时钉回输入框上方',
+      pin.readerMoved?.at(-1) === true && pin.readerVeto?.at(-1)?.pinned === false && pin.readerVeto?.at(-1)?.mask === null &&
+        pin.readerReturned?.at(-1)?.pinned === true && pin.readerReturned?.at(-1)?.mask?.position === 'absolute',
+      JSON.stringify({ moved: pin.readerMoved?.at(-1), veto: pin.readerVeto?.at(-1), returned: pin.readerReturned?.at(-1) }))
     // 钉住的行把脚下的画布一直铺到输入框顶，宿主在行下沿留出的那条缝里
     // 就不会露出滑动中的正文（chat-wait.css）。
     check('状态行钉住时行下的画布铺到输入框顶，跟随关掉后这块画布随之退场',

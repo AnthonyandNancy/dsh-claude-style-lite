@@ -360,6 +360,9 @@
       "读者滚动期间状态行不再钉住": [
         0
       ],
+      "读者的移动从滚轮后的第一帧起就留在对话容器上": [
+        0
+      ],
       "后续增长不改变读者选择的滚动位置": [
         10
       ],
@@ -831,6 +834,12 @@
       "a reader reading higher up keeps his place when content grows, and nothing slides": [
         0
       ],
+      "a wheel inside the host's sample window keeps its position when the sample closes the follow": [
+        0
+      ],
+      "a sample that closes a follow with no reader move is handed back by one press": [
+        1
+      ],
       "a thinking row is never pressed by the skin, and stays folded as the host drew it": [
         0
       ],
@@ -1006,6 +1015,9 @@
       ],
       "words that settle shorter take the box down with them, so the clock sits right after them": [
         10
+      ],
+      "状态行随读者的上滚在下一帧撤钉，宿主跟随重新出现时钉回输入框上方": [
+        1
       ],
       "状态行钉住时行下的画布铺到输入框顶，跟随关掉后这块画布随之退场": [
         17
