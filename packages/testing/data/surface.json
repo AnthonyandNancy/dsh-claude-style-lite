@@ -120,6 +120,8 @@
     { "id": "model.search-field", "selector": ".dsh-claude-model-search-input", "feature": "model", "sees": "the search field at the top of the second level: the reader types a model's name into it and the list under it narrows" },
     { "id": "model.search-clear", "selector": ".dsh-claude-model-search-clear", "feature": "model", "sees": "the control that clears the search field, drawn while the field holds words" },
     { "id": "model.sub-row", "selector": ".dsh-claude-model-popover-sub .dsh-claude-model-option", "feature": "model", "sees": "one model row of the second level, under its provider's label" },
+    { "id": "chat-wait.reader-moved", "attribute": "data-dsh-claude-wait-reader-moved", "feature": "chat-wait", "sees": "the running status line standing down its pin because the reader moved the conversation since the host follow came on" },
+    { "id": "chat-wait.tail", "attribute": "data-dsh-claude-wait-tail", "feature": "chat-wait", "sees": "the running row standing last in the flow, the one the status line bottom pin may hold above the composer" },
     { "id": "chat.message-fold", "attribute": "data-dsh-claude-message-fold", "feature": "chat-fold", "sees": "a long user message whose current choice keeps its bubble capped" },
     { "id": "chat.message-fold-toggle", "selector": ".dsh-claude-message-fold-toggle", "feature": "chat-fold", "sees": "the control under a long user message that expands or caps the bubble" },
     { "id": "process.think-open", "attribute": "data-dsh-claude-think-open", "feature": "process-column", "sees": "a thinking row whose disclosure stands open, where the column layout restates the row's own height" },

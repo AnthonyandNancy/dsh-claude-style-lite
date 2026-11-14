@@ -1,7 +1,9 @@
 import { QUIET_ATTR } from '../../constants'
 import { observeMatches } from '@dsh-claude-style/engine/bus'
 import { requestFrame } from '@dsh-claude-style/engine/frame'
+import { conversationScroller } from '@dsh-claude-style/engine/chat-dom'
 import { closestConversationSession, conversationSessionId, findChatTarget } from '@dsh-claude-style/engine/host'
+import { subscribeReaderMove, readerMovedSince } from '@dsh-claude-style/engine/scroll-owner'
 import { hostChatCopy, hostChatSeat } from '../../core/i18n'
 import { readPrefs, subscribePrefs } from '../../core/prefs'
 import { buildElement, writeTextInPlace } from '@dsh-claude-style/engine/dom'
@@ -10,7 +12,8 @@ import { motionMs } from '../../shared/motion'
 import { releaseSwappingText, setSwappingText } from '../../shared/swapping-text'
 import { activityWords, waitingWord, THINKING_KEY } from '../../shared/turn-activity'
 import { startWaitLoader, releaseWaitLoader } from './wait-loader'
-import { CHAT_FLOW_SELECTOR, CHAT_RUNNING_SELECTOR, CHAT_RUNNING_HOLDING_ATTRIBUTE, CHAT_RUNNING_TEXT_SELECTOR } from '@dsh-claude-style/contracts/dom'
+import { createPinRelease } from './pin-release'
+import { CHAT_FLOW_SELECTOR, CHAT_RUNNING_SELECTOR, CHAT_RUNNING_HOLDING_ATTRIBUTE, CHAT_RUNNING_TEXT_SELECTOR, FOLLOWING_TAIL_ATTRIBUTE, FOLLOWING_TAIL_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { WAIT_OVERTIME_MS, openTurn, waitStart, wordForPass } from './wait-state'
 import { waitTickPlan } from './wait-tick'
 import { foreignRunningLineOwns } from './running-owner'
@@ -72,6 +75,14 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
   const TICK_MS = 250
   /** The host's running rows, kept current by the bus: a pass reads this instead of querying (D40). */
   const runningRows = observeMatches<HTMLElement>(CHAT_RUNNING_SELECTOR, scheduleSync)
+  /** The reader's move veto on the pin: set on the scroller, taken off by the host's follow edge (D100). */
+  const pinRelease = createPinRelease({
+    followAttribute: FOLLOWING_TAIL_ATTRIBUTE,
+    followSelector: FOLLOWING_TAIL_SELECTOR,
+    scroller: conversationScroller,
+    subscribeMove: subscribeReaderMove,
+    movedSince: readerMovedSince,
+  })
   /** Each running row with the line drawn into it and the parts a pass writes. */
   const lines = new Map<HTMLElement, WaitLine>()
   const hostWords = new Map<HTMLElement, Element>()
@@ -481,6 +492,7 @@ export function install(ctx: HostContext, ui: FeatureUi<typeof manifest>) {
 
   return () => {
     stopped = true
+    pinRelease.stop()
     if (cancelTailPass !== null) cancelTailPass()
     cancelTailPass = null
     tailReadings = null

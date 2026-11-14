@@ -23,6 +23,8 @@ export type { RevealRun, RevealSnapshot, RevealState } from './features/chat-rev
 export { countProcessItems, summaryForm, summaryParts, summarySeparator, summaryText } from './features/chat-fold/process-summary'
 export { createSummaryWidthCache } from './features/chat-fold/summary-width'
 export { foreignRunningLineOwns } from './features/chat-wait/running-owner'
+export { createPinRelease } from './features/chat-wait/pin-release'
+export type { PinRelease, PinReleaseOptions } from './features/chat-wait/pin-release'
 export { waitTickPlan } from './features/chat-wait/wait-tick'
 export type { WaitTickPlan, WaitTickState } from './features/chat-wait/wait-tick'
 export { WORD_LOCK_MS, openTurn, waitStart, wordForPass } from './features/chat-wait/wait-state'
