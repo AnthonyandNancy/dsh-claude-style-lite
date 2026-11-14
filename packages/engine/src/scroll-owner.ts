@@ -1,4 +1,5 @@
 import { subscribeMutations } from './bus'
+import { requestFrame } from './frame'
 import { skin } from './skin'
 import { CHAT_RUNNING_SELECTOR, COMPOSER_SELECTOR, CONVERSATION_SESSION_ATTRIBUTE, CONVERSATION_SESSION_SELECTOR, SIDEBAR_SLOT_SELECTOR, STREAMING_SELECTOR } from '@dsh-claude-style/contracts/dom'
 import { SCROLL_KEYS, SUBMISSION_ROW_SELECTOR, conversationScroller, findFollowTailButton, isScrollbarStrip } from './chat-dom'
@@ -64,6 +65,37 @@ let submissionHoldUntil = 0
 /** How many features use the owner; its listeners live while one does. */
 let members = 0
 let stopSubmissionWatch: (() => void) | null = null
+/**
+ * Told once on the frame after an accepted reader move, so the status line's
+ * pin can stand down before the host's sample closes its follow (D100).
+ */
+const moveListeners = new Set<() => void>()
+/** Cancels the frame that would tell the listeners, or null while none waits. */
+let cancelMoveFrame: (() => void) | null = null
+
+/**
+ * Hear a reader move on the frame after it is accepted (D40, D100). The owner
+ * keeps the instant alone: whether the move releases a pinned row belongs to
+ * the row's own feature.
+ * @returns unsubscribe.
+ */
+export function subscribeReaderMove(listener: () => void) {
+  moveListeners.add(listener)
+  return () => {
+    moveListeners.delete(listener)
+  }
+}
+
+/** Queue one announcement for the next frame's write phase; moves in one frame are one call. */
+function announceReaderMove() {
+  if (cancelMoveFrame !== null) return
+  cancelMoveFrame = requestFrame({
+    write() {
+      cancelMoveFrame = null
+      for (const listener of moveListeners) listener()
+    },
+  })
+}
 
 /** The ease running on a container now, and the source it serves. */
 function runningSource(container: Element) {
@@ -152,6 +184,7 @@ function noteIntent(event: Event) {
   if (scroller === null || !intentReaches(scroller, event)) return
   if (event.type === 'pointerdown' && !pressMovesScroll(scroller, event)) return
   lastMovingIntentAt = performance.now()
+  announceReaderMove()
 }
 
 function hasSubmissionNode(nodes: NodeList) {
@@ -201,6 +234,9 @@ export function joinScrollOwner() {
     for (const type of INTENT_TYPES) document.removeEventListener(type, noteIntent, true)
     if (stopSubmissionWatch !== null) stopSubmissionWatch()
     stopSubmissionWatch = null
+    if (cancelMoveFrame !== null) cancelMoveFrame()
+    cancelMoveFrame = null
+    moveListeners.clear()
   }
 }
 
