@@ -33,17 +33,16 @@ body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"]:not([data-c
   overflow: visible;
   height: auto;
 }
-/* Do NOT override the host viewArea flex contract here. In the active
-   phase the host uses `flex: 1 0 auto; min-height: auto` so the viewArea
-   is content-sized and the sticky composerSeat pins to the scrollport
-   bottom. An earlier override (`flex: 1 1 auto; min-height: 0`) let the
-   viewArea shrink to exactly viewport-minus-composer, which put the
-   composer seat near the TOP of the scroll content — sticky bottom:0
-   cannot pull an element down past its normal position, so the composer
-   appeared mid-scroll and never followed message growth.
-   The one place the skin states that contract is the transcript's own mark
-   below (TRANSCRIPT_ATTR), where the host has withdrawn it: it repeats the
-   active phase's values and nothing else. */
+/* The host grants the seat's place and the view area's content-sized height
+   from `data-phase="active"` alone: the seat takes sticky, bottom, margin-top:
+   auto and the base flex:none, and the view area takes `flex: 1 0 auto;
+   min-height: auto`. A conversation column can be mounted while the phase mark
+   is `hero` or `settling`, so this file repeats all of those conditions from
+   its own transcript mark. With only sticky and bottom, the seat stays after
+   the message column at its shrunken flex height, and sticky has no document
+   place from which to lift it back to the scrollport's floor. The
+   new-conversation page carries no column and keeps the host's own centred
+   layout. */
 body[data-dsh-claude-style] [data-dsh-claude-part~="composer-stack"]:not([data-composer-variant="hero"]) {
   flex: 0 0 auto;
   overflow: visible;
@@ -91,9 +90,17 @@ body[data-dsh-claude-style] [data-dsh-claude-transcript] [data-dsh-claude-part~=
   flex: 1 0 auto;
   min-height: auto;
 }
+/* With the transcript mounted, the seat keeps all four parts of the host's
+   active contract. Sticky only moves a seat whose document place is already at
+   the scrollport's floor; `margin-top: auto` puts it there when the rows are
+   shorter than the scrollport, and `flex: none` keeps it at its own height when
+   they are longer. The host's hero rules flex the seat to fill the column, which
+   would otherwise leave the seat at zero height and the card spilling past it. */
 body[data-dsh-claude-style] [data-dsh-claude-transcript] [data-composer-seat] {
   position: sticky;
   bottom: 0;
+  margin-top: auto;
+  flex: none;
   z-index: 7;
 }
 /* Message body clearance: the transcript ends where the fade band begins (same

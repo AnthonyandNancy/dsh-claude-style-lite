@@ -7,12 +7,15 @@
    The two tab bodies live in home-overview.css and home-models.css. */
 
 /* The scroll body centres the hero stack; the studio form starts at the top and
-   lets the seat take the rest of the column, so the card lands on the bottom edge. */
+   lets the seat take the rest of the column, so the card lands on the bottom edge.
+   A mounted transcript owns the seat's flex instead: the conversation can carry a
+   hero phase mark for a frame, and the seat's own contract keeps it at its real
+   height on the scrollport's floor. */
 body[data-dsh-claude-style] [data-dsh-claude-home-hero] [data-dsh-claude-part~="scroll-body"] {
   justify-content: flex-start;
 }
 
-body[data-dsh-claude-style] [data-dsh-claude-home-hero] [data-dsh-claude-part~="composer-seat"] {
+body[data-dsh-claude-style] [data-dsh-claude-home-hero]:not([data-dsh-claude-transcript]) [data-dsh-claude-part~="composer-seat"] {
   flex: 1 1 auto;
   min-height: 0;
 }

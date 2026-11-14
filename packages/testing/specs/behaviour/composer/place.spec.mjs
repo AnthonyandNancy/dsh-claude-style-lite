@@ -87,18 +87,38 @@ function readRadioMark(page) {
 function mount(t, phase) {
   return t.page.evaluate(([seat, column, scroller, phaseAttribute, part, mark, value]) => {
     const name = (selector) => selector.slice(1, -1)
+    // The host's phase contract around a composer, written once and read by the
+    // fixture's own classes: the seat's pin and the view area's content-sized
+    // height are granted from `active` alone, `hero` centres the scroll body,
+    // and `settling` keeps the seat out of sight. Without it a phase change
+    // moves no box, and a reading taken under a different mark could not tell
+    // the host's contract from the skin's.
+    document.querySelector('#dsh-place-host-phases')?.remove()
+    const sheet = document.createElement('style')
+    sheet.id = 'dsh-place-host-phases'
+    sheet.textContent = `
+      .dsh-place-seat { display: flex; flex: none; flex-direction: column; }
+      [${phaseAttribute}="active"] .dsh-place-view { flex: 1 0 auto; min-height: auto; }
+      [${phaseAttribute}="active"] .dsh-place-seat { position: sticky; bottom: 0; margin-top: auto; z-index: 9; }
+      [${phaseAttribute}="hero"] .dsh-place-scroll { justify-content: center; overflow-y: auto; }
+      [${phaseAttribute}="settling"] .dsh-place-seat { visibility: hidden; }
+    `
+    document.head.append(sheet)
     const root = document.createElement('div')
     root.setAttribute(phaseAttribute, value)
     root.style.cssText = 'display:flex;flex-direction:column;height:200px;width:360px'
     const body = document.createElement('div')
     body.setAttribute(name(scroller), '')
-    body.style.cssText = 'flex:1;min-height:0;overflow-y:auto'
+    body.className = 'dsh-place-scroll'
+    body.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;overflow-y:auto'
     const view = document.createElement('div')
+    view.className = 'dsh-place-view'
     const flow = document.createElement('div')
     flow.setAttribute(name(column), '')
     flow.style.height = '600px'
     const seatBox = document.createElement('div')
     seatBox.setAttribute(name(seat), '')
+    seatBox.className = 'dsh-place-seat'
     seatBox.style.height = '40px'
     view.append(flow)
     body.append(view, seatBox)
@@ -106,15 +126,23 @@ function mount(t, phase) {
     document.body.append(root)
     window.__debugPlace = {
       root,
+      sheet,
       seat: seatBox,
       view,
+      flow,
+      body,
       mark,
       phaseAttribute,
+      setScroll(top) {
+        body.scrollTop = top
+        return body.scrollHeight - body.clientHeight - body.scrollTop
+      },
       read() {
         const paint = getComputedStyle(seatBox)
         const band = getComputedStyle(seatBox, '::before')
         // The view area's contract is read in the one frame it carries the part
-        // mark: the rule is the stylesheet's, and the mark is the walk's.
+        // mark: the rule is the stylesheet's, and the walk takes the mark back
+        // on its next pass.
         view.setAttribute(part, 'view-area')
         const flex = getComputedStyle(view).flex
         view.removeAttribute(part)
@@ -123,9 +151,11 @@ function mount(t, phase) {
           mark: root.hasAttribute(mark),
           position: paint.position,
           bottom: paint.bottom,
+          marginTop: paint.marginTop,
+          seatFlex: paint.flex,
           bar: paint.backgroundColor,
           band: band.content === 'none' ? null : band.height,
-          flex,
+          viewFlex: flex,
         }
       },
     }
@@ -222,14 +252,116 @@ export default spec({ page: 'composer' }, ({ test }) => {
     await waitForMark(t, true)
     const active = await readPlace(t)
     t.expectThat.equal(active.mark, true, 'the root marked while a message column is mounted')
-    t.expectThat.equal([active.position, active.bottom, active.flex], ['sticky', '0px', '1 0 auto'], 'the seat pinned and the view area content-sized under the active phase')
+    t.expectThat.equal(
+      [active.position, active.bottom, active.marginTop, active.seatFlex, active.viewFlex],
+      ['sticky', '0px', '0px', '0 0 auto', '1 0 auto'],
+      'the seat carries the host active position contract and the view area is content-sized',
+    )
     t.expectThat.equal([active.bar, active.band], [CANVAS, '40px'], 'the bar and its fade band behind the card')
     // The host's other marks for a conversation: moving the mark alone must not
-    // move the composer.
+    // move the composer. Only the positioning fields are compared; the phase
+    // forms of the host's own sheets paint the rest differently.
+    const placeOf = ({ position, bottom, marginTop, seatFlex, viewFlex }) =>
+      ({ position, bottom, marginTop, seatFlex, viewFlex })
+    const activePlace = placeOf(active)
     for (const phase of ['hero', 'settling']) {
-      t.expectThat.equal(await readUnder(t, phase), { ...active, phase }, `the composer's place under the ${phase} mark`)
+      t.expectThat.equal(placeOf(await readUnder(t, phase)), activePlace, `the composer's place under the ${phase} mark`)
     }
-    await t.page.evaluate(() => { window.__debugPlace.root.remove(); delete window.__debugPlace })
+    await t.page.evaluate(() => { window.__debugPlace.root.remove(); window.__debugPlace.sheet.remove(); delete window.__debugPlace })
+  })
+
+  test('the composer seat keeps one screen box at every scroll offset under every phase mark', async (t) => {
+    await mount(t, 'active')
+    await waitForMark(t, true)
+    const readings = await t.page.evaluate(async () => {
+      const { root, flow, seat, setScroll, body, phaseAttribute } = window.__debugPlace
+      const scroller = body
+      const original = root.getAttribute(phaseAttribute)
+      flow.style.height = '2400px'
+      const boxes = []
+      for (const phase of ['active', 'hero', 'settling']) {
+        root.setAttribute(phaseAttribute, phase)
+        setScroll(0)
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        for (const offset of [0, 120, 240, 360, 600, 900]) {
+          setScroll(offset)
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+          const box = seat.getBoundingClientRect()
+          boxes.push({
+            phase,
+            offset,
+            scrollTop: Math.round(scroller.scrollTop),
+            box: [Math.round(box.top * 100) / 100, Math.round(box.bottom * 100) / 100],
+          })
+        }
+      }
+      root.setAttribute(phaseAttribute, original)
+      return boxes
+    })
+    const byPhase = ['active', 'hero', 'settling'].map((phase) => {
+      const boxes = readings.filter((reading) => reading.phase === phase).map((reading) => JSON.stringify(reading.box))
+      return [phase, [...new Set(boxes)]]
+    })
+    t.expectThat.equal(byPhase.map(([, boxes]) => boxes.length), [1, 1, 1],
+      `each phase holds one seat box over the scroll sweep: ${JSON.stringify(readings)}`)
+    const activeBox = byPhase[0][1][0]
+    for (const [phase, boxes] of byPhase) {
+      t.expectThat.equal(boxes, [activeBox], `the ${phase} phase holds the active phase's seat box`)
+    }
+    await t.page.evaluate(() => { window.__debugPlace.root.remove(); window.__debugPlace.sheet.remove(); delete window.__debugPlace })
+  })
+
+  test('a short transcript keeps the composer on the scrollport\'s floor', async (t) => {
+    // The host grants the seat its place from `active` alone, and a mounted
+    // column can carry a hero mark: the floor this test reads is the skin's
+    // transcript contract, with nothing of the host's own holding the seat down.
+    await mount(t, 'hero')
+    await waitForMark(t, true)
+    const reading = await t.page.evaluate(() => {
+      const { flow, seat, body } = window.__debugPlace
+      flow.style.height = '80px'
+      const scroller = body
+      const box = seat.getBoundingClientRect()
+      const port = scroller.getBoundingClientRect()
+      return {
+        gap: Math.round((scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop) * 100) / 100,
+        seatBottom: Math.round(box.bottom * 100) / 100,
+        portBottom: Math.round(port.bottom * 100) / 100,
+        scrollHeight: scroller.scrollHeight,
+        clientHeight: scroller.clientHeight,
+        bodyOverflow: getComputedStyle(body).overflowY,
+      }
+    })
+    t.expectThat.equal(reading.gap, 0, `a transcript shorter than the scrollport leaves nothing to scroll: ${JSON.stringify(reading)}`)
+    t.expectThat.equal(reading.seatBottom, reading.portBottom, 'the seat rests on the scrollport\'s bottom edge')
+    await t.page.evaluate(() => { window.__debugPlace.root.remove(); window.__debugPlace.sheet.remove(); delete window.__debugPlace })
+  })
+
+  test('the transcript clips sideways without changing the scroll box', async (t) => {
+    await mount(t, 'active')
+    await waitForMark(t, true)
+    const reading = await t.page.evaluate(() => {
+      const { body } = window.__debugPlace
+      const scroller = body
+      const before = { clientHeight: scroller.clientHeight, clientWidth: scroller.clientWidth }
+      const wide = document.createElement('div')
+      wide.style.cssText = 'width:2000px;height:40px'
+      scroller.append(wide)
+      const after = {
+        clientHeight: scroller.clientHeight,
+        clientWidth: scroller.clientWidth,
+        overflowX: getComputedStyle(scroller).overflowX,
+        overflowY: getComputedStyle(scroller).overflowY,
+        scrollWidth: scroller.scrollWidth,
+      }
+      wide.remove()
+      return { before, after, bodyOverflow: getComputedStyle(body).overflowY }
+    })
+    t.expectThat.equal(reading.after.overflowX, 'clip', 'the x axis is clipped, not scrolled')
+    t.expectThat.equal(reading.after.overflowY, 'auto', 'the host keeps the vertical scroll on the same box')
+    t.expectThat.equal(reading.after.clientHeight, reading.before.clientHeight, 'a wide child does not change the scrollport height')
+    t.expectThat.equal(reading.after.clientWidth, reading.before.clientWidth, 'a wide child does not change the scrollport width')
+    await t.page.evaluate(() => { window.__debugPlace.root.remove(); window.__debugPlace.sheet.remove(); delete window.__debugPlace })
   })
 
   test('a card mounted in a session switch\'s batch is drawn in the skin\'s own look on its first frame', async (t) => {
@@ -394,7 +526,7 @@ export default spec({ page: 'composer' }, ({ test }) => {
     await waitForMark(t, false)
     const gone = await readPlace(t)
     t.expectThat.equal(gone.mark, false, 'the root unmarked once the column is gone')
-    t.expectThat.equal([gone.position, gone.flex], ['static', '0 1 auto'], 'the seat and the view area handed back to the host')
-    await t.page.evaluate(() => { window.__debugPlace.root.remove(); delete window.__debugPlace })
+    t.expectThat.equal([gone.position, gone.seatFlex, gone.viewFlex], ['sticky', '0 0 auto', '1 0 auto'], 'the seat and the view area handed back to the host, whose own active contract stands')
+    await t.page.evaluate(() => { window.__debugPlace.root.remove(); window.__debugPlace.sheet.remove(); delete window.__debugPlace })
   })
 })

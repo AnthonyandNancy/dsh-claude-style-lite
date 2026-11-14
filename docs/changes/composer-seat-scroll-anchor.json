@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-14",
+  "group": "fixes",
+  "order": 1,
+  "external": true,
+  "zh": "修复长会话滚动时输入区随滚动位置上下移动的问题",
+  "en": "Keep the composer seat on one screen position while a long transcript scrolls"
+}
